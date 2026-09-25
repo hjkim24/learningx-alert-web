@@ -266,3 +266,89 @@ def run_due_rules(
                 "run_failed",
             )
     return runs
+
+
+def reconcile_interrupted_runs(
+    now,
+    collector=collect_for_user,
+    sender=send_webhook_part,
+):
+    runs = tuple(
+        ScheduledRun.objects.filter(status=ScheduledRun.Status.RUNNING).order_by("id")
+    )
+    for run in runs:
+        deliveries = tuple(run.deliveries.all())
+        statuses = {delivery.status for delivery in deliveries}
+
+        if statuses & {Delivery.Status.SENDING, Delivery.Status.NEEDS_REVIEW}:
+            with transaction.atomic():
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.NEEDS_REVIEW,
+                    "interrupted_sending",
+                    now,
+                )
+                _finish_run(
+                    run,
+                    ScheduledRun.Status.NEEDS_REVIEW,
+                    now,
+                    "interrupted_sending",
+                )
+            continue
+
+        if deliveries and statuses == {Delivery.Status.SUCCEEDED}:
+            _finish_run(run, ScheduledRun.Status.SUCCEEDED, now)
+            continue
+
+        if Delivery.Status.DEFINITELY_FAILED in statuses:
+            with transaction.atomic():
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.DEFINITELY_FAILED,
+                    "interrupted_definite_failure",
+                    now,
+                )
+                _finish_run(
+                    run,
+                    ScheduledRun.Status.FAILED,
+                    now,
+                    "interrupted_definite_failure",
+                )
+            continue
+
+        if Delivery.Status.SUCCEEDED in statuses:
+            with transaction.atomic():
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.NEEDS_REVIEW,
+                    "interrupted_after_confirmation",
+                    now,
+                )
+                _finish_run(
+                    run,
+                    ScheduledRun.Status.NEEDS_REVIEW,
+                    now,
+                    "interrupted_after_confirmation",
+                )
+            continue
+
+        with transaction.atomic():
+            run.deliveries.all().delete()
+            run.course_results.all().delete()
+            run.items.all().delete()
+            ScheduledRun.objects.filter(pk=run.pk).update(
+                status=ScheduledRun.Status.INTERRUPTED,
+                safe_error_code="",
+                finished_at=None,
+            )
+        run.status = ScheduledRun.Status.INTERRUPTED
+        try:
+            execute_run(run, now, collector=collector, sender=sender)
+        except Exception:
+            _finish_run(
+                run,
+                ScheduledRun.Status.FAILED,
+                now,
+                "run_failed",
+            )
+    return runs
