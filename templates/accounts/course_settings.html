@@ -22,10 +22,21 @@
         {{ form.non_field_errors }}
         <p>{{ form.enabled }} {{ form.enabled.label_tag }}</p>
         <p>{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
+        <p>
+          <label><input type="checkbox" disabled> 강의/출석 — 검증 후 제공</label>
+        </p>
+        <p>
+          <label><input type="checkbox" disabled> 필수 학습자료 — 검증 후 제공</label>
+        </p>
       </fieldset>
     {% empty %}
       <p>선택할 수 있는 활성 과목이 없습니다.</p>
     {% endfor %}
     <button class="primary-button" type="submit">저장</button>
+  </form>
+
+  <form method="post" action="{% url 'preview' %}">
+    {% csrf_token %}
+    <button type="submit">알림 미리보기</button>
   </form>
 {% endblock %}

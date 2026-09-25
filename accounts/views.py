@@ -1,9 +1,11 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
+from .collection import collect_for_user
 from .courses import CourseSyncError, sync_courses
 from .forms import CanvasTokenForm, CourseSelectionFormSet
 from .models import CanvasConnection, CourseSelection
@@ -100,3 +102,14 @@ def course_settings_save(request):
         {"formset": formset},
         status=400,
     )
+
+
+@login_required
+@require_POST
+def preview(request):
+    try:
+        result = collect_for_user(request.user, timezone.now())
+    except CanvasConnection.DoesNotExist:
+        messages.error(request, "먼저 Canvas 계정을 연결해 주세요.")
+        return redirect("dashboard")
+    return render(request, "accounts/preview.html", {"result": result})
