@@ -3,6 +3,12 @@
 {% block title %}과목 선택 · LearningX Alert{% endblock %}
 
 {% block content %}
+  <nav class="settings-nav" aria-label="설정 메뉴">
+    <a href="{% url 'dashboard' %}">대시보드</a>
+    <a aria-current="page" href="{% url 'course_settings' %}">과목 선택</a>
+    <a href="{% url 'notification_settings' %}">알림 설정</a>
+  </nav>
+
   <header class="page-heading">
     <div>
       <p class="eyebrow">알림 설정</p>
@@ -11,21 +17,21 @@
     <p>알림을 받을 Canvas 과제 과목을 선택합니다.</p>
   </header>
 
-  <form method="post" action="{% url 'course_settings_save' %}">
+  <form class="settings-form" method="post" action="{% url 'course_settings_save' %}">
     {% csrf_token %}
     {{ formset.management_form }}
     {{ formset.non_form_errors }}
     {% for form in formset %}
-      <fieldset>
+      <fieldset class="course-row">
         <legend>{{ form.instance.course_name }}</legend>
         {{ form.id }}
         {{ form.non_field_errors }}
-        <p>{{ form.enabled }} {{ form.enabled.label_tag }}</p>
-        <p>{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
-        <p>
+        <p class="check-field">{{ form.enabled }} {{ form.enabled.label_tag }}</p>
+        <p class="check-field">{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
+        <p class="check-field is-disabled">
           <label><input type="checkbox" disabled> 강의/출석 — 검증 후 제공</label>
         </p>
-        <p>
+        <p class="check-field is-disabled">
           <label><input type="checkbox" disabled> 필수 학습자료 — 검증 후 제공</label>
         </p>
       </fieldset>
@@ -35,8 +41,8 @@
     <button class="primary-button" type="submit">저장</button>
   </form>
 
-  <form method="post" action="{% url 'preview' %}">
+  <form class="secondary-action" method="post" action="{% url 'preview' %}">
     {% csrf_token %}
-    <button type="submit">알림 미리보기</button>
+    <button class="secondary-button" type="submit">알림 미리보기</button>
   </form>
 {% endblock %}

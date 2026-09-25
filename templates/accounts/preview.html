@@ -3,6 +3,12 @@
 {% block title %}알림 미리보기 · LearningX Alert{% endblock %}
 
 {% block content %}
+  <nav class="settings-nav" aria-label="설정 메뉴">
+    <a href="{% url 'dashboard' %}">대시보드</a>
+    <a href="{% url 'course_settings' %}">과목 선택</a>
+    <a href="{% url 'notification_settings' %}">알림 설정</a>
+  </nav>
+
   <header class="page-heading">
     <div>
       <p class="eyebrow">전송 전 확인</p>
@@ -11,10 +17,10 @@
     <p>현재 설정으로 조회한 미완료 Canvas 과제입니다. 이 화면에서는 전송하지 않습니다.</p>
   </header>
 
-  <section aria-labelledby="preview-items-title">
+  <section class="preview-section" aria-labelledby="preview-items-title">
     <h2 id="preview-items-title">알림 대상</h2>
     {% for item in result.items %}
-      <article>
+      <article class="preview-item">
         <h3>{{ item.title }}</h3>
         <p>{{ item.course_name }}</p>
         <p>마감 {{ item.due_at|date:"Y.m.d H:i" }} KST</p>
@@ -24,11 +30,11 @@
     {% endfor %}
   </section>
 
-  <section aria-labelledby="preview-outcomes-title">
+  <section class="preview-section" aria-labelledby="preview-outcomes-title">
     <h2 id="preview-outcomes-title">과목별 조회 결과</h2>
     <ul>
       {% for outcome in result.outcomes %}
-        <li>
+        <li class="outcome outcome-{{ outcome.status }}">
           <strong>{{ outcome.course_name }}</strong>
           {% if outcome.status == "failed" %}
             <span>확인 실패 — {{ outcome.safe_summary }}</span>

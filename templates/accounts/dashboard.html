@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}연결 설정 · LearningX Alert{% endblock %}
+{% block title %}대시보드 · LearningX Alert{% endblock %}
 
 {% block content %}
   <header class="page-heading">
     <div>
-      <p class="eyebrow">연결 설정</p>
-      <h1>알림을 준비하는 첫 단계</h1>
+      <p class="eyebrow">대시보드</p>
+      <h1>내 알림 준비 상태</h1>
     </div>
-    <p>Google 본인 확인과 Canvas 데이터 연결 상태를 점검합니다.</p>
+    <p>계정 연결부터 과목과 알림 대상 설정까지 현재 상태를 확인합니다.</p>
   </header>
 
   <ol class="status-rail" aria-label="설정 진행 상태">
@@ -20,9 +20,20 @@
       <span class="status-number" aria-hidden="true">2</span>
       <span><strong>Canvas</strong> {% if connection %}연결됨{% else %}연결 필요{% endif %}</span>
     </li>
-    <li>
+    <li class="{% if selected_course_count %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">3</span>
-      <span><strong>알림</strong> 준비 전</span>
+      <span><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</span>
+    </li>
+    <li class="{% if destination %}is-complete{% endif %}">
+      <span class="status-number" aria-hidden="true">4</span>
+      <span>
+        <strong>알림 대상</strong>
+        {% if destination %}
+          {% if destination.kind == "discord" %}Discord{% else %}Slack{% endif %} 저장됨
+        {% else %}
+          설정 필요
+        {% endif %}
+      </span>
     </li>
   </ol>
 
@@ -82,10 +93,15 @@
     </section>
 
     <aside class="next-step" aria-labelledby="next-step-title">
-      <p class="section-index" aria-hidden="true">다음</p>
+      <p class="section-index" aria-hidden="true">설정</p>
       <h2 id="next-step-title">과목과 알림 선택</h2>
-      <p>과목 선택은 다음 단계에서 진행합니다.</p>
-      <p class="fine-print">현재 단계에서는 알림을 보내거나 Canvas 내용을 변경하지 않습니다.</p>
+      <p><a class="secondary-button full-width" href="{% url 'course_settings' %}">과목 선택</a></p>
+      <p><a class="secondary-button full-width" href="{% url 'notification_settings' %}">알림 설정</a></p>
+      <form method="post" action="{% url 'preview' %}">
+        {% csrf_token %}
+        <button class="primary-button full-width" type="submit">알림 미리보기</button>
+      </form>
+      <p class="fine-print">자동 실행은 아직 시작되지 않았습니다. 시험 전송은 알림 설정에서 직접 실행할 때만 동작합니다.</p>
     </aside>
   </div>
 {% endblock %}

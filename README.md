@@ -1,6 +1,8 @@
 # LearningX Alert Web
 
-SKKU LearningX/Canvas 마감 알림 서비스의 비공개 파일럿입니다. 현재 웹 범위는 allowlist 기반 Google 로그인과 사용자별 Canvas 토큰 연결·교체·해제까지입니다. 과목 선택과 알림 전송은 아직 구현되지 않았습니다.
+SKKU LearningX/Canvas 마감 알림 서비스의 비공개 파일럿입니다. 현재 웹에서는 allowlist 기반 Google 로그인, 사용자별 Canvas 연결, 활성 과목 선택, 미완료 과제 미리보기, 알림 규칙과 Discord 또는 Slack 웹훅 설정, 명시적인 시험 전송을 지원합니다.
+
+현재 알림 대상으로 활성화된 항목은 Canvas 과제뿐입니다. LearningX 강의/출석과 필수 학습자료는 계정별 동작 근거가 더 필요하므로 화면에서 “검증 후 제공”으로 비활성화되어 있습니다. 자동 예약 전송은 아직 시작되지 않으며, 시험 알림은 사용자가 버튼을 누른 경우에만 한 번 전송을 시도합니다.
 
 ## 로컬 웹 실행
 
@@ -17,6 +19,8 @@ cp .env.example .env
 ```bash
 .venv/bin/python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
 ```
+
+키를 교체할 때는 쉼표로 구분한 키 목록의 맨 앞에 새 키를 둡니다. 예를 들어 `CREDENTIAL_ENCRYPTION_KEYS=새키,이전키` 순서이며, 새로 저장되는 값은 첫 번째 키로 암호화되고 기존 값은 뒤의 키로도 복호화됩니다.
 
 Google OAuth 웹 애플리케이션에는 다음 로컬 콜백을 등록합니다.
 
@@ -35,6 +39,10 @@ set +a
 ```
 
 `.env`, Django secret, Google OAuth secret, Fernet 키는 Git에 커밋하지 않습니다. Canvas 개인 액세스 토큰은 `.env`에 넣지 않고 로그인 후 웹 폼으로만 제출합니다.
+
+## 알림 대상과 시험 전송
+
+웹훅 URL은 저장 전에 Discord 또는 Slack의 공식 HTTPS 형식과 공개 IP 해석 여부를 확인하고 Fernet으로 암호화합니다. 저장만으로는 메시지를 보내지 않습니다. “시험 알림 보내기”를 누르면 한 번만 시도하며, 응답이 애매하거나 연결이 끊긴 경우 자동 재시도하지 않고 대상 채널을 직접 확인하도록 표시합니다.
 
 ## 테스트
 

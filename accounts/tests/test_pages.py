@@ -19,4 +19,6 @@ class PageContractTests(TestCase):
 
         self.assertContains(response, 'type="password"')
         self.assertContains(response, 'autocomplete="off"')
-        self.assertContains(response, "과목 선택은 다음 단계에서 진행합니다")
+        self.assertContains(response, "과목 선택")
+        self.assertContains(response, "알림 설정")
+        self.assertContains(response, "자동 실행은 아직 시작되지 않았습니다")

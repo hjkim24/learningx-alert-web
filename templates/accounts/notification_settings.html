@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}알림 설정 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <nav class="settings-nav" aria-label="설정 메뉴">
+    <a href="{% url 'dashboard' %}">대시보드</a>
+    <a href="{% url 'course_settings' %}">과목 선택</a>
+    <a aria-current="page" href="{% url 'notification_settings' %}">알림 설정</a>
+  </nav>
+
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">알림 설정</p>
+      <h1>언제, 어디로 받을까요?</h1>
+    </div>
+    <p>Canvas 과제의 마감 조회 범위와 알림 시각, Discord 또는 Slack 한 곳을 설정합니다.</p>
+  </header>
+
+  <p class="scope-notice">자동 알림 실행은 아직 시작되지 않았습니다. 현재는 설정 저장, 미리보기, 명시적인 시험 전송만 가능합니다.</p>
+
+  <div class="settings-grid">
+    <section class="settings-section" aria-labelledby="rule-title">
+      <p class="section-index" aria-hidden="true">01</p>
+      <h2 id="rule-title">조회와 알림 시각</h2>
+      <form class="settings-form" method="post" action="{% url 'notification_rule_save' %}">
+        {% csrf_token %}
+        {{ rule_form.non_field_errors }}
+        <div class="field-row">
+          {{ rule_form.lookahead_days.label_tag }}
+          {{ rule_form.lookahead_days }}
+          {{ rule_form.lookahead_days.errors }}
+          <small>오늘 이후 1–14일 안에 마감되는 미완료 과제를 확인합니다.</small>
+        </div>
+        <div class="field-row">
+          {{ rule_form.first_time.label_tag }}
+          {{ rule_form.first_time }}
+          {{ rule_form.first_time.errors }}
+        </div>
+        <div class="field-row">
+          {{ rule_form.second_time.label_tag }}
+          {{ rule_form.second_time }}
+          {{ rule_form.second_time.errors }}
+          <small>하루 한 번만 받으려면 비워 두세요.</small>
+        </div>
+        <button class="primary-button" type="submit">알림 규칙 저장</button>
+      </form>
+    </section>
+
+    <section class="settings-section" aria-labelledby="destination-title">
+      <p class="section-index" aria-hidden="true">02</p>
+      <h2 id="destination-title">알림 대상</h2>
+      {% if destination %}
+        <dl class="destination-summary">
+          <div>
+            <dt>서비스</dt>
+            <dd>{% if destination.kind == "discord" %}Discord{% else %}Slack{% endif %}</dd>
+          </div>
+          <div>
+            <dt>시험 상태</dt>
+            <dd>
+              {% if destination.status == "succeeded" %}시험 성공
+              {% elif destination.status == "definitely_failed" %}전송 실패
+              {% elif destination.status == "needs_review" %}확인 필요
+              {% else %}시험 전{% endif %}
+            </dd>
+          </div>
+          {% if destination.last_tested_at %}
+            <div>
+              <dt>마지막 시험</dt>
+              <dd>{{ destination.last_tested_at|date:"Y.m.d H:i" }} KST</dd>
+            </div>
+          {% endif %}
+        </dl>
+      {% endif %}
+
+      <form class="settings-form" method="post" action="{% url 'destination_save' %}">
+        {% csrf_token %}
+        {{ destination_form.non_field_errors }}
+        <div class="field-row">
+          {{ destination_form.kind.label_tag }}
+          {{ destination_form.kind }}
+          {{ destination_form.kind.errors }}
+        </div>
+        <div class="field-row">
+          {{ destination_form.webhook_url.label_tag }}
+          {{ destination_form.webhook_url }}
+          {{ destination_form.webhook_url.errors }}
+          <small>저장된 URL은 다시 표시되지 않습니다. 같은 서비스를 유지한다면 빈칸으로 저장할 수 있습니다.</small>
+        </div>
+        <p class="fine-print">웹훅은 저장만으로 전송되지 않습니다.</p>
+        <button class="primary-button" type="submit">알림 대상 저장</button>
+      </form>
+
+      {% if destination %}
+        <div class="destination-actions">
+          <form method="post" action="{% url 'destination_test' %}">
+            {% csrf_token %}
+            <button class="secondary-button" type="submit">시험 알림 보내기</button>
+          </form>
+          <form method="post" action="{% url 'destination_delete' %}">
+            {% csrf_token %}
+            <button class="danger-button" type="submit">알림 대상 삭제</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="fine-print">시험 알림 보내기는 알림 대상을 저장한 뒤 사용할 수 있습니다.</p>
+      {% endif %}
+    </section>
+  </div>
+{% endblock %}

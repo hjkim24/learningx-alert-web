@@ -1,15 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .collection import collect_for_user
 from .courses import CourseSyncError, sync_courses
-from .forms import CanvasTokenForm, CourseSelectionFormSet, DestinationForm
-from .models import CanvasConnection, CourseSelection, Destination
+from .forms import (
+    CanvasTokenForm,
+    CourseSelectionFormSet,
+    DestinationForm,
+    NotificationRuleForm,
+)
+from .models import CanvasConnection, CourseSelection, Destination, NotificationRule
 from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
@@ -31,10 +35,24 @@ def dashboard(request):
         .values("canvas_user_id", "canvas_name", "verified_at")
         .first()
     )
+    selected_course_count = CourseSelection.objects.filter(
+        user=request.user,
+        enabled=True,
+    ).count()
+    destination = (
+        Destination.objects.filter(user=request.user)
+        .values("kind", "status")
+        .first()
+    )
     return render(
         request,
         "accounts/dashboard.html",
-        {"connection": connection, "form": CanvasTokenForm()},
+        {
+            "connection": connection,
+            "destination": destination,
+            "form": CanvasTokenForm(),
+            "selected_course_count": selected_course_count,
+        },
     )
 
 
@@ -127,6 +145,54 @@ def preview(request):
     return render(request, "accounts/preview.html", {"result": result})
 
 
+def _notification_settings_context(request, *, rule_form=None, destination_form=None):
+    destination = (
+        Destination.objects.filter(user=request.user)
+        .values("kind", "status", "last_tested_at")
+        .first()
+    )
+    if rule_form is None:
+        rule, _ = NotificationRule.objects.get_or_create(user=request.user)
+        rule_form = NotificationRuleForm(instance=rule)
+    if destination_form is None:
+        initial = {"kind": destination["kind"]} if destination else None
+        destination_form = DestinationForm(initial=initial)
+    return {
+        "destination": destination,
+        "destination_form": destination_form,
+        "rule_form": rule_form,
+    }
+
+
+@login_required
+@require_GET
+def notification_settings(request):
+    return render(
+        request,
+        "accounts/notification_settings.html",
+        _notification_settings_context(request),
+    )
+
+
+@login_required
+@require_POST
+def notification_rule_save(request):
+    rule = NotificationRule.objects.filter(user=request.user).first()
+    form = NotificationRuleForm(request.POST, instance=rule)
+    if not form.is_valid():
+        return render(
+            request,
+            "accounts/notification_settings.html",
+            _notification_settings_context(request, rule_form=form),
+            status=400,
+        )
+    saved_rule = form.save(commit=False)
+    saved_rule.user = request.user
+    saved_rule.save()
+    messages.success(request, "알림 규칙을 저장했습니다.")
+    return redirect("notification_settings")
+
+
 @sensitive_post_parameters("webhook_url")
 @sensitive_variables("webhook_url")
 @login_required
@@ -135,7 +201,12 @@ def destination_save(request):
     existing = Destination.objects.filter(user=request.user).first()
     form = DestinationForm(request.POST, existing=existing)
     if not form.is_valid():
-        return HttpResponseBadRequest("알림 대상 설정을 확인해 주세요.")
+        return render(
+            request,
+            "accounts/notification_settings.html",
+            _notification_settings_context(request, destination_form=form),
+            status=400,
+        )
 
     webhook_url = form.cleaned_data["webhook_url"]
     if webhook_url:
@@ -146,9 +217,18 @@ def destination_save(request):
                 webhook_url,
             )
         except WebhookValidationError:
-            return HttpResponseBadRequest("유효한 웹훅 URL을 입력해 주세요.")
+            form.add_error(
+                "webhook_url",
+                "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요.",
+            )
+            return render(
+                request,
+                "accounts/notification_settings.html",
+                _notification_settings_context(request, destination_form=form),
+                status=400,
+            )
     messages.success(request, "알림 대상을 저장했습니다.")
-    return redirect("dashboard")
+    return redirect("notification_settings")
 
 
 @login_required
@@ -156,7 +236,7 @@ def destination_save(request):
 def destination_delete(request):
     Destination.objects.filter(user=request.user).delete()
     messages.success(request, "알림 대상을 삭제했습니다.")
-    return redirect("dashboard")
+    return redirect("notification_settings")
 
 
 @sensitive_variables("webhook_url")
@@ -166,7 +246,7 @@ def destination_test(request):
     destination = Destination.objects.filter(user=request.user).first()
     if not destination:
         messages.error(request, "알림 대상을 먼저 저장해 주세요.")
-        return redirect("dashboard")
+        return redirect("notification_settings")
 
     webhook_url = decrypt_secret(destination.encrypted_webhook_url)
     try:
@@ -189,4 +269,4 @@ def destination_test(request):
         messages.success(request, "시험 알림 전송을 확인했습니다.")
     destination.last_tested_at = timezone.now()
     destination.save(update_fields=("status", "last_tested_at"))
-    return redirect("dashboard")
+    return redirect("notification_settings")
