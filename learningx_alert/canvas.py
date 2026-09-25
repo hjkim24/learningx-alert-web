@@ -70,3 +70,12 @@ class CanvasClient:
     def courses(self) -> list[Course]:
         payload = self.get_all("/api/v1/courses", (("enrollment_state", "active"),))
         return [Course(id=int(entry["id"]), name=str(entry.get("name") or "")) for entry in payload]
+
+    def assignments(self, course_id: int) -> list[dict[str, Any]]:
+        return self.get_all(f"/api/v1/courses/{course_id}/assignments")
+
+    def submission_state(self, course_id: int, assignment_id: int) -> str:
+        payload, _, _ = self._json(
+            f"{self.base_url}/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"
+        )
+        return str(payload.get("workflow_state") or "")
