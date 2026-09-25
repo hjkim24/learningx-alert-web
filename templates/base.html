@@ -1,0 +1,42 @@
+{% load static %}
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}LearningX Alert{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="{% url 'dashboard' %}" aria-label="LearningX Alert 홈">
+      <span aria-hidden="true" class="wordmark-mark">LX</span>
+      <span>LearningX Alert</span>
+    </a>
+    {% if user.is_authenticated %}
+      <div class="account-menu">
+        <span>{{ user.email|default:user.username }}</span>
+        <form method="post" action="{% url 'account_logout' %}">
+          {% csrf_token %}
+          <button class="text-button" type="submit">로그아웃</button>
+        </form>
+      </div>
+    {% else %}
+      <span class="security-note">파일럿 전용</span>
+    {% endif %}
+  </header>
+
+  {% if messages %}
+    <div class="message-stack" aria-live="polite">
+      {% for message in messages %}
+        <p class="message{% if message.tags %} message-{{ message.tags }}{% endif %}">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main class="page-frame">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

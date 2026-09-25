@@ -1,0 +1,127 @@
+import os
+from pathlib import Path
+
+from cryptography.fernet import Fernet
+
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+DJANGO_SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+SECRET_KEY = DJANGO_SECRET_KEY or "local-development-only"
+
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
+]
+ROOT_URLCONF = "config.urls"
+WSGI_APPLICATION = "config.wsgi.application"
+TIME_ZONE = "Asia/Seoul"
+USE_TZ = True
+LANGUAGE_CODE = "ko-kr"
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_EXCEPTION_REPORTER_FILTER = "config.filters.AlwaysSafeExceptionReporterFilter"
+
+INSTALLED_APPS = [
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "accounts",
+]
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+]
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ]
+        },
+    }
+]
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.environ.get("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
+    }
+}
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
+LOGIN_REDIRECT_URL = "dashboard"
+LOGOUT_REDIRECT_URL = "account_login"
+AUTHENTICATION_BACKENDS = ["allauth.account.auth_backends.AuthenticationBackend"]
+SOCIALACCOUNT_ONLY = True
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_STORE_TOKENS = False
+SOCIALACCOUNT_LOGIN_ON_GET = False
+PILOT_ALLOWED_EMAILS = {
+    email.strip().casefold()
+    for email in os.environ.get("PILOT_ALLOWED_EMAILS", "").split(",")
+    if email.strip()
+}
+SOCIALACCOUNT_ADAPTER = "accounts.adapters.PilotSocialAccountAdapter"
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "secret": GOOGLE_CLIENT_SECRET,
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+        "OAUTH_PKCE_ENABLED": True,
+    }
+}
+CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")
+CREDENTIAL_ENCRYPTION_KEYS = [
+    key.strip()
+    for key in os.environ.get("CREDENTIAL_ENCRYPTION_KEYS", "").split(",")
+    if key.strip()
+]
+
+if not DEBUG:
+    required_production_settings = {
+        "DJANGO_SECRET_KEY": DJANGO_SECRET_KEY,
+        "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
+        "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
+        "CREDENTIAL_ENCRYPTION_KEYS": CREDENTIAL_ENCRYPTION_KEYS,
+    }
+    missing = [name for name, value in required_production_settings.items() if not value]
+    if missing:
+        raise RuntimeError(
+            "Missing required production configuration: " + ", ".join(missing)
+        )
+    try:
+        for key in CREDENTIAL_ENCRYPTION_KEYS:
+            Fernet(key.encode())
+    except (TypeError, ValueError) as error:
+        raise RuntimeError(
+            "CREDENTIAL_ENCRYPTION_KEYS must contain valid Fernet keys"
+        ) from error
+
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
