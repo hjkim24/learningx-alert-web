@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}과목 선택 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">알림 설정</p>
+      <h1>과목 선택</h1>
+    </div>
+    <p>알림을 받을 Canvas 과제 과목을 선택합니다.</p>
+  </header>
+
+  <form method="post" action="{% url 'course_settings_save' %}">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    {{ formset.non_form_errors }}
+    {% for form in formset %}
+      <fieldset>
+        <legend>{{ form.instance.course_name }}</legend>
+        {{ form.id }}
+        {{ form.non_field_errors }}
+        <p>{{ form.enabled }} {{ form.enabled.label_tag }}</p>
+        <p>{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
+      </fieldset>
+    {% empty %}
+      <p>선택할 수 있는 활성 과목이 없습니다.</p>
+    {% endfor %}
+    <button class="primary-button" type="submit">저장</button>
+  </form>
+{% endblock %}
