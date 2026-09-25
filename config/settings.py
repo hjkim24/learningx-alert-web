@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from cryptography.fernet import Fernet
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
@@ -18,6 +20,7 @@ TIME_ZONE = "Asia/Seoul"
 USE_TZ = True
 LANGUAGE_CODE = "ko-kr"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+DEFAULT_EXCEPTION_REPORTER_FILTER = "config.filters.AlwaysSafeExceptionReporterFilter"
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -109,6 +112,13 @@ if not DEBUG:
         raise RuntimeError(
             "Missing required production configuration: " + ", ".join(missing)
         )
+    try:
+        for key in CREDENTIAL_ENCRYPTION_KEYS:
+            Fernet(key.encode())
+    except (TypeError, ValueError) as error:
+        raise RuntimeError(
+            "CREDENTIAL_ENCRYPTION_KEYS must contain valid Fernet keys"
+        ) from error
 
 SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = True

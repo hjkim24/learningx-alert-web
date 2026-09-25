@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 
 from learningx_alert.canvas import CanvasClient
 
@@ -35,6 +36,7 @@ def decrypt_secret(value):
     return _fernet().decrypt(value.encode()).decode()
 
 
+@sensitive_variables("token", "normalized_token")
 def verify_and_store_connection(*, user, token, client_class=CanvasClient):
     normalized_token = token.strip()
     try:

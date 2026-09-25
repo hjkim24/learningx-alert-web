@@ -67,3 +67,32 @@ class ProductionSettingsTests(SimpleTestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "True True")
+
+    def test_production_rejects_malformed_fernet_key_without_echoing_it(self):
+        malformed_key = "malformed-key-must-not-appear"
+        env = os.environ.copy()
+        env.update(
+            {
+                "DJANGO_DEBUG": "0",
+                "DJANGO_SECRET_KEY": "production-test-secret",
+                "GOOGLE_CLIENT_ID": "test-client-id",
+                "GOOGLE_CLIENT_SECRET": "test-client-secret",
+                "CREDENTIAL_ENCRYPTION_KEYS": malformed_key,
+            }
+        )
+
+        result = subprocess.run(
+            [sys.executable, "manage.py", "check"],
+            cwd=PROJECT_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        output = result.stdout + result.stderr
+        self.assertIn(
+            "CREDENTIAL_ENCRYPTION_KEYS must contain valid Fernet keys",
+            output,
+        )
+        self.assertNotIn(malformed_key, output)

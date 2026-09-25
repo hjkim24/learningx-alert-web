@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
+from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_POST
 
 from .forms import CanvasTokenForm
@@ -22,6 +23,7 @@ def dashboard(request):
     )
 
 
+@sensitive_post_parameters("token")
 @login_required
 @require_POST
 def canvas_connect(request):

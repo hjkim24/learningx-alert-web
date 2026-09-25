@@ -1,3 +1,4 @@
+import socket
 from urllib.error import URLError
 from unittest.mock import patch
 
@@ -85,6 +86,42 @@ class CanvasConnectionViewTests(TestCase):
             "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
         )
         self.assertNotContains(response, "submitted-secret-must-not-appear")
+        self.assertFalse(CanvasConnection.objects.exists())
+
+    @override_settings(DEBUG=True)
+    @patch.object(CanvasClient, "profile", side_effect=RuntimeError("unexpected"))
+    @patch.object(CanvasClient, "__init__", return_value=None)
+    def test_unexpected_failure_redacts_token_from_debug_report(self, _init, _profile):
+        token = "debug-report-secret-must-not-appear"
+        self.client.force_login(self.user)
+        self.client.raise_request_exception = False
+
+        with self.assertLogs("django.request", level="ERROR"):
+            response = self.client.post(reverse("canvas_connect"), {"token": token})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertNotContains(response, token, status_code=500)
+        self.assertFalse(CanvasConnection.objects.exists())
+
+    @patch(
+        "learningx_alert.network.socket.getaddrinfo",
+        side_effect=socket.gaierror("temporary DNS failure"),
+    )
+    def test_dns_failure_shows_safe_error_without_storage(self, _getaddrinfo):
+        token = "dns-failure-secret-must-not-appear"
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("canvas_connect"),
+            {"token": token},
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
+        )
+        self.assertNotContains(response, token)
         self.assertFalse(CanvasConnection.objects.exists())
 
     def test_connect_requires_csrf_token(self):

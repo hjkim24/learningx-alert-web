@@ -21,8 +21,12 @@ def https_origin(url: str) -> tuple[str, str, int]:
 
 
 def resolve_public_addresses(host: str, port: int) -> tuple[str, ...]:
+    try:
+        entries = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as error:
+        raise UnsafeUrlError("destination address could not be resolved") from error
     addresses = tuple(
-        dict.fromkeys(entry[4][0] for entry in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM))
+        dict.fromkeys(entry[4][0] for entry in entries)
     )
     try:
         public = addresses and all(ipaddress.ip_address(address).is_global for address in addresses)
