@@ -48,7 +48,7 @@ The service must not claim support for a LearningX item type that the two-accoun
 
 ## Selected stack
 
-- Python 3.13.
+- Python 3.12.
 - Django 5.2 LTS.
 - Django templates, plain HTML and CSS, and minimal browser JavaScript.
 - django-allauth with the Google provider.
