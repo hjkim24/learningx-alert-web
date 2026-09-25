@@ -5,7 +5,8 @@ import re
 from collections.abc import Sequence
 from http.cookiejar import CookieJar
 from typing import Any
-from urllib.parse import urlencode, urlsplit
+from urllib.error import HTTPError
+from urllib.parse import urlencode, urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
 
 from .models import CanvasProfile, Course
@@ -79,3 +80,67 @@ class CanvasClient:
             f"{self.base_url}/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/self"
         )
         return str(payload.get("workflow_state") or "")
+
+    def json_path(self, path: str):
+        payload, _, _ = self._json(f"{self.base_url}{path}")
+        return payload
+
+    def open_external(
+        self,
+        method: str,
+        url: str,
+        *,
+        data: bytes | None = None,
+        bearer: str | None = None,
+        allowed_hosts: set[str],
+    ) -> tuple[bytes, str]:
+        current_url = url
+        current_method = method
+        current_data = data
+        for _ in range(6):
+            validate_https_url(current_url, allowed_hosts, resolve_public=self.resolve_public)
+            headers = {"Accept": "application/json, text/html;q=0.9"}
+            if bearer:
+                headers["Authorization"] = f"Bearer {bearer}"
+            if current_data is not None:
+                headers["Content-Type"] = "application/x-www-form-urlencoded"
+            request = Request(current_url, data=current_data, headers=headers, method=current_method)
+            try:
+                response = self.opener.open(request, timeout=30)
+            except HTTPError as error:
+                if error.code not in {301, 302, 303, 307, 308}:
+                    raise
+                location = error.headers.get("Location", "")
+                if not location:
+                    raise UnsafeUrlError("redirect has no destination") from error
+                next_url = urljoin(current_url, location)
+                validate_https_url(next_url, allowed_hosts, resolve_public=self.resolve_public)
+                if bearer and urlsplit(next_url).netloc != urlsplit(current_url).netloc:
+                    raise UnsafeUrlError("bearer redirect changed origin") from error
+                if (
+                    current_data is not None
+                    and error.code in {307, 308}
+                    and urlsplit(next_url).netloc != urlsplit(current_url).netloc
+                ):
+                    raise UnsafeUrlError("form redirect changed origin") from error
+                if error.code in {301, 302, 303}:
+                    current_method, current_data = "GET", None
+                current_url = next_url
+                continue
+            with response:
+                final_url = response.geturl()
+                validate_https_url(final_url, allowed_hosts, resolve_public=self.resolve_public)
+                if urlsplit(final_url).netloc != urlsplit(current_url).netloc:
+                    raise UnsafeUrlError("unexpected redirect")
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if len(body) > MAX_RESPONSE_BYTES:
+                    raise ValueError("response is too large")
+                return body, final_url
+        raise UnsafeUrlError("too many redirects")
+
+    def external_json(self, url: str, *, bearer: str, allowed_hosts: set[str]):
+        body, _ = self.open_external("GET", url, bearer=bearer, allowed_hosts=allowed_hosts)
+        return json.loads(body)
+
+    def cookie_value(self, name: str) -> str:
+        return next((cookie.value for cookie in self.cookies if cookie.name == name), "")
