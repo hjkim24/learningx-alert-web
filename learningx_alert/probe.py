@@ -8,6 +8,17 @@ from .models import CapabilityResult, CapabilityStatus
 
 
 MATERIAL_TYPES = {"pdf", "file", "document", "ppt", "pptx", "doc", "docx", "hwp", "xlsx", "xls"}
+COMPLETION_STRINGS = {"true", "false", "complete", "completed", "incomplete", "not_completed"}
+
+
+def has_usable_completion(value) -> bool:
+    if isinstance(value, bool):
+        return True
+    if isinstance(value, int):
+        return value in {0, 1}
+    if isinstance(value, str):
+        return value.strip().lower() in COMPLETION_STRINGS
+    return False
 
 
 def probe_canvas(client: CanvasClient, course_ids: Sequence[int]) -> list[CapabilityResult]:
@@ -132,7 +143,9 @@ def probe_learningx(client, course_ids: Sequence[int]) -> list[CapabilityResult]
                     count=len(attendance),
                 )
             )
-            completion_count = sum(1 for entry in attendance if "completed" in entry)
+            completion_count = sum(
+                1 for entry in attendance if has_usable_completion(entry.get("completed"))
+            )
             completion_status = CapabilityStatus.VERIFIED if completion_count else CapabilityStatus.UNVERIFIED
             completion_reason = "" if completion_count else "no_completion_sample"
             results.append(
@@ -170,6 +183,8 @@ def probe_learningx(client, course_ids: Sequence[int]) -> list[CapabilityResult]
                 for item in items
                 if str(item["type"]).lower() in MATERIAL_TYPES and item["required"]
             ]
+            material_status = CapabilityStatus.VERIFIED if materials else CapabilityStatus.UNVERIFIED
+            material_reason = "" if materials else "no_required_material_sample"
             results.append(
                 CapabilityResult(
                     course_id,
@@ -182,8 +197,9 @@ def probe_learningx(client, course_ids: Sequence[int]) -> list[CapabilityResult]
                 CapabilityResult(
                     course_id,
                     "required_materials",
-                    CapabilityStatus.VERIFIED,
+                    material_status,
                     count=len(materials),
+                    reason=material_reason,
                 )
             )
     return results

@@ -15,7 +15,7 @@
 | Assignment list | verified | Four owner-approved course samples returned independently |
 | Own submission state | verified | Own state lookup completed for every returned assignment |
 | LearningX sessionless launch | verified | Launch completed for four course samples |
-| Attendance and completion | verified | Attendance response included explicit completion fields in a positive sample |
+| Attendance and completion | unavailable | Previous sample requires rerun under stricter completion-value validation |
 | Required materials | unavailable | Module reads succeeded, but no positive required-material sample was found |
 
 ## Account B

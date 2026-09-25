@@ -7,10 +7,10 @@ from http.cookiejar import CookieJar
 from typing import Any
 from urllib.error import HTTPError
 from urllib.parse import urlencode, urljoin, urlsplit
-from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, Request, build_opener
+from urllib.request import HTTPRedirectHandler, HTTPCookieProcessor, ProxyHandler, Request, build_opener
 
 from .models import CanvasProfile, Course
-from .network import UnsafeUrlError, validate_https_url
+from .network import PinnedHTTPSHandler, UnsafeUrlError, https_origin, validate_https_url
 
 
 MAX_RESPONSE_BYTES = 5 * 1024 * 1024
@@ -31,17 +31,26 @@ class CanvasClient:
         parsed = urlsplit(self.base_url)
         self.canvas_host = (parsed.hostname or "").lower()
         validate_https_url(self.base_url, {self.canvas_host}, resolve_public=resolve_public)
+        self.canvas_origin = https_origin(self.base_url)
         self.token = token
         self.cookies = CookieJar()
-        self.opener = opener or build_opener(HTTPCookieProcessor(self.cookies), NoRedirectHandler())
+        handlers = [ProxyHandler({}), HTTPCookieProcessor(self.cookies), NoRedirectHandler()]
+        if resolve_public:
+            handlers.append(PinnedHTTPSHandler())
+        self.opener = opener or build_opener(*handlers)
         self.resolve_public = resolve_public
 
-    def _json(self, url: str) -> tuple[Any, dict[str, str], str]:
+    def _validate_canvas_url(self, url: str) -> None:
         validate_https_url(url, {self.canvas_host}, resolve_public=self.resolve_public)
+        if https_origin(url) != self.canvas_origin:
+            raise UnsafeUrlError("destination left the configured Canvas origin")
+
+    def _json(self, url: str) -> tuple[Any, dict[str, str], str]:
+        self._validate_canvas_url(url)
         request = Request(url, headers={"Accept": "application/json", "Authorization": f"Bearer {self.token}"})
         with self.opener.open(request, timeout=30) as response:
             final_url = response.geturl()
-            validate_https_url(final_url, {self.canvas_host}, resolve_public=self.resolve_public)
+            self._validate_canvas_url(final_url)
             body = response.read(MAX_RESPONSE_BYTES + 1)
             if len(body) > MAX_RESPONSE_BYTES:
                 raise ValueError("response is too large")
@@ -115,12 +124,12 @@ class CanvasClient:
                     raise UnsafeUrlError("redirect has no destination") from error
                 next_url = urljoin(current_url, location)
                 validate_https_url(next_url, allowed_hosts, resolve_public=self.resolve_public)
-                if bearer and urlsplit(next_url).netloc != urlsplit(current_url).netloc:
+                if bearer and https_origin(next_url) != https_origin(current_url):
                     raise UnsafeUrlError("bearer redirect changed origin") from error
                 if (
                     current_data is not None
                     and error.code in {307, 308}
-                    and urlsplit(next_url).netloc != urlsplit(current_url).netloc
+                    and https_origin(next_url) != https_origin(current_url)
                 ):
                     raise UnsafeUrlError("form redirect changed origin") from error
                 if error.code in {301, 302, 303}:
@@ -130,7 +139,7 @@ class CanvasClient:
             with response:
                 final_url = response.geturl()
                 validate_https_url(final_url, allowed_hosts, resolve_public=self.resolve_public)
-                if urlsplit(final_url).netloc != urlsplit(current_url).netloc:
+                if https_origin(final_url) != https_origin(current_url):
                     raise UnsafeUrlError("unexpected redirect")
                 body = response.read(MAX_RESPONSE_BYTES + 1)
                 if len(body) > MAX_RESPONSE_BYTES:
@@ -139,6 +148,8 @@ class CanvasClient:
         raise UnsafeUrlError("too many redirects")
 
     def external_json(self, url: str, *, bearer: str, allowed_hosts: set[str]):
+        if https_origin(url) != self.canvas_origin:
+            raise UnsafeUrlError("bearer destination left the configured Canvas origin")
         body, _ = self.open_external("GET", url, bearer=bearer, allowed_hosts=allowed_hosts)
         return json.loads(body)
 

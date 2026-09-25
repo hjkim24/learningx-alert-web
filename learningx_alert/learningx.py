@@ -24,13 +24,21 @@ class LtiFormParser(HTMLParser):
         super().__init__()
         self.action = ""
         self.inputs: list[tuple[str, str]] = []
+        self._form_seen = False
+        self._inside_selected_form = False
 
     def handle_starttag(self, tag: str, attrs) -> None:
         values = dict(attrs)
-        if tag == "form" and not self.action:
+        if tag == "form" and not self._form_seen:
+            self._form_seen = True
+            self._inside_selected_form = True
             self.action = values.get("action") or ""
-        if tag == "input" and values.get("name"):
+        if tag == "input" and self._inside_selected_form and values.get("name"):
             self.inputs.append((values["name"], values.get("value") or ""))
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "form" and self._inside_selected_form:
+            self._inside_selected_form = False
 
 
 class LearningXClient:

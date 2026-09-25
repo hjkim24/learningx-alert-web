@@ -34,6 +34,20 @@ class CanvasClientTests(unittest.TestCase):
             client.courses()
         self.assertEqual(len(opener.requests), 1)
 
+    def test_rejects_same_host_on_changed_port_before_request(self) -> None:
+        opener = FakeOpener([
+            FakeResponse(
+                url="https://canvas.example.edu/api/v1/courses?per_page=100&enrollment_state=active",
+                body=b"[]",
+                headers={"Link": '<https://canvas.example.edu:8443/api?page=2>; rel="next"'},
+            ),
+            FakeResponse(url="https://canvas.example.edu:8443/api?page=2", body=b"[]"),
+        ])
+        client = CanvasClient("https://canvas.example.edu", "sentinel-token", opener=opener, resolve_public=False)
+        with self.assertRaises(PaginationError):
+            client.courses()
+        self.assertEqual(len(opener.requests), 1)
+
     def test_rejects_repeated_next_link(self) -> None:
         repeated = "https://canvas.example.edu/api/v1/courses?page=2"
         opener = FakeOpener([
