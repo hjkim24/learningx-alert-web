@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
@@ -226,6 +227,24 @@ class RunExecutionTests(TestCase):
         self.assertEqual(run.status, ScheduledRun.Status.NEEDS_REVIEW)
         self.assertEqual(delivery.status, Delivery.Status.NEEDS_REVIEW)
         self.assertEqual(delivery.safe_error_code, "delivery_unexpected")
+
+    @patch("accounts.scheduling._start_delivery", return_value=False)
+    def test_lost_delivery_claim_never_calls_provider(self, _start_delivery):
+        run = self.create_run()
+
+        execute_run(
+            run,
+            self.now,
+            collector=lambda user, now: self.result,
+            sender=self.fail_if_called,
+        )
+
+        run.refresh_from_db()
+        delivery = run.deliveries.get()
+        self.assertEqual(run.status, ScheduledRun.Status.NEEDS_REVIEW)
+        self.assertEqual(run.safe_error_code, "delivery_state_conflict")
+        self.assertEqual(delivery.status, Delivery.Status.NEEDS_REVIEW)
+        self.assertEqual(delivery.safe_error_code, "delivery_state_conflict")
 
     def test_missing_destination_fails_without_delivery(self):
         run = self.create_run()

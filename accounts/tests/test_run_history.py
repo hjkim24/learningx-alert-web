@@ -146,3 +146,42 @@ class RunHistoryTests(TestCase):
         self.assertContains(response, reverse("run_detail", args=(self.own_run.pk,)))
         self.assertNotContains(response, reverse("run_detail", args=(self.other_run.pk,)))
         self.assertEqual(ScheduledRun.objects.count(), 2)
+
+    @patch(
+        "accounts.views.timezone.now",
+        return_value=datetime(2026, 9, 26, 0, 0, 59, tzinfo=UTC),
+    )
+    def test_dashboard_advances_past_a_started_schedule_minute(self, _now):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "2026.09.26 20:00 KST")
+
+    @patch(
+        "accounts.views.timezone.now",
+        return_value=datetime(2026, 9, 26, 0, 0, tzinfo=UTC),
+    )
+    def test_dashboard_advances_past_an_already_claimed_current_slot(self, _now):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "2026.09.26 20:00 KST")
+
+    @patch(
+        "accounts.views.timezone.now",
+        return_value=datetime(2026, 9, 26, 1, 0, tzinfo=UTC),
+    )
+    def test_dashboard_requires_an_assignment_enabled_course(self, _now):
+        self.user.course_selections.update(include_assignments=False)
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.context["selected_course_count"], 0)
+        self.assertIsNone(response.context["next_run"])
+        self.assertContains(
+            response,
+            "Canvas, 과목, 알림 시간과 대상을 모두 설정하면 표시됩니다.",
+        )

@@ -4,8 +4,10 @@ from unittest.mock import patch
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
+from accounts.management.commands import run_scheduler
 from accounts.collection import AlertItem, CollectionResult, CourseOutcome
 from accounts.models import Delivery, Destination, ScheduledRun
 from accounts.scheduling import reconcile_interrupted_runs
@@ -83,6 +85,34 @@ class WorkerTests(TestCase):
         self.assertEqual(calls, [self.user.pk])
         self.assertEqual(run.status, ScheduledRun.Status.SUCCEEDED)
         self.assertFalse(run.deliveries.filter(idempotency_key="pending-key").exists())
+
+    def test_pending_and_interrupted_runs_are_recollected_and_resumed(self):
+        runs = [
+            ScheduledRun.objects.create(
+                user=self.user,
+                scheduled_for=self.now - timedelta(minutes=offset),
+                status=status,
+            )
+            for offset, status in enumerate(
+                (
+                    ScheduledRun.Status.PENDING,
+                    ScheduledRun.Status.INTERRUPTED,
+                ),
+                start=1,
+            )
+        ]
+        calls = []
+
+        reconcile_interrupted_runs(
+            self.now,
+            collector=self.collector(calls),
+            sender=self.sender,
+        )
+
+        self.assertEqual(calls, [self.user.pk, self.user.pk])
+        for run in runs:
+            run.refresh_from_db()
+            self.assertEqual(run.status, ScheduledRun.Status.SUCCEEDED)
 
     def test_sending_delivery_becomes_needs_review_without_provider_call(self):
         run = self.create_running_run()
@@ -201,6 +231,34 @@ class WorkerTests(TestCase):
         call_command("run_scheduler")
 
         sleep.assert_called_once_with(29.75)
+
+    @patch("accounts.management.commands.run_scheduler.time.sleep")
+    @patch(
+        "accounts.management.commands.run_scheduler.time.time",
+        side_effect=(120.5, 181.0, 181.0),
+    )
+    @patch(
+        "accounts.management.commands.run_scheduler.run_due_rules",
+        side_effect=((), KeyboardInterrupt),
+    )
+    @patch("accounts.management.commands.run_scheduler.reconcile_interrupted_runs")
+    def test_worker_rescans_immediately_after_crossing_a_minute(
+        self,
+        _reconcile,
+        scan,
+        clock,
+        sleep,
+    ):
+        call_command("run_scheduler")
+
+        self.assertEqual(scan.call_count, 2)
+        self.assertEqual(clock.call_count, 3)
+        sleep.assert_not_called()
+
+    def test_second_worker_for_same_database_is_rejected(self):
+        with run_scheduler.scheduler_lock():
+            with self.assertRaisesMessage(CommandError, "scheduler already running"):
+                call_command("run_scheduler", "--once")
 
     @patch(
         "accounts.management.commands.run_scheduler.reconcile_interrupted_runs",

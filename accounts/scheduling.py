@@ -99,6 +99,19 @@ def _finish_open_deliveries(run, status, safe_error_code, now):
     )
 
 
+def _start_delivery(delivery, now):
+    return (
+        Delivery.objects.filter(
+            pk=delivery.pk,
+            status=Delivery.Status.PENDING,
+        ).update(
+            status=Delivery.Status.SENDING,
+            started_at=now,
+        )
+        == 1
+    )
+
+
 @sensitive_variables()
 def execute_run(
     run,
@@ -189,13 +202,18 @@ def execute_run(
 
     webhook_url = decrypt_secret(destination.encrypted_webhook_url)
     for delivery, part in zip(deliveries, parts, strict=True):
-        with transaction.atomic():
-            Delivery.objects.filter(
-                pk=delivery.pk,
-                status=Delivery.Status.PENDING,
-            ).update(
-                status=Delivery.Status.SENDING,
-                started_at=now,
+        if not _start_delivery(delivery, now):
+            _finish_open_deliveries(
+                run,
+                Delivery.Status.NEEDS_REVIEW,
+                "delivery_state_conflict",
+                now,
+            )
+            return _finish_run(
+                run,
+                ScheduledRun.Status.NEEDS_REVIEW,
+                now,
+                "delivery_state_conflict",
             )
         try:
             receipt = sender(destination.kind, webhook_url, part)
@@ -274,7 +292,13 @@ def reconcile_interrupted_runs(
     sender=send_webhook_part,
 ):
     runs = tuple(
-        ScheduledRun.objects.filter(status=ScheduledRun.Status.RUNNING).order_by("id")
+        ScheduledRun.objects.filter(
+            status__in=(
+                ScheduledRun.Status.PENDING,
+                ScheduledRun.Status.RUNNING,
+                ScheduledRun.Status.INTERRUPTED,
+            )
+        ).order_by("id")
     )
     for run in runs:
         deliveries = tuple(run.deliveries.all())

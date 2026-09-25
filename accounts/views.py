@@ -40,7 +40,7 @@ from .services import (
 from .scheduling import SEOUL
 
 
-def _next_scheduled_at(rule, now):
+def _next_scheduled_at(rule, now, *, current_slot_claimed=False):
     local_now = now.astimezone(SEOUL)
     local_minute = local_now.replace(second=0, microsecond=0)
     candidates = []
@@ -52,7 +52,9 @@ def _next_scheduled_at(rule, now):
             configured.replace(second=0, microsecond=0),
             tzinfo=SEOUL,
         )
-        if candidate < local_minute:
+        if candidate < local_now or (
+            current_slot_claimed and candidate == local_minute
+        ):
             candidate += timedelta(days=1)
         candidates.append(candidate)
     return min(candidates) if candidates else None
@@ -69,6 +71,7 @@ def dashboard(request):
     selected_course_count = CourseSelection.objects.filter(
         user=request.user,
         enabled=True,
+        include_assignments=True,
     ).count()
     destination = (
         Destination.objects.filter(user=request.user)
@@ -78,7 +81,16 @@ def dashboard(request):
     rule = NotificationRule.objects.filter(user=request.user).first()
     next_run = None
     if connection and selected_course_count and destination and rule:
-        next_run = _next_scheduled_at(rule, timezone.now())
+        now = timezone.now()
+        current_slot_claimed = ScheduledRun.objects.filter(
+            user=request.user,
+            scheduled_for=now.replace(second=0, microsecond=0),
+        ).exists()
+        next_run = _next_scheduled_at(
+            rule,
+            now,
+            current_slot_claimed=current_slot_claimed,
+        )
 
     recent_runs = list(
         ScheduledRun.objects.filter(user=request.user)
