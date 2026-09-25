@@ -21,4 +21,4 @@ class PageContractTests(TestCase):
         self.assertContains(response, 'autocomplete="off"')
         self.assertContains(response, "과목 선택")
         self.assertContains(response, "알림 설정")
-        self.assertContains(response, "자동 실행은 아직 시작되지 않았습니다")
+        self.assertContains(response, "예약 실행은 별도 스케줄러가 처리합니다")

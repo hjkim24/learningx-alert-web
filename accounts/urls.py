@@ -19,4 +19,6 @@ urlpatterns = [
     path("destination/save/", views.destination_save, name="destination_save"),
     path("destination/delete/", views.destination_delete, name="destination_delete"),
     path("destination/test/", views.destination_test, name="destination_test"),
+    path("runs/<int:pk>/", views.run_detail, name="run_detail"),
+    path("account/delete/", views.account_delete, name="account_delete"),
 ]

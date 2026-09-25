@@ -1,6 +1,9 @@
+from datetime import datetime, timedelta
+
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_POST
@@ -13,7 +16,15 @@ from .forms import (
     DestinationForm,
     NotificationRuleForm,
 )
-from .models import CanvasConnection, CourseSelection, Destination, NotificationRule
+from .models import (
+    CanvasConnection,
+    CourseRunResult,
+    CourseSelection,
+    Delivery,
+    Destination,
+    NotificationRule,
+    ScheduledRun,
+)
 from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
@@ -26,9 +37,29 @@ from .services import (
     decrypt_secret,
     verify_and_store_connection,
 )
+from .scheduling import SEOUL
+
+
+def _next_scheduled_at(rule, now):
+    local_now = now.astimezone(SEOUL)
+    local_minute = local_now.replace(second=0, microsecond=0)
+    candidates = []
+    for configured in (rule.first_time, rule.second_time):
+        if configured is None:
+            continue
+        candidate = datetime.combine(
+            local_now.date(),
+            configured.replace(second=0, microsecond=0),
+            tzinfo=SEOUL,
+        )
+        if candidate < local_minute:
+            candidate += timedelta(days=1)
+        candidates.append(candidate)
+    return min(candidates) if candidates else None
 
 
 @login_required
+@require_GET
 def dashboard(request):
     connection = (
         CanvasConnection.objects.filter(user=request.user)
@@ -44,16 +75,76 @@ def dashboard(request):
         .values("kind", "status")
         .first()
     )
+    rule = NotificationRule.objects.filter(user=request.user).first()
+    next_run = None
+    if connection and selected_course_count and destination and rule:
+        next_run = _next_scheduled_at(rule, timezone.now())
+
+    recent_runs = list(
+        ScheduledRun.objects.filter(user=request.user)
+        .only(
+            "id",
+            "scheduled_for",
+            "status",
+            "safe_error_code",
+            "finished_at",
+        )[:5]
+    )
+    latest_run = recent_runs[0] if recent_runs else None
+    course_failures = CourseRunResult.objects.none()
+    delivery_problems = Delivery.objects.none()
+    if latest_run:
+        course_failures = CourseRunResult.objects.filter(
+            run=latest_run,
+            run__user=request.user,
+            status=CourseRunResult.Status.FAILED,
+        ).only("course_name", "error_code", "safe_summary")
+        delivery_problems = Delivery.objects.filter(
+            run=latest_run,
+            run__user=request.user,
+            status__in=(
+                Delivery.Status.DEFINITELY_FAILED,
+                Delivery.Status.NEEDS_REVIEW,
+            ),
+        ).only("part_number", "status", "safe_error_code")
     return render(
         request,
         "accounts/dashboard.html",
         {
             "connection": connection,
             "destination": destination,
+            "course_failures": course_failures,
+            "delivery_problems": delivery_problems,
             "form": CanvasTokenForm(),
+            "next_run": next_run,
+            "recent_runs": recent_runs,
             "selected_course_count": selected_course_count,
         },
     )
+
+
+@login_required
+@require_GET
+def run_detail(request, pk):
+    run = get_object_or_404(
+        ScheduledRun.objects.prefetch_related(
+            "course_results",
+            "items",
+            "deliveries",
+        ),
+        pk=pk,
+        user=request.user,
+    )
+    return render(request, "accounts/run_detail.html", {"run": run})
+
+
+@login_required
+@require_POST
+def account_delete(request):
+    user = request.user
+    logout(request)
+    user.delete()
+    return redirect("account_login")
 
 
 @sensitive_post_parameters("token")

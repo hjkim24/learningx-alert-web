@@ -675,6 +675,95 @@ h2 {
   color: var(--alert);
 }
 
+.history-grid {
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.history-panel,
+.danger-zone {
+  padding: 40px clamp(24px, 5vw, 56px);
+}
+
+.history-panel:first-child {
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.history-panel.full-panel,
+.danger-zone {
+  border-top: 1px solid var(--line);
+}
+
+.history-panel.full-panel {
+  background: var(--surface);
+}
+
+.schedule-time {
+  margin: 20px 0 8px;
+  font-size: clamp(1.35rem, 3vw, 2.2rem);
+  font-weight: 750;
+}
+
+.history-list {
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history-list li,
+.problem-row {
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) auto auto;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.history-list a {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.problem-row {
+  margin: 0;
+}
+
+.empty-state.compact {
+  margin: 20px 0 0;
+  padding: 18px 0;
+}
+
+.run-meta {
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 0 clamp(24px, 5vw, 56px);
+}
+
+.run-meta div {
+  padding: 20px 16px;
+}
+
+.run-meta dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.run-meta dd {
+  margin: 7px 0 0;
+  font-weight: 700;
+}
+
+.danger-zone p:not(.section-index) {
+  max-width: 48rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 @media (hover: hover) {
   .primary-button:hover {
     background: #2455bb;
@@ -725,8 +814,17 @@ h2 {
   .connected-summary dl,
   .token-form,
   .destination-summary,
-  .outcome {
+  .outcome,
+  .history-grid,
+  .history-list li,
+  .problem-row,
+  .run-meta {
     grid-template-columns: 1fr;
+  }
+
+  .history-panel:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
   }
 
   .settings-nav {
