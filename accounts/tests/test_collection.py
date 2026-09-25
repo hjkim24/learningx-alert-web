@@ -140,6 +140,26 @@ class CollectionTests(TestCase):
         self.assertEqual(result.outcomes[0].status, "failed")
         self.assertEqual(result.outcomes[0].error_code, "submission_state_failed")
 
+    def test_unknown_submission_states_fail_closed(self):
+        self.fake.assignments_by_course[101] = [self.assignment(1)]
+
+        for state in ("", "mystery_state"):
+            with self.subTest(state=state):
+                self.fake.submissions = {1: state}
+
+                result = collect_for_user(
+                    self.user,
+                    self.now,
+                    client_class=self.fake_class,
+                )
+
+                self.assertEqual(result.items, ())
+                self.assertEqual(result.outcomes[0].status, "failed")
+                self.assertEqual(
+                    result.outcomes[0].error_code,
+                    "submission_state_failed",
+                )
+
     def test_collection_reads_only_current_users_enabled_courses(self):
         CourseSelection.objects.create(
             user=self.other,

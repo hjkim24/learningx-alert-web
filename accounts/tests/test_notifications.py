@@ -39,6 +39,7 @@ class NotificationTests(SimpleTestCase):
         for invalid in (
             "http://discord.com/api/webhooks/123/token",
             "https://evil.example/api/webhooks/123/token",
+            "https://discord.com:443/api/webhooks/123/token",
             "https://discord.com:8443/api/webhooks/123/token",
             "https://discord.com/api/webhooks/123/token?wait=true",
             "https://discord.com/api/webhooks/123/token#fragment",

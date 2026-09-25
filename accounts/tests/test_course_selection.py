@@ -143,6 +143,28 @@ class CourseSelectionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, own.course_name)
         self.assertNotContains(response, "타인 과목")
+        sync.assert_not_called()
+
+    @patch("accounts.views.sync_courses")
+    def test_explicit_sync_posts_once(self, sync):
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("course_sync"))
+
+        sync.assert_called_once_with(self.user)
+        self.assertRedirects(
+            response,
+            reverse("course_settings"),
+            fetch_redirect_response=False,
+        )
+
+    def test_sync_requires_csrf_token(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+
+        response = client.post(reverse("course_sync"))
+
+        self.assertEqual(response.status_code, 403)
 
     def test_save_updates_only_current_users_known_course_ids(self):
         own = CourseSelection.objects.create(

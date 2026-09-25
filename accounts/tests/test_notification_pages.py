@@ -128,6 +128,14 @@ class NotificationPageTests(TestCase):
             f'{reverse("account_login")}?next={reverse("notification_settings")}',
         )
 
+    def test_notification_settings_get_does_not_create_default_rule(self):
+        self.rule.delete()
+
+        response = self.client.get(reverse("notification_settings"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(NotificationRule.objects.filter(user=self.user).exists())
+
     def test_lookahead_out_of_range_returns_korean_error_and_preserves_rule(self):
         for value, message in (("0", "1일 이상"), ("15", "14일 이하")):
             with self.subTest(value=value):

@@ -116,6 +116,9 @@ def collect_for_user(user, now, client_class=CanvasClient):
                 continue
             if state in SUBMITTED_STATES:
                 continue
+            if state != "unsubmitted":
+                submission_failed = True
+                continue
             items.append(
                 AlertItem(
                     selection.canvas_course_id,

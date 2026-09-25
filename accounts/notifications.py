@@ -36,6 +36,7 @@ class AmbiguousDeliveryError(Exception):
     pass
 
 
+@sensitive_variables()
 def validate_webhook_url(kind, value, resolve_public=True):
     normalized_url = value.strip()
     providers = {
@@ -51,7 +52,7 @@ def validate_webhook_url(kind, value, resolve_public=True):
             resolve_public=resolve_public,
         )
         if (
-            parsed.port not in (None, 443)
+            parsed.port is not None
             or parsed.query
             or parsed.fragment
             or not path_pattern.fullmatch(parsed.path)
@@ -125,6 +126,7 @@ def _delivery_opener(resolve_public):
     return build_opener(*handlers)
 
 
+@sensitive_variables()
 def send_webhook_part(
     kind,
     webhook_url,

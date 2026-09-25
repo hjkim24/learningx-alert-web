@@ -86,7 +86,21 @@ def canvas_disconnect(request):
 
 
 @login_required
+@require_GET
 def course_settings(request):
+    formset = CourseSelectionFormSet(
+        queryset=CourseSelection.objects.filter(user=request.user)
+    )
+    return render(
+        request,
+        "accounts/course_settings.html",
+        {"formset": formset},
+    )
+
+
+@login_required
+@require_POST
+def course_sync(request):
     try:
         sync_courses(request.user)
     except CanvasConnection.DoesNotExist:
@@ -96,15 +110,9 @@ def course_settings(request):
             request,
             "과목 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
         )
-
-    formset = CourseSelectionFormSet(
-        queryset=CourseSelection.objects.filter(user=request.user)
-    )
-    return render(
-        request,
-        "accounts/course_settings.html",
-        {"formset": formset},
-    )
+    else:
+        messages.success(request, "Canvas 과목 목록을 새로고침했습니다.")
+    return redirect("course_settings")
 
 
 @login_required
@@ -152,8 +160,8 @@ def _notification_settings_context(request, *, rule_form=None, destination_form=
         .first()
     )
     if rule_form is None:
-        rule, _ = NotificationRule.objects.get_or_create(user=request.user)
-        rule_form = NotificationRuleForm(instance=rule)
+        rule = NotificationRule.objects.filter(user=request.user).first()
+        rule_form = NotificationRuleForm(instance=rule or NotificationRule())
     if destination_form is None:
         initial = {"kind": destination["kind"]} if destination else None
         destination_form = DestinationForm(initial=initial)
@@ -254,6 +262,12 @@ def destination_test(request):
             destination.kind,
             webhook_url,
             "LearningX Alert 시험 알림입니다.",
+        )
+    except WebhookValidationError:
+        destination.status = Destination.Status.DEFINITELY_FAILED
+        messages.error(
+            request,
+            "저장된 웹훅 주소를 사용할 수 없습니다. 새 URL을 저장해 주세요.",
         )
     except DefiniteDeliveryError:
         destination.status = Destination.Status.DEFINITELY_FAILED

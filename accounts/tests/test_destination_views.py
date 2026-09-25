@@ -21,6 +21,20 @@ PUBLIC_DNS = [
         ("93.184.216.34", 443),
     )
 ]
+PRIVATE_DNS = [
+    (
+        socket.AF_INET,
+        socket.SOCK_STREAM,
+        socket.IPPROTO_TCP,
+        "",
+        ("127.0.0.1", 443),
+    )
+]
+
+
+class UnexpectedOpener:
+    def open(self, request, timeout=30):
+        raise RuntimeError("unexpected sender failure")
 
 
 @override_settings(CREDENTIAL_ENCRYPTION_KEYS=[KEY])
@@ -169,6 +183,47 @@ class DestinationViewTests(TestCase):
                 self.assertNotContains(response, str(error))
                 self.assertNotContains(response, self.discord_url)
                 self.assertNotContains(response, destination.encrypted_webhook_url)
+
+    @patch("accounts.notifications._delivery_opener")
+    @patch("learningx_alert.network.socket.getaddrinfo", return_value=PRIVATE_DNS)
+    def test_stored_webhook_that_becomes_unsafe_fails_without_request(
+        self,
+        _resolver,
+        opener_factory,
+    ):
+        destination = self.create_destination()
+
+        response = self.client.post(reverse("destination_test"), follow=True)
+
+        opener_factory.assert_not_called()
+        destination.refresh_from_db()
+        self.assertEqual(destination.status, Destination.Status.DEFINITELY_FAILED)
+        self.assertIsNotNone(destination.last_tested_at)
+        self.assertContains(response, "저장된 웹훅 주소를 사용할 수 없습니다.")
+        self.assertNotContains(response, self.discord_url)
+        self.assertNotContains(response, destination.encrypted_webhook_url)
+
+    @override_settings(DEBUG=True)
+    @patch("accounts.notifications._delivery_opener", return_value=UnexpectedOpener())
+    @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
+    def test_debug_error_page_redacts_sender_url_locals(
+        self,
+        _resolver,
+        _opener_factory,
+    ):
+        destination = self.create_destination()
+        self.client.raise_request_exception = False
+
+        with self.assertLogs("django.request", level="ERROR"):
+            response = self.client.post(reverse("destination_test"))
+
+        self.assertEqual(response.status_code, 500)
+        self.assertNotContains(response, self.discord_url, status_code=500)
+        self.assertNotContains(
+            response,
+            destination.encrypted_webhook_url,
+            status_code=500,
+        )
 
     @patch("accounts.views.send_webhook_part")
     def test_other_users_destination_is_never_tested_or_rendered(self, send):

@@ -7,6 +7,7 @@ urlpatterns = [
     path("canvas/", views.canvas_connect, name="canvas_connect"),
     path("canvas/disconnect/", views.canvas_disconnect, name="canvas_disconnect"),
     path("courses/", views.course_settings, name="course_settings"),
+    path("courses/sync/", views.course_sync, name="course_sync"),
     path("courses/save/", views.course_settings_save, name="course_settings_save"),
     path("preview/", views.preview, name="preview"),
     path("notifications/", views.notification_settings, name="notification_settings"),
