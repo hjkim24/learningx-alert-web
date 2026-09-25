@@ -1,19 +1,39 @@
+{% extends "base.html" %}
 {% load socialaccount %}
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>로그인 · LearningX Alert</title>
-</head>
-<body>
-  <main>
-    <h1>LearningX Alert</h1>
-    <p>Google 계정으로 파일럿 접근 권한을 확인합니다.</p>
-    <form method="post" action="{% provider_login_url 'google' process='login' %}">
-      {% csrf_token %}
-      <button type="submit">Google로 계속</button>
-    </form>
-  </main>
-</body>
-</html>
+
+{% block title %}로그인 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <div class="split login-layout">
+    <section class="hero" aria-labelledby="login-title">
+      <p class="eyebrow">학생을 위한 마감 점검 도구</p>
+      <h1 id="login-title">놓치지 않도록,<br>한 번만 설정하세요.</h1>
+      <p class="hero-copy">
+        LearningX와 Canvas에 흩어진 마감 정보를 한곳에서 확인하기 위한
+        비공개 파일럿입니다.
+      </p>
+    </section>
+
+    <section class="login-panel" aria-labelledby="login-steps-title">
+      <div>
+        <p class="section-index" aria-hidden="true">01—02</p>
+        <h2 id="login-steps-title">두 연결은 서로 다릅니다</h2>
+      </div>
+      <ol class="connection-steps">
+        <li>
+          <strong>Google 로그인</strong>
+          <span>서비스 사용자 본인을 확인합니다.</span>
+        </li>
+        <li>
+          <strong>Canvas 연결</strong>
+          <span>로그인 후 개인 액세스 토큰을 별도로 연결합니다.</span>
+        </li>
+      </ol>
+      <form method="post" action="{% provider_login_url 'google' process='login' %}">
+        {% csrf_token %}
+        <button class="primary-button full-width" type="submit">Google로 계속</button>
+      </form>
+      <p class="fine-print">설정이 끝나기 전까지 아직 알림은 시작되지 않습니다.</p>
+    </section>
+  </div>
+{% endblock %}

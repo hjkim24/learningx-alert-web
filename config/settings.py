@@ -4,9 +4,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "local-development-only")
-if not DEBUG and SECRET_KEY == "local-development-only":
-    raise RuntimeError("DJANGO_SECRET_KEY is required when DJANGO_DEBUG=0")
+DJANGO_SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+SECRET_KEY = DJANGO_SECRET_KEY or "local-development-only"
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -63,6 +62,7 @@ DATABASES = {
 }
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "account_login"
 AUTHENTICATION_BACKENDS = ["allauth.account.auth_backends.AuthenticationBackend"]
@@ -76,11 +76,13 @@ PILOT_ALLOWED_EMAILS = {
     if email.strip()
 }
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.PilotSocialAccountAdapter"
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": os.environ.get("GOOGLE_CLIENT_ID", ""),
-            "secret": os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+            "client_id": GOOGLE_CLIENT_ID,
+            "secret": GOOGLE_CLIENT_SECRET,
             "key": "",
         },
         "SCOPE": ["profile", "email"],
@@ -94,3 +96,22 @@ CREDENTIAL_ENCRYPTION_KEYS = [
     for key in os.environ.get("CREDENTIAL_ENCRYPTION_KEYS", "").split(",")
     if key.strip()
 ]
+
+if not DEBUG:
+    required_production_settings = {
+        "DJANGO_SECRET_KEY": DJANGO_SECRET_KEY,
+        "GOOGLE_CLIENT_ID": GOOGLE_CLIENT_ID,
+        "GOOGLE_CLIENT_SECRET": GOOGLE_CLIENT_SECRET,
+        "CREDENTIAL_ENCRYPTION_KEYS": CREDENTIAL_ENCRYPTION_KEYS,
+    }
+    missing = [name for name, value in required_production_settings.items() if not value]
+    if missing:
+        raise RuntimeError(
+            "Missing required production configuration: " + ", ".join(missing)
+        )
+
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
