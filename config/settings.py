@@ -88,3 +88,9 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")
+CREDENTIAL_ENCRYPTION_KEYS = [
+    key.strip()
+    for key in os.environ.get("CREDENTIAL_ENCRYPTION_KEYS", "").split(",")
+    if key.strip()
+]
