@@ -1,0 +1,16 @@
+.git
+.github
+.superpowers
+.venv
+__pycache__
+*.py[cod]
+*.egg-info
+.env
+.env.*
+db.sqlite3
+*.sqlite3
+staticfiles
+accounts/tests
+tests
+docs
+infra
