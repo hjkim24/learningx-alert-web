@@ -1,4 +1,12 @@
-mock_provider "oci" {}
+mock_provider "oci" {
+  override_during = plan
+
+  mock_data "oci_vault_secrets" {
+    defaults = {
+      secrets = [{ id = "ocid1.vaultsecret.oc1.ap-chuncheon-1.test" }]
+    }
+  }
+}
 
 variables {
   tenancy_ocid                       = "ocid1.tenancy.oc1..test"
@@ -33,7 +41,7 @@ variables {
 }
 
 run "approved_production_resources" {
-  command = plan
+  command = apply
 
   assert {
     condition = (
@@ -90,5 +98,28 @@ run "approved_production_resources" {
   assert {
     condition     = length(oci_core_instance.app_host.create_vnic_details[0].nsg_ids) == length(var.instance_existing_nsg_ids) + 1
     error_message = "the app instance must retain existing NSGs and add exactly the web NSG"
+  }
+
+  assert {
+    condition = (
+      data.oci_vault_secrets.django_secret_key.name == "django-secret-key" &&
+      data.oci_vault_secrets.google_client_secret.name == "google-client-secret" &&
+      data.oci_vault_secrets.credential_encryption_keys.name == "credential-encryption-keys" &&
+      data.oci_vault_secrets.django_secret_key.state == "ACTIVE" &&
+      data.oci_vault_secrets.google_client_secret.state == "ACTIVE" &&
+      data.oci_vault_secrets.credential_encryption_keys.state == "ACTIVE"
+    )
+    error_message = "Vault metadata lookups must use the three exact active secret names"
+  }
+
+  assert {
+    condition = (
+      output.app_domain == var.app_domain &&
+      output.object_storage_namespace == var.object_storage_namespace &&
+      output.django_secret_key_ocid == "ocid1.vaultsecret.oc1.ap-chuncheon-1.test" &&
+      output.google_client_secret_ocid == "ocid1.vaultsecret.oc1.ap-chuncheon-1.test" &&
+      output.credential_encryption_keys_ocid == "ocid1.vaultsecret.oc1.ap-chuncheon-1.test"
+    )
+    error_message = "runtime outputs must expose metadata coordinates without bundle content"
   }
 }
