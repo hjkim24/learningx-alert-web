@@ -61,7 +61,11 @@ set +a
 
 웹훅 URL은 저장 전에 Discord 또는 Slack의 공식 HTTPS 형식과 공개 IP 해석 여부를 확인하고 Fernet으로 암호화합니다. 저장만으로는 메시지를 보내지 않습니다. “시험 알림 보내기”를 누르면 한 번만 시도하며, 응답이 애매하거나 연결이 끊긴 경우 자동 재시도하지 않고 대상 채널을 직접 확인하도록 표시합니다.
 
-예약 전송도 자동 재시도하지 않습니다. `definitely_failed`는 공급자가 거부를 확정한 경우이고, `needs_review`는 타임아웃이나 전송 중 중단처럼 수신 여부를 확정할 수 없어 대상 채널을 직접 확인해야 하는 경우입니다. OCI 배포는 아직 완료 상태로 간주하지 않으며 별도 Terraform 및 실환경 검증 단계에서 진행합니다.
+예약 전송도 자동 재시도하지 않습니다. `definitely_failed`는 공급자가 거부를 확정한 경우이고, `needs_review`는 타임아웃이나 전송 중 중단처럼 수신 여부를 확정할 수 없어 대상 채널을 직접 확인해야 하는 경우입니다.
+
+## 운영 배포
+
+OCI 운영 환경은 `https://alert.sobok-app.com`에서 실행됩니다. HTTPS 인증서, 공개 health check, 단일 스케줄러, Vault 시크릿 파일 권한, SQLite 백업·복원 무결성, 기존 `tossterm`·Tailscale 공존을 검증했습니다. 배포, 복원, 롤백 절차는 [OCI 운영 런북](docs/operations/oci-production.md)을 따릅니다.
 
 ## 테스트
 
