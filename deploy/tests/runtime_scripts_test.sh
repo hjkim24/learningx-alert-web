@@ -97,6 +97,20 @@ exit 19
 FAKE_OCI
 chmod +x "$fake_oci"
 
+fake_bin="$test_root/bin"
+mkdir -p "$fake_bin"
+cat >"$fake_bin/install" <<'FAKE_INSTALL'
+#!/usr/bin/env bash
+set -euo pipefail
+
+destination=${!#}
+if [[ "${FAKE_INSTALL_MODE:-success}" == "fail-third" && "$destination" == */credential-encryption-keys ]]; then
+    exit 23
+fi
+exec /usr/bin/install "$@"
+FAKE_INSTALL
+chmod +x "$fake_bin/install"
+
 current_uid=$(id -u)
 current_gid=$(id -g)
 secrets_dir="$test_root/secrets"
@@ -106,6 +120,7 @@ for name in django-secret-key google-client-secret credential-encryption-keys; d
 done
 
 run_fetch() {
+    PATH="$fake_bin:$PATH" \
     SECRETS_DIR="$secrets_dir" \
     SECRET_UID="$current_uid" \
     SECRET_GID="$current_gid" \
@@ -114,6 +129,7 @@ run_fetch() {
     GOOGLE_CLIENT_SECRET_OCID=google-ocid \
     CREDENTIAL_ENCRYPTION_KEYS_OCID=encryption-ocid \
     FAKE_OCI_MODE="$1" \
+    FAKE_INSTALL_MODE="${2:-success}" \
     bash deploy/fetch-secrets.sh
 }
 
@@ -131,8 +147,16 @@ done
 assert_not_contains "$empty_output" "test-google-value"
 assert_not_contains "$empty_output" "$test_root"
 
+install_failure_output=$(run_fetch success fail-third 2>&1) && fail "partial install unexpectedly succeeded"
+for name in django-secret-key google-client-secret credential-encryption-keys; do
+    assert_equal "$(<"$secrets_dir/$name")" "old-value"
+done
+assert_not_contains "$install_failure_output" "test-google-value"
+assert_not_contains "$install_failure_output" "$test_root"
+
 success_output=$(run_fetch success 2>&1)
 assert_contains "$success_output" "secrets_ready"
+[[ -L "$secrets_dir" ]] || fail "secrets directory was not switched to a generation link"
 assert_equal "$(<"$secrets_dir/django-secret-key")" "test-django-value"
 assert_equal "$(<"$secrets_dir/google-client-secret")" "test-google-value"
 assert_equal "$(<"$secrets_dir/credential-encryption-keys")" "test-encryption-value"
@@ -140,6 +164,17 @@ for name in django-secret-key google-client-secret credential-encryption-keys; d
     assert_equal "$(file_mode "$secrets_dir/$name")" "440"
     assert_equal "$(file_owner "$secrets_dir/$name")" "$current_uid:$current_gid"
 done
+
+repeat_install_failure=$(run_fetch success fail-third 2>&1) && fail "repeat partial install unexpectedly succeeded"
+for name in django-secret-key google-client-secret credential-encryption-keys; do
+    case "$name" in
+        django-secret-key) expected="test-django-value" ;;
+        google-client-secret) expected="test-google-value" ;;
+        credential-encryption-keys) expected="test-encryption-value" ;;
+    esac
+    assert_equal "$(<"$secrets_dir/$name")" "$expected"
+done
+assert_not_contains "$repeat_install_failure" "$test_root"
 
 database_path="$test_root/db.sqlite3"
 backup_dir="$test_root/backups"

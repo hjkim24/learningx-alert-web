@@ -14,10 +14,14 @@ from accounts.scheduling import reconcile_interrupted_runs, run_due_rules
 
 @contextmanager
 def scheduler_lock():
-    database_name = str(settings.DATABASES["default"]["NAME"]).encode()
-    database_key = hashlib.sha256(database_name).hexdigest()[:16]
-    lock_path = Path(tempfile.gettempdir()) / f"learningx-alert-{database_key}.lock"
-    # ponytail: host-local lock matches the single-host pilot; use a DB lease for multiple hosts.
+    database_name = str(settings.DATABASES["default"]["NAME"])
+    if database_name.startswith("file:") and "mode=memory" in database_name:
+        database_key = hashlib.sha256(database_name.encode()).hexdigest()[:16]
+        lock_path = Path(tempfile.gettempdir()) / f"learningx-alert-{database_key}.lock"
+    else:
+        database_path = Path(database_name)
+        lock_path = database_path.with_name(f"{database_path.name}.scheduler.lock")
+    # ponytail: shared-volume lock covers one host; use a DB lease for multiple hosts.
     with lock_path.open("a+") as lock_file:
         try:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

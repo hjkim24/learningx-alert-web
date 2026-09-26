@@ -10,10 +10,22 @@ SECRET_GID=${SECRET_GID:-10001}
 : "${GOOGLE_CLIENT_SECRET_OCID:?GOOGLE_CLIENT_SECRET_OCID is required}"
 : "${CREDENTIAL_ENCRYPTION_KEYS_OCID:?CREDENTIAL_ENCRYPTION_KEYS_OCID is required}"
 
-staging_dir=""
+download_dir=""
+generation_dir=""
+legacy_dir=""
+link_path=""
 cleanup() {
-    if [[ -n "$staging_dir" && -d "$staging_dir" ]]; then
-        rm -rf -- "$staging_dir"
+    if [[ -n "$legacy_dir" && -d "$legacy_dir" && ! -e "$SECRETS_DIR" ]]; then
+        mv "$legacy_dir" "$SECRETS_DIR"
+    fi
+    if [[ -n "$link_path" && -L "$link_path" ]]; then
+        rm -f -- "$link_path"
+    fi
+    if [[ -n "$download_dir" && -d "$download_dir" ]]; then
+        rm -rf -- "$download_dir"
+    fi
+    if [[ -n "$generation_dir" && -d "$generation_dir" ]]; then
+        rm -rf -- "$generation_dir"
     fi
 }
 trap cleanup EXIT
@@ -27,7 +39,7 @@ fail_bundle() {
 fetch_bundle() {
     local secret_id=$1
     local output_name=$2
-    local staged_path="$staging_dir/$output_name"
+    local staged_path="$download_dir/$output_name"
 
     if ! "$OCI_BIN" secrets secret-bundle get \
         --secret-id "$secret_id" \
@@ -42,16 +54,37 @@ fetch_bundle() {
 
 secrets_parent=$(dirname "$SECRETS_DIR")
 install -d -m 0750 -o "$SECRET_UID" -g "$SECRET_GID" "$secrets_parent"
-staging_dir=$(mktemp -d "$secrets_parent/.secrets.XXXXXX")
-chmod 0700 "$staging_dir"
+generations_dir="$secrets_parent/secret-sets"
+install -d -m 0750 -o "$SECRET_UID" -g "$SECRET_GID" "$generations_dir"
+download_dir=$(mktemp -d "$secrets_parent/.secret-download.XXXXXX")
+generation_dir=$(mktemp -d "$generations_dir/.generation.XXXXXX")
+chmod 0700 "$download_dir"
+chown "$SECRET_UID:$SECRET_GID" "$generation_dir"
+chmod 0750 "$generation_dir"
 
 fetch_bundle "$DJANGO_SECRET_KEY_OCID" django-secret-key
 fetch_bundle "$GOOGLE_CLIENT_SECRET_OCID" google-client-secret
 fetch_bundle "$CREDENTIAL_ENCRYPTION_KEYS_OCID" credential-encryption-keys
 
-install -d -m 0750 -o "$SECRET_UID" -g "$SECRET_GID" "$SECRETS_DIR"
 for name in django-secret-key google-client-secret credential-encryption-keys; do
-    install -m 0440 -o "$SECRET_UID" -g "$SECRET_GID" "$staging_dir/$name" "$SECRETS_DIR/$name"
+    install -m 0440 -o "$SECRET_UID" -g "$SECRET_GID" "$download_dir/$name" "$generation_dir/$name"
 done
+
+link_path="$secrets_parent/.secrets-link.$$"
+ln -s "$generation_dir" "$link_path"
+if [[ -d "$SECRETS_DIR" && ! -L "$SECRETS_DIR" ]]; then
+    legacy_dir="$generations_dir/legacy-$(date -u +%Y%m%dT%H%M%SZ)-$$"
+    mv "$SECRETS_DIR" "$legacy_dir"
+fi
+if ! python3 - "$link_path" "$SECRETS_DIR" <<'PY'
+import os
+import sys
+
+os.replace(sys.argv[1], sys.argv[2])
+PY
+then
+    exit 1
+fi
+generation_dir=""
 
 printf 'secrets_ready\n'

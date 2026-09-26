@@ -1,7 +1,13 @@
+import os
+import subprocess
+import sys
+import tempfile
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 from cryptography.fernet import Fernet
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -259,6 +265,51 @@ class WorkerTests(TestCase):
         with run_scheduler.scheduler_lock():
             with self.assertRaisesMessage(CommandError, "scheduler already running"):
                 call_command("run_scheduler", "--once")
+
+    def test_second_process_with_different_tmpdir_is_rejected(self):
+        with tempfile.TemporaryDirectory() as root:
+            root_path = Path(root)
+            database_path = root_path / "db.sqlite3"
+            parent_tmp = root_path / "parent-tmp"
+            child_tmp = root_path / "child-tmp"
+            parent_tmp.mkdir()
+            child_tmp.mkdir()
+            database_settings = {
+                **settings.DATABASES["default"],
+                "NAME": database_path,
+            }
+            child_code = """
+import django
+django.setup()
+from django.core.management.base import CommandError
+from accounts.management.commands.run_scheduler import scheduler_lock
+try:
+    with scheduler_lock():
+        pass
+except CommandError:
+    raise SystemExit(0)
+raise SystemExit(3)
+"""
+            env = {
+                **os.environ,
+                "DATABASE_PATH": str(database_path),
+                "DJANGO_SETTINGS_MODULE": "config.settings",
+                "TMPDIR": str(child_tmp),
+            }
+
+            with patch.object(settings, "DATABASES", {"default": database_settings}):
+                with patch.object(tempfile, "tempdir", str(parent_tmp)):
+                    with run_scheduler.scheduler_lock():
+                        child = subprocess.run(
+                            [sys.executable, "-c", child_code],
+                            cwd=settings.BASE_DIR,
+                            env=env,
+                            capture_output=True,
+                            text=True,
+                            check=False,
+                        )
+
+            self.assertEqual(child.returncode, 0, child.stderr)
 
     @patch(
         "accounts.management.commands.run_scheduler.reconcile_interrupted_runs",
