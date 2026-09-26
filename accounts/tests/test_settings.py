@@ -70,7 +70,9 @@ class ProductionSettingsTests(SimpleTestCase):
                 "-c",
                 (
                     "from config import settings; "
-                    "print(settings.SESSION_COOKIE_SECURE, settings.CSRF_COOKIE_SECURE)"
+                    "print(settings.SESSION_COOKIE_SECURE, settings.CSRF_COOKIE_SECURE, "
+                    "'django.middleware.clickjacking.XFrameOptionsMiddleware' "
+                    "in settings.MIDDLEWARE)"
                 ),
             ],
             cwd=PROJECT_ROOT,
@@ -80,7 +82,7 @@ class ProductionSettingsTests(SimpleTestCase):
         )
 
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), "True True")
+        self.assertEqual(result.stdout.strip(), "True True True")
 
     def test_production_rejects_malformed_fernet_key_without_echoing_it(self):
         malformed_key = "malformed-key-must-not-appear"

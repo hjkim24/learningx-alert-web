@@ -95,6 +95,11 @@ printf '%s\n' "${source_paths[@]}" | "$RSYNC_BIN" \
 "$SSH_BIN" "$SSH_TARGET" sudo bash -s -- "$release_dir" <<'REMOTE_DEPLOY'
 set -euo pipefail
 release_dir=$1
+revision=${release_dir##*/}
+[[ "$revision" =~ ^[0-9a-f]{40}$ ]] || {
+    printf 'invalid remote revision\n' >&2
+    exit 1
+}
 runtime_env=/etc/learningx-alert/runtime.env
 [[ -f "$runtime_env" ]] || {
     printf 'missing remote runtime environment\n' >&2
@@ -107,6 +112,7 @@ set +a
 
 cd "$release_dir"
 docker compose -p learningx-alert -f compose.prod.yaml build web
+docker image tag "learningx-alert:${IMAGE_TAG:-local}" "learningx-alert:$revision"
 ./deploy/fetch-secrets.sh
 ./deploy/backup.sh
 docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps --interactive=false --no-tty web python manage.py check --deploy

@@ -112,6 +112,7 @@ ssh_calls=$(<"$ssh_log")
 for expected in "for command_name in docker oci sqlite3 systemctl sudo rsync" "install it before deployment" "docker compose version" "docker compose" "fetch-secrets.sh" "backup.sh" "manage.py check --deploy" "manage.py migrate --noinput" "systemctl restart learningx-alert.service" "ln -s"; do
     assert_contains "$ssh_calls" "$expected"
 done
+assert_contains "$ssh_calls" 'docker image tag "learningx-alert:${IMAGE_TAG:-local}" "learningx-alert:$revision"'
 assert_contains "$ssh_calls" "run --rm --no-deps --interactive=false --no-tty web python manage.py check --deploy"
 assert_contains "$ssh_calls" "run --rm --no-deps --interactive=false --no-tty web python manage.py migrate --noinput"
 
