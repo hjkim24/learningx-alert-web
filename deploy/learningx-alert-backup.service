@@ -1,0 +1,12 @@
+[Unit]
+Description=Back up the LearningX Alert SQLite database
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/learningx-alert/runtime.env
+ConditionPathExists=/opt/learningx-alert/current/deploy/backup.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/learningx-alert/runtime.env
+ExecStart=/opt/learningx-alert/current/deploy/backup.sh
+Nice=10
