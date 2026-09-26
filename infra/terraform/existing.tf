@@ -53,7 +53,7 @@ resource "oci_core_instance" "app_host" {
     assign_public_ip          = var.instance_assign_public_ip
     display_name              = var.instance_vnic_display_name
     hostname_label            = "tossterm"
-    nsg_ids                   = var.instance_existing_nsg_ids
+    nsg_ids                   = concat(var.instance_existing_nsg_ids, [oci_core_network_security_group.web.id])
     private_ip                = "10.0.1.31"
     skip_source_dest_check    = var.instance_skip_source_dest_check
     subnet_id                 = oci_core_subnet.existing.id
