@@ -109,8 +109,8 @@ cd "$release_dir"
 docker compose -p learningx-alert -f compose.prod.yaml build web
 ./deploy/fetch-secrets.sh
 ./deploy/backup.sh
-docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps web python manage.py check --deploy
-docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps web python manage.py migrate --noinput
+docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps --no-TTY web python manage.py check --deploy
+docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps --no-TTY web python manage.py migrate --noinput
 
 install -m 0644 deploy/learningx-alert.service /etc/systemd/system/learningx-alert.service
 install -m 0644 deploy/learningx-alert-backup.service /etc/systemd/system/learningx-alert-backup.service
