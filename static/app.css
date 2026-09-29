@@ -1228,10 +1228,43 @@ button[aria-busy="true"] {
   color: var(--muted);
   font-size: var(--fs-small);
   line-height: 1.6;
+  word-break: keep-all;
 }
 
 .login-after .guide-link {
   white-space: nowrap;
+}
+
+.login-legal {
+  margin: 16px 0 0;
+  font-size: var(--fs-small);
+}
+
+.login-legal a {
+  color: var(--muted);
+}
+
+/* ---------- Privacy policy ---------- */
+.policy-list {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.policy-list dt {
+  margin-top: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.policy-list dt:first-child {
+  margin-top: 0;
+}
+
+.policy-list dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .login-visual {
