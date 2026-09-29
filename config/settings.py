@@ -120,6 +120,8 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+# Public contact shown on /privacy/ (the Google consent screen links there).
+PRIVACY_CONTACT_EMAIL = os.environ.get("PRIVACY_CONTACT_EMAIL", "").strip()
 CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")
 # Hosts the LearningX LTI launch may visit. Empty disables lecture alerts.
 LEARNINGX_ALLOWED_HOSTS = frozenset(

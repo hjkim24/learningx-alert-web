@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}개인정보처리방침 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <header class="page-heading compact-heading">
+    <div>
+      <h1>개인정보처리방침</h1>
+      <p>LearningX Alert가 어떤 정보를 받아서 어디에 쓰고, 언제 지우는지 적었어요.</p>
+      <p class="fine-print">시행일 2026년 9월 29일</p>
+    </div>
+  </header>
+
+  <section class="panel policy-section" aria-labelledby="policy-collect-title">
+    <h2 id="policy-collect-title">받는 정보</h2>
+    <dl class="policy-list">
+      <dt>Google 계정</dt>
+      <dd>로그인할 때 Google이 알려 주는 이메일 주소와 기본 프로필(이름, 프로필 사진 주소, 계정 ID)이에요. Google 액세스 토큰은 저장하지 않아요.</dd>
+      <dt>Canvas 연결</dt>
+      <dd>직접 붙여 넣은 Canvas 액세스 토큰, Canvas 사용자 ID와 이름이에요. 토큰은 암호화해서 저장하고 화면에 다시 보여 주지 않아요.</dd>
+      <dt>과목과 마감 정보</dt>
+      <dd>수강 과목 이름과 학기, 알림을 보내려고 조회한 과제·강의·학습자료의 제목과 마감 시각, 알림을 끈 항목이에요.</dd>
+      <dt>알림 설정</dt>
+      <dd>조회 범위, 알림 시각과 요일, 알림 대상(Discord·Slack 웹훅 주소, 브라우저 푸시 구독 정보)이에요. 웹훅 주소와 푸시 구독 정보는 암호화해서 저장해요.</dd>
+      <dt>실행 기록</dt>
+      <dd>예약 알림을 언제 실행했고 대상별로 성공했는지 남겨요. 오류 기록에는 토큰이나 웹훅 주소를 적지 않아요.</dd>
+    </dl>
+  </section>
+
+  <section class="panel policy-section" aria-labelledby="policy-use-title">
+    <h2 id="policy-use-title">쓰는 곳</h2>
+    <ul class="guide-facts">
+      <li>받은 정보는 과제·강의 마감을 조회해서 정해 둔 시각에 알림을 보내는 데만 써요.</li>
+      <li>광고에 쓰거나, 팔거나, 알림과 관계없는 곳에 넘기지 않아요.</li>
+      <li>Google에서 받은 정보는 로그인과 계정 구분에만 쓰고, <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API 서비스 사용자 데이터 정책</a>의 제한적 사용 요건을 지켜요.</li>
+      <li>분석 도구나 광고 추적 도구는 쓰지 않아요. 쿠키는 로그인 유지와 요청 위조 방지에만 써요.</li>
+    </ul>
+  </section>
+
+  <section class="panel policy-section" aria-labelledby="policy-share-title">
+    <h2 id="policy-share-title">정보가 거쳐 가는 곳</h2>
+    <dl class="policy-list">
+      <dt>Canvas와 LearningX</dt>
+      <dd>연결한 토큰으로 학교 Canvas와 LearningX에 과목·과제·강의 목록을 읽기 요청만 보내요.</dd>
+      <dt>등록한 알림 대상</dt>
+      <dd>알림 내용(과목 이름, 항목 제목, 마감 시각)은 직접 등록한 Discord·Slack 웹훅으로 보내요. 그 뒤로는 각 서비스의 정책을 따라요.</dd>
+      <dt>브라우저 푸시 서비스</dt>
+      <dd>브라우저 푸시는 브라우저 회사(Google, Apple, Mozilla, Microsoft)의 푸시 서버를 거쳐요. 내용은 암호화돼서 이 서버들은 읽을 수 없지만, 알림 문구가 잠금 화면에 보일 수 있어요.</dd>
+      <dt>서버</dt>
+      <dd>서비스와 백업은 Oracle Cloud 춘천 리전(대한민국)에 있어요.</dd>
+    </dl>
+  </section>
+
+  <section class="panel policy-section" aria-labelledby="policy-delete-title">
+    <h2 id="policy-delete-title">보관과 삭제</h2>
+    <ul class="guide-facts">
+      <li>계정을 쓰는 동안 보관해요.</li>
+      <li><strong>계정 페이지에서 계정을 삭제하면</strong> 위의 정보를 모두 바로 지워요.</li>
+      <li>대시보드에서 Canvas 연결을 해제하면 저장된 토큰을 바로 지워요. Canvas의 "승인된 통합"에서 토큰을 지우면 우리 쪽 접근도 그때 끊겨요.</li>
+      <li>장애에 대비한 데이터베이스 백업은 최대 14일 동안 남았다가 자동으로 지워져요.</li>
+    </ul>
+  </section>
+
+  <section class="panel policy-section" aria-labelledby="policy-contact-title">
+    <h2 id="policy-contact-title">문의</h2>
+    {% if contact_email %}
+      <p>개인정보에 관한 문의나 삭제 요청은 <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>으로 보내 주세요.</p>
+    {% else %}
+      <p>개인정보에 관한 문의나 삭제 요청은 운영자에게 보내 주세요.</p>
+    {% endif %}
+    <p class="fine-print">이 방침이 바뀌면 이 페이지에 새 시행일과 함께 올려요.</p>
+  </section>
+{% endblock %}
