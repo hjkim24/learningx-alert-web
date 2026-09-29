@@ -63,6 +63,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         exporting = telemetry.configure_metrics("learningx-alert-scheduler")
+        telemetry.configure_tracing_and_logs("learningx-alert-scheduler", sample_ratio=1.0)
         # stdout, not logging: the worker tests pin time.time(), which every
         # LogRecord reads.
         self.stdout.write(f"scheduler starting metrics={'on' if exporting else 'off'}")

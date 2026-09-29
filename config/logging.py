@@ -53,6 +53,8 @@ _EXTRA_FIELDS = (
     "deliveries",
     "courses",
     "runs",
+    "exception_type",
+    "stack",
 )
 
 
