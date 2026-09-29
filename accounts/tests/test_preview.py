@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 from unittest.mock import patch
 
@@ -102,7 +103,26 @@ class PreviewTests(TestCase):
         self.assertContains(response, "마감 없음 2건")
         self.assertContains(response, "확인 실패")
         self.assertContains(response, "일부 과제의 제출 상태를 확인하지 못했습니다.")
-        self.assertContains(response, "submission_state_failed")
+        self.assertContains(response, 'data-error-code="submission_state_failed"')
+        self.assertNotContains(response, "<code>submission_state_failed</code>")
+        self.assertNotContains(response, "잠시 후 다시 미리보기를 열어 주세요.")
+
+    @patch("accounts.views.collect_for_user")
+    def test_canvas_outage_explains_it_is_temporary(self, collect):
+        result = self.result()
+        outage = replace(
+            result.outcomes[1],
+            error_code="lectures_failed",
+            safe_summary="Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.",
+        )
+        collect.return_value = replace(result, outcomes=(result.outcomes[0], outage))
+        self.client.force_login(self.user)
+
+        response = self.client.post(reverse("preview"))
+
+        self.assertContains(response, "Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.")
+        self.assertContains(response, "잠시 후 다시 미리보기를 열어 주세요.")
+        self.assertNotContains(response, "<code>lectures_failed</code>")
 
     @patch("accounts.views.collect_for_user")
     def test_preview_uses_current_user_and_never_renders_credentials(self, collect):

@@ -20,9 +20,12 @@
       <strong>확인하지 못한 과목이 {{ failed_outcomes|length }}개 있습니다.</strong>
       <ul class="plain-list">
         {% for outcome in failed_outcomes %}
-          <li>{{ outcome.course_name|course_title }} — {{ outcome.safe_summary }} <code>{{ outcome.error_code }}</code></li>
+          <li data-error-code="{{ outcome.error_code }}">{{ outcome.course_name|course_title }} — {{ outcome.safe_summary }}</li>
         {% endfor %}
       </ul>
+      {% if transient_failure %}
+        <p>Canvas가 잠시 응답하지 않아 생기는 일시적인 오류일 가능성이 큽니다. 잠시 후 다시 미리보기를 열어 주세요. 예약 알림은 다음 알림 시각에 자동으로 다시 확인합니다.</p>
+      {% endif %}
     </div>
   {% endif %}
 
@@ -87,8 +90,7 @@
         <li class="outcome outcome-{{ outcome.status }}">
           <strong>{{ outcome.course_name|course_title }}</strong>
           {% if outcome.status == "failed" %}
-            <span>확인 실패 — {{ outcome.safe_summary }}</span>
-            <code>{{ outcome.error_code }}</code>
+            <span data-error-code="{{ outcome.error_code }}">확인 실패 — {{ outcome.safe_summary }}</span>
           {% elif outcome.status == "empty" %}
             <span>알림 대상 없음</span>
           {% else %}

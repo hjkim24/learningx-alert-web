@@ -20,6 +20,9 @@ COMPLETED_VALUES = {"true", "1", "complete", "completed"}
 INCOMPLETE_VALUES = {"false", "0", "incomplete", "not_completed"}
 MAX_EXTERNAL_ID_LENGTH = 128
 
+# Failures caused by Canvas/LearningX not answering; they clear up on their own.
+TRANSIENT_ERROR_CODES = frozenset({"assignments_failed", "lectures_failed"})
+
 EXPECTED_ERRORS = (
     HTTPError,
     URLError,
@@ -137,7 +140,7 @@ def _collect_assignments(client, selection, now, upper):
     except EXPECTED_ERRORS:
         return _SourceResult(
             error_code="assignments_failed",
-            safe_summary="과제 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 과제 목록을 확인하지 못했습니다.",
         )
 
     items = []
@@ -240,12 +243,12 @@ def _collect_lectures(learningx, selection, now, upper):
             )
         return _SourceResult(
             error_code="lectures_failed",
-            safe_summary="강의 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.",
         )
     except EXPECTED_ERRORS:
         return _SourceResult(
             error_code="lectures_failed",
-            safe_summary="강의 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.",
         )
 
     items = []

@@ -102,8 +102,7 @@
       {% for outcome in course_failures %}
         <p class="problem-row">
           <strong>{{ outcome.course_name }}</strong>
-          <span>{{ outcome.safe_summary }}</span>
-          <code>{{ outcome.error_code }}</code>
+          <span data-error-code="{{ outcome.error_code }}">{{ outcome.safe_summary }}</span>
         </p>
       {% endfor %}
       {% for delivery in delivery_problems %}
