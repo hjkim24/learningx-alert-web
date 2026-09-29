@@ -66,6 +66,7 @@ class PreviewGroupingTests(SimpleTestCase):
         groups = _group_items_by_day(items, now)
 
         self.assertEqual([g["dday"] for g in groups], ["오늘", "D-5", "D-6"])
+        self.assertEqual([g["urgent"] for g in groups], [True, False, False])
         self.assertEqual([[i.title for i in g["items"]] for g in groups], [["a"], ["b"], ["c"]])
 
 
@@ -192,6 +193,9 @@ class UxPageTests(TestCase):
         self.assertContains(response, 'aria-label="주 메뉴"')
         self.assertContains(response, "알림을 받을 곳이 없어 예약 알림이 발송되지 않습니다")
         self.assertNotContains(response, "내 로컬 계정과 이력 삭제")
+        self.assertContains(response, 'action="/connection/preview/" data-loading')
+        self.assertContains(response, 'id="loading-veil"')
+        self.assertContains(response, "app.js")
 
     @patch("accounts.views.collect_for_user")
     def test_preview_groups_items_and_shows_message_text(self, collect):

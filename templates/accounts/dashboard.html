@@ -8,7 +8,7 @@
       <h1>대시보드</h1>
       <p>다음 알림과 최근 실행 결과를 확인합니다.</p>
     </div>
-    <form method="post" action="{% url 'preview' %}">
+    <form method="post" action="{% url 'preview' %}" data-loading>
       {% csrf_token %}
       <button class="primary-button" type="submit"{% if not connection %} disabled{% endif %}>알림 미리보기</button>
     </form>
@@ -22,7 +22,7 @@
   {% elif not connection %}
     <div class="attention-notice" role="status">
       <strong>Canvas 계정을 연결해 주세요.</strong>
-      <p>아래 Canvas 연결에 SKKU Canvas 개인 액세스 토큰을 입력하면 수강 과목을 자동으로 불러옵니다.</p>
+      <p>아래 Canvas 연결에 Canvas 개인 액세스 토큰을 입력하면 수강 과목을 자동으로 불러옵니다.</p>
     </div>
   {% elif not selected_course_count %}
     <div class="attention-notice" role="status">
@@ -140,7 +140,7 @@
         </div>
       </dl>
     {% else %}
-      <p class="fine-print">SKKU Canvas → 계정 → 설정 → 새 액세스 토큰에서 발급한 토큰을 입력해 주세요.</p>
+      <p class="fine-print">Canvas → 계정 → 설정 → 새 액세스 토큰에서 발급한 토큰을 입력해 주세요.</p>
     {% endif %}
 
     <form class="token-form" method="post" action="{% url 'canvas_connect' %}">
