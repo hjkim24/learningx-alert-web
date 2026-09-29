@@ -13,8 +13,8 @@
 
   {% if not destination_count %}
     <div class="attention-notice" role="status">
-      <strong>아직 알림을 받을 곳이 없습니다.</strong>
-      <p><a href="{% url 'destination_settings' %}">받을 곳</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가하기 전까지 예약 알림은 발송되지 않습니다.</p>
+      <strong>아직 등록된 알림 대상이 없습니다.</strong>
+      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가하기 전까지 예약 알림은 발송되지 않습니다.</p>
     </div>
   {% endif %}
 
