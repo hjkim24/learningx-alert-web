@@ -1699,3 +1699,151 @@ button[aria-busy="true"] {
     transition: none;
   }
 }
+
+/* ---------- Notification sub-tabs (알림 시각 | 받을 곳) ---------- */
+.sub-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 24rem;
+  margin: 0 24px 16px;
+  padding: 4px;
+  border-radius: var(--r-pill);
+  background: var(--mist);
+}
+
+.sub-tabs a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 2.75rem;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.sub-tabs a:hover {
+  color: var(--ink);
+}
+
+.sub-tabs a[aria-current="page"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(29 42 36 / 8%);
+}
+
+.sub-tabs a:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Save bar: only while there are unsaved changes ---------- */
+.save-bar {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(calc(100% + 32px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 200ms ease, opacity 160ms ease;
+}
+
+.save-bar[data-dirty] {
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Keep the last alarm row clear of the bar while it floats. */
+.settings-form:has(.save-bar[data-dirty]) {
+  padding-bottom: 8px;
+}
+
+.webhook-panel .webhook-form {
+  display: grid;
+  gap: 16px;
+}
+
+.webhook-panel .webhook-form > .primary-button {
+  justify-self: start;
+}
+
+/* ---------- Header account link ---------- */
+.account-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  text-decoration: none;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.account-link:hover,
+.account-link[aria-current="page"] {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.account-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--r-pill);
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .sub-tabs {
+    max-width: none;
+    margin: 0 10px 12px;
+  }
+
+  .account-email {
+    display: none;
+  }
+
+  .account-link {
+    padding: 4px;
+  }
+
+  .save-bar {
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .save-bar > span {
+    display: none;
+  }
+
+  .save-bar .primary-button {
+    flex: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .save-bar,
+  .sub-tabs a,
+  .account-link {
+    transition: none;
+  }
+}

@@ -471,3 +471,46 @@
 
   refresh();
 })();
+
+// Save bar: stays hidden until the schedule form differs from what was loaded.
+// Reverting every change hides it again; leaving with unsaved edits asks first.
+(() => {
+  const bar = document.querySelector("[data-save-bar]");
+  const form = bar && bar.closest("form");
+  if (!form) {
+    return;
+  }
+  const snapshot = () =>
+    JSON.stringify(
+      [...new FormData(form).entries()]
+        .filter(([name]) => name !== "csrfmiddlewaretoken")
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    );
+  // A form re-rendered after a failed save already holds unsaved input.
+  const startDirty = bar.hasAttribute("data-dirty");
+  const initial = snapshot();
+  let submitting = false;
+
+  const isDirty = () => startDirty || snapshot() !== initial;
+  const refresh = () => bar.toggleAttribute("data-dirty", isDirty());
+
+  form.addEventListener("input", refresh);
+  form.addEventListener("change", refresh);
+  // Adding or deleting an alarm row changes the form without an input event.
+  new MutationObserver(refresh).observe(form, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["hidden"],
+  });
+  form.addEventListener("submit", () => {
+    submitting = true;
+  });
+  window.addEventListener("beforeunload", (event) => {
+    if (!submitting && isDirty()) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+  refresh();
+})();

@@ -12,6 +12,12 @@ urlpatterns = [
     path("preview/", views.preview, name="preview"),
     path("notifications/", views.notification_settings, name="notification_settings"),
     path(
+        "notifications/destinations/",
+        views.destination_settings,
+        name="destination_settings",
+    ),
+    path("account/", views.account_settings, name="account_settings"),
+    path(
         "notifications/save/",
         views.notification_settings_save,
         name="notification_settings_save",

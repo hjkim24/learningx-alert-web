@@ -71,7 +71,7 @@ class DestinationViewTests(TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("notification_settings"))
+        self.assertRedirects(response, reverse("destination_settings"))
         destination = Destination.objects.get(user=self.user)
         self.assertEqual(decrypt_secret(destination.encrypted_webhook_url), self.discord_url)
         self.assertNotEqual(destination.encrypted_webhook_url, self.discord_url)
@@ -90,7 +90,7 @@ class DestinationViewTests(TestCase):
             follow=True,
         )
 
-        self.assertRedirects(response, reverse("notification_settings"))
+        self.assertRedirects(response, reverse("destination_settings"))
         self.assertEqual(Destination.objects.filter(user=self.user).count(), 2)
         first.refresh_from_db()
         self.assertEqual(decrypt_secret(first.encrypted_webhook_url), self.discord_url)
@@ -144,7 +144,7 @@ class DestinationViewTests(TestCase):
 
         self.assertRedirects(
             response,
-            reverse("notification_settings"),
+            reverse("destination_settings"),
             fetch_redirect_response=False,
         )
         self.assertFalse(Destination.objects.filter(pk=own.pk).exists())
@@ -168,7 +168,7 @@ class DestinationViewTests(TestCase):
 
         response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
 
-        self.assertRedirects(response, reverse("notification_settings"))
+        self.assertRedirects(response, reverse("destination_settings"))
         send.assert_called_once_with(
             Destination.Kind.DISCORD,
             self.discord_url,

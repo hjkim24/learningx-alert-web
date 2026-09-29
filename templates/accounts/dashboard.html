@@ -32,7 +32,7 @@
   {% elif not destinations %}
     <div class="attention-notice" role="status">
       <strong>알림을 받을 곳이 없어 예약 알림이 발송되지 않습니다.</strong>
-      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
+      <p><a href="{% url 'destination_settings' %}">받을 곳</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
     </div>
   {% endif %}
 
@@ -47,7 +47,7 @@
     </li>
     <li class="{% if destinations %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">3</span>
-      <a href="{% url 'notification_settings' %}">
+      <a href="{% url 'destination_settings' %}">
         <strong>알림 대상</strong>
         {% if destinations %}
           {{ destination_kinds|join:" · " }}{% if destinations|length > 1 %} {{ destinations|length }}곳{% else %} 저장됨{% endif %}
