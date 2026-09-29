@@ -209,28 +209,88 @@ time,
 
 /* ---------- Page sheet ---------- */
 
+/* Floating toasts: pinned to the top of the viewport so they never push the
+   page down or collide with the bottom save bar. */
 .message-stack {
-  width: var(--page);
-  margin: 8px auto 0;
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  z-index: 60;
+  width: min(100% - 32px, 28rem);
+  transform: translateX(-50%);
   display: grid;
   gap: 8px;
+  pointer-events: none;
 }
 
 .message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   margin: 0;
   border-radius: var(--r-block);
-  background: var(--brand-soft);
+  background: var(--surface);
+  box-shadow: var(--shadow-float), inset 4px 0 0 var(--brand);
   color: var(--ink);
-  padding: 12px 18px;
+  padding: 12px 10px 12px 18px;
   font-size: var(--fs-small);
+  pointer-events: auto;
+  animation: toast-in 220ms ease both;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.message > p {
+  flex: 1;
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+
+.message-close {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.message-close:hover,
+.message-close:focus-visible {
+  background: var(--mist);
+  color: var(--ink);
 }
 
 .message-error {
   background: var(--clay-soft);
+  box-shadow: var(--shadow-float), inset 4px 0 0 var(--clay);
 }
 
 .message-warning {
   background: var(--urgent-soft);
+  box-shadow: var(--shadow-float), inset 4px 0 0 var(--urgent);
+}
+
+.message.is-leaving {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    animation: none;
+    transition: none;
+  }
 }
 
 .page-frame {
