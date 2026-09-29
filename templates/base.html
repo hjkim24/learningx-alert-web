@@ -46,9 +46,12 @@
     {% endwith %}
   {% endif %}
   {% if messages %}
-    <div class="message-stack" aria-live="polite">
+    <div class="message-stack" aria-live="polite" data-toasts>
       {% for message in messages %}
-        <p class="message{% if message.tags %} message-{{ message.tags }}{% endif %}">{{ message }}</p>
+        <div class="message{% if message.tags %} message-{{ message.tags }}{% endif %}" data-toast{% if message.level >= 40 %} role="alert"{% endif %}>
+          <p>{{ message }}</p>
+          <button type="button" class="message-close" data-toast-close aria-label="알림 닫기">×</button>
+        </div>
       {% endfor %}
     </div>
   {% endif %}

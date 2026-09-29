@@ -611,3 +611,41 @@
     });
   });
 })();
+
+// Floating toasts for Django messages: close button, and success/info toasts
+// fade out on their own. Errors stay until closed. Hover or focus pauses.
+(() => {
+  const AUTO_HIDE_MS = 5000;
+
+  function dismiss(toast) {
+    if (toast.classList.contains("is-leaving")) return;
+    toast.classList.add("is-leaving");
+    const remove = () => {
+      const stack = toast.parentElement;
+      toast.remove();
+      if (stack && !stack.children.length) stack.remove();
+    };
+    toast.addEventListener("transitionend", remove, { once: true });
+    setTimeout(remove, 400); // reduced motion: no transitionend
+  }
+
+  document.querySelectorAll("[data-toast]").forEach((toast) => {
+    toast.querySelector("[data-toast-close]")?.addEventListener("click", () => dismiss(toast));
+    if (toast.getAttribute("role") === "alert") return;
+
+    let timer = setTimeout(() => dismiss(toast), AUTO_HIDE_MS);
+    const pause = () => clearTimeout(timer);
+    const resume = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => dismiss(toast), AUTO_HIDE_MS / 2);
+    };
+    toast.addEventListener("mouseenter", pause);
+    toast.addEventListener("focusin", pause);
+    toast.addEventListener("mouseleave", resume);
+    toast.addEventListener("focusout", resume);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") document.querySelectorAll("[data-toast]").forEach(dismiss);
+  });
+})();
