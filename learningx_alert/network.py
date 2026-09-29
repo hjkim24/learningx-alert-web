@@ -6,9 +6,17 @@ from http.client import HTTPConnection, HTTPSConnection
 from urllib.parse import urlsplit
 from urllib.request import HTTPSHandler
 
-from opentelemetry import trace
+import time
+
+from opentelemetry import metrics, trace
 
 _tracer = trace.get_tracer("learningx_alert.network")
+# No-op until a MeterProvider is installed. Attributes are host + outcome only.
+_outbound_duration = metrics.get_meter("learningx_alert.network").create_histogram(
+    "learningx.outbound.duration",
+    unit="s",
+    description="Outbound HTTPS call duration, by destination host and outcome",
+)
 
 
 class UnsafeUrlError(ValueError):
@@ -85,6 +93,7 @@ class PinnedHTTPSHandler(HTTPSHandler):
             record_exception=False,
             set_status_on_exception=False,
         ) as span:
+            started = time.monotonic()
             try:
                 address = resolve_public_addresses(host, port)[0]
 
@@ -96,11 +105,22 @@ class PinnedHTTPSHandler(HTTPSHandler):
                 # The class name only; messages can echo the URL.
                 span.set_attribute("error.type", type(error).__name__)
                 span.set_status(trace.StatusCode.ERROR)
+                _record_outbound(host, "error", started)
                 raise
             status = getattr(response, "status", None)
+            outcome = "ok"
             if status is not None:
                 span.set_attribute("http.response.status_code", status)
                 if status >= 400:
                     span.set_attribute("error.type", str(status))
                     span.set_status(trace.StatusCode.ERROR)
+                    outcome = "http_error"
+            _record_outbound(host, outcome, started)
             return response
+
+
+def _record_outbound(host: str, outcome: str, started: float) -> None:
+    _outbound_duration.record(
+        time.monotonic() - started,
+        {"server.address": host, "outcome": outcome},
+    )

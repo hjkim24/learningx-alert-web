@@ -25,6 +25,35 @@ receivers:
       - endpoint: https://${env:APP_DOMAIN}/healthz/
         method: GET
 
+  # Host (VM) metrics read from the host's /proc and / mounted read-only at
+  # /hostfs. The collector runs as a non-root user, so root-only files stay
+  # unreadable. No Docker socket: that would be root-equivalent.
+  hostmetrics:
+    collection_interval: 60s
+    root_path: /hostfs
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      load:
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      filesystem:
+        include_mount_points:
+          mount_points: ["/"]
+          match_type: strict
+        metrics:
+          system.filesystem.utilization:
+            enabled: true
+      disk:
+      network:
+        exclude:
+          interfaces: ["lo", "veth.*", "docker.*", "br-.*"]
+          match_type: regexp
+
 processors:
   memory_limiter:
     check_interval: 5s
@@ -36,6 +65,11 @@ processors:
     attributes:
       - key: service.namespace
         value: learningx-alert
+        action: upsert
+  resource/host:
+    attributes:
+      - key: service.name
+        value: learningx-alert-host
         action: upsert
   # Belt and braces: drop any attribute that could identify a person even if a
   # future instrument adds one by mistake.
@@ -88,6 +122,10 @@ service:
     metrics:
       receivers: [otlp, http_check/site]
       processors: [memory_limiter, attributes/strip, resource, batch]
+      exporters: [otlp_http/grafana]
+    metrics/host:
+      receivers: [hostmetrics]
+      processors: [memory_limiter, resource/host, resource, batch]
       exporters: [otlp_http/grafana]
     traces:
       receivers: [otlp]
