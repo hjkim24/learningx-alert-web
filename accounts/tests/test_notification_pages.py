@@ -80,7 +80,7 @@ class NotificationPageTests(TestCase):
         self.assertContains(dashboard, "알림 설정")
         self.assertNotContains(dashboard, "자동 알림 실행 중")
         self.assertContains(courses, "과제")
-        self.assertContains(courses, "검증 후 제공", count=1)
+        self.assertNotContains(courses, "검증 후 제공")
         self.assertContains(courses, "운영 설정 후 제공", count=1)
         self.assertContains(notifications, "마감 조회 범위")
         self.assertContains(notifications, "시험 알림 보내기")
@@ -102,8 +102,8 @@ class NotificationPageTests(TestCase):
         self.assertContains(courses, f'for="id_form-0-enabled"')
         self.assertContains(courses, f'for="id_form-0-include_assignments"')
         self.assertContains(courses, "강의 — 운영 설정 후 제공")
-        self.assertContains(courses, "필수 학습자료 — 검증 후 제공")
-        self.assertContains(courses, 'type="checkbox" disabled', count=2)
+        self.assertNotContains(courses, "필수 학습자료")
+        self.assertContains(courses, 'type="checkbox" disabled', count=1)
         for field_name in (
             "lookahead_days",
             "first_time",
