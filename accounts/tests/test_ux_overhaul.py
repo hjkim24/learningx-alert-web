@@ -98,7 +98,7 @@ class NotificationSettingsSaveTests(TestCase):
         self.assertRedirects(response, reverse("notification_settings"))
         self.assertEqual(NotificationRule.objects.get(user=self.user).lookahead_days, 7)
         self.assertFalse(Destination.objects.filter(user=self.user).exists())
-        self.assertContains(response, "웹훅 URL도 입력해 주세요")
+        self.assertContains(response, "웹훅이나 브라우저 푸시를 추가해 주세요")
         self.assertContains(response, "아직 알림을 받을 곳이 없습니다")
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
@@ -144,7 +144,7 @@ class NotificationSettingsSaveTests(TestCase):
             DISCORD_URL,
         )
 
-    def test_changing_provider_without_url_is_rejected(self):
+    def test_changing_provider_without_url_only_saves_rule(self):
         Destination.objects.create(
             user=self.user,
             kind=Destination.Kind.DISCORD,
@@ -153,8 +153,8 @@ class NotificationSettingsSaveTests(TestCase):
 
         response = self.post(kind=Destination.Kind.SLACK)
 
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(NotificationRule.objects.filter(user=self.user).exists())
+        self.assertRedirects(response, reverse("notification_settings"))
+        self.assertTrue(NotificationRule.objects.filter(user=self.user).exists())
         self.assertEqual(Destination.objects.get(user=self.user).kind, Destination.Kind.DISCORD)
 
 

@@ -4,7 +4,13 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from accounts.models import CourseRunResult, Delivery, RunItem, ScheduledRun
+from accounts.models import (
+    CourseRunResult,
+    Delivery,
+    Destination,
+    RunItem,
+    ScheduledRun,
+)
 
 
 class RunModelTests(TestCase):
@@ -37,8 +43,14 @@ class RunModelTests(TestCase):
 
     def test_part_number_and_idempotency_key_are_unique(self):
         run = self.create_run()
+        destination = Destination.objects.create(
+            user=self.user,
+            kind="discord",
+            encrypted_webhook_url="ciphertext",
+        )
         Delivery.objects.create(
             run=run,
+            destination=destination,
             destination_kind="discord",
             part_number=1,
             idempotency_key="key-1",
@@ -46,6 +58,7 @@ class RunModelTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Delivery.objects.create(
                 run=run,
+                destination=destination,
                 destination_kind="discord",
                 part_number=1,
                 idempotency_key="key-2",

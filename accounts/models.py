@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
+from django.utils import timezone
 
 
 class CanvasConnection(models.Model):
@@ -72,9 +73,18 @@ class NotificationRule(models.Model):
 
 
 class Destination(models.Model):
+    """One place a user's alerts go. A user may have several.
+
+    `encrypted_webhook_url` holds the encrypted secret for every kind: the
+    webhook URL for Discord/Slack, the PushSubscription JSON for web push.
+    """
+
+    MAX_PER_USER = 10
+
     class Kind(models.TextChoices):
         DISCORD = "discord", "Discord"
         SLACK = "slack", "Slack"
+        WEBPUSH = "webpush", "브라우저 푸시"
 
     class Status(models.TextChoices):
         UNTESTED = "untested", "시험 전"
@@ -82,19 +92,38 @@ class Destination(models.Model):
         DEFINITELY_FAILED = "definitely_failed", "전송 실패"
         NEEDS_REVIEW = "needs_review", "확인 필요"
 
-    user = models.OneToOneField(
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="destination",
+        related_name="destinations",
     )
     kind = models.CharField(max_length=16, choices=Kind.choices)
+    label = models.CharField(max_length=64, blank=True)
     encrypted_webhook_url = models.TextField()
+    # Keyed hash of the secret target, so the same webhook or browser is not
+    # registered twice without storing anything reversible.
+    target_fingerprint = models.CharField(max_length=64, blank=True)
     status = models.CharField(
         max_length=24,
         choices=Status.choices,
         default=Status.UNTESTED,
     )
     last_tested_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "target_fingerprint"),
+                condition=~Q(target_fingerprint=""),
+                name="unique_user_destination_target",
+            )
+        ]
+        ordering = ("created_at", "id")
+
+    @property
+    def display_name(self):
+        return self.label or self.get_kind_display()
 
 
 class ScheduledRun(models.Model):
@@ -200,7 +229,15 @@ class Delivery(models.Model):
         on_delete=models.CASCADE,
         related_name="deliveries",
     )
+    destination = models.ForeignKey(
+        Destination,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="deliveries",
+    )
     destination_kind = models.CharField(max_length=16, choices=Destination.Kind.choices)
+    destination_label = models.CharField(max_length=64, blank=True)
     part_number = models.PositiveSmallIntegerField()
     idempotency_key = models.CharField(max_length=64, unique=True)
     provider_confirmation_id = models.CharField(max_length=255, blank=True)
@@ -216,8 +253,8 @@ class Delivery(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=("run", "part_number"),
-                name="unique_run_delivery_part",
+                fields=("run", "destination", "part_number"),
+                name="unique_run_destination_part",
             )
         ]
-        ordering = ("part_number",)
+        ordering = ("id",)

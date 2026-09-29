@@ -126,6 +126,15 @@ LEARNINGX_ALLOWED_HOSTS = frozenset(
     for host in os.environ.get("LEARNINGX_ALLOWED_HOSTS", "").split(",")
     if host.strip()
 )
+# Browser (PWA) push. The VAPID key is derived from SECRET_KEY unless an explicit
+# base64url P-256 scalar is provided; the subject is the contact push services see.
+WEB_PUSH_ENABLED = os.environ.get("WEB_PUSH_ENABLED", "1") == "1"
+WEB_PUSH_VAPID_PRIVATE_KEY = _secret_setting("WEB_PUSH_VAPID_PRIVATE_KEY")
+WEB_PUSH_SUBJECT = os.environ.get("WEB_PUSH_SUBJECT", "").strip() or (
+    f"https://{ALLOWED_HOSTS[0]}"
+    if ALLOWED_HOSTS and ALLOWED_HOSTS[0] not in {"127.0.0.1", "localhost"}
+    else "https://alert.sobok-app.com"
+)
 CREDENTIAL_ENCRYPTION_KEYS = [
     key.strip()
     for key in _secret_setting("CREDENTIAL_ENCRYPTION_KEYS").split(",")

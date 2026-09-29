@@ -57,3 +57,135 @@
     }
   });
 })();
+
+// Browser push (PWA). Registers /sw.js, asks permission only on a click, and
+// posts the PushSubscription to the server with the CSRF token.
+(() => {
+  const panel = document.querySelector("[data-push]");
+  if (!panel) {
+    return;
+  }
+  const status = panel.querySelector("[data-push-status]");
+  const subscribeButton = panel.querySelector("[data-push-subscribe]");
+  const unsubscribeButton = panel.querySelector("[data-push-unsubscribe]");
+  const iosHint = panel.querySelector("[data-push-ios]");
+
+  const setStatus = (text) => {
+    status.textContent = text;
+  };
+  const csrfToken = () => {
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return input ? input.value : "";
+  };
+  const keyBytes = (base64url) => {
+    const padded = base64url.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (base64url.length % 4)) % 4);
+    return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+  };
+  const deviceLabel = () => {
+    const agent = navigator.userAgent;
+    const os = /iPhone|iPad/.test(agent) ? "iOS" : /Android/.test(agent) ? "Android" : /Mac/.test(agent) ? "macOS" : /Windows/.test(agent) ? "Windows" : "기기";
+    const browser = /Edg\//.test(agent) ? "Edge" : /Firefox\//.test(agent) ? "Firefox" : /Chrome\//.test(agent) ? "Chrome" : /Safari\//.test(agent) ? "Safari" : "브라우저";
+    return `${os} ${browser}`;
+  };
+  const post = (url, body) =>
+    fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+      body: JSON.stringify(body),
+    });
+
+  const isIos = /iPhone|iPad/.test(navigator.userAgent);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+  if (!supported) {
+    if (isIos && !standalone) {
+      iosHint.hidden = false;
+      setStatus("홈 화면에 추가한 앱에서만 푸시를 켤 수 있습니다.");
+    } else {
+      setStatus("이 브라우저는 푸시 알림을 지원하지 않습니다.");
+    }
+    return;
+  }
+
+  let registration = null;
+
+  async function refresh() {
+    const subscription = await registration.pushManager.getSubscription();
+    if (Notification.permission === "denied") {
+      setStatus("브라우저 설정에서 이 사이트의 알림이 차단되어 있습니다. 사이트 설정에서 허용으로 바꿔 주세요.");
+      subscribeButton.hidden = true;
+      unsubscribeButton.hidden = !subscription;
+      return subscription;
+    }
+    subscribeButton.hidden = Boolean(subscription);
+    unsubscribeButton.hidden = !subscription;
+    setStatus(subscription ? "이 브라우저는 푸시를 받도록 등록되어 있습니다." : "이 브라우저는 아직 등록되지 않았습니다.");
+    return subscription;
+  }
+
+  async function subscribe() {
+    subscribeButton.disabled = true;
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setStatus("알림 권한을 허용해야 푸시를 받을 수 있습니다.");
+        return;
+      }
+      const subscription =
+        (await registration.pushManager.getSubscription()) ||
+        (await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: keyBytes(panel.dataset.vapidKey),
+        }));
+      const response = await post(panel.dataset.subscribeUrl, {
+        subscription: subscription.toJSON(),
+        label: deviceLabel(),
+      });
+      if (response.ok) {
+        window.location.reload();
+        return;
+      }
+      const payload = await response.json().catch(() => ({}));
+      setStatus(
+        payload.error === "destination_limit"
+          ? "알림 대상이 가득 찼습니다. 쓰지 않는 대상을 삭제한 뒤 다시 시도해 주세요."
+          : "등록하지 못했습니다. 잠시 후 다시 시도해 주세요."
+      );
+    } catch (error) {
+      setStatus("푸시 등록 중 문제가 생겼습니다. 브라우저 알림 설정을 확인해 주세요.");
+    } finally {
+      subscribeButton.disabled = false;
+    }
+  }
+
+  async function unsubscribe() {
+    unsubscribeButton.disabled = true;
+    try {
+      const subscription = await registration.pushManager.getSubscription();
+      if (subscription) {
+        await post(panel.dataset.unsubscribeUrl, { endpoint: subscription.endpoint });
+        await subscription.unsubscribe();
+      }
+      window.location.reload();
+    } catch (error) {
+      setStatus("해제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      unsubscribeButton.disabled = false;
+    }
+  }
+
+  navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .then((result) => {
+      registration = result;
+      subscribeButton.addEventListener("click", subscribe);
+      unsubscribeButton.addEventListener("click", unsubscribe);
+      return refresh();
+    })
+    .catch(() => setStatus("서비스 워커를 등록하지 못했습니다. HTTPS 주소로 접속했는지 확인해 주세요."));
+})();

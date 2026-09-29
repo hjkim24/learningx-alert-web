@@ -63,8 +63,23 @@ CourseSelectionFormSet = modelformset_factory(
 )
 
 
+WEBHOOK_KINDS = (
+    (Destination.Kind.DISCORD, Destination.Kind.DISCORD.label),
+    (Destination.Kind.SLACK, Destination.Kind.SLACK.label),
+)
+
+
 class DestinationForm(LabelSuffixMixin, forms.Form):
-    kind = forms.ChoiceField(label="알림 서비스", choices=Destination.Kind.choices)
+    """A new Discord/Slack webhook destination. Browser push registers via JS."""
+
+    kind = forms.ChoiceField(label="알림 서비스", choices=WEBHOOK_KINDS)
+    label = forms.CharField(
+        label="이름 (선택)",
+        required=False,
+        max_length=64,
+        strip=True,
+        widget=forms.TextInput(attrs={"placeholder": "예: 개인 서버 #과제"}),
+    )
     webhook_url = forms.CharField(
         label="웹훅 URL",
         required=False,
@@ -75,23 +90,14 @@ class DestinationForm(LabelSuffixMixin, forms.Form):
         ),
     )
 
-    def __init__(self, *args, existing=None, **kwargs):
+    def __init__(self, *args, require_url=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.existing = existing
-        if existing and not self.is_bound:
-            self.initial["kind"] = existing.kind
+        self.require_url = require_url
 
     def clean(self):
         cleaned = super().clean()
-        kind = cleaned.get("kind")
-        webhook_url = cleaned.get("webhook_url")
-        if not webhook_url and not self.existing:
+        if self.require_url and not cleaned.get("webhook_url"):
             self.add_error("webhook_url", "웹훅 URL을 입력해 주세요.")
-        elif not webhook_url and kind != self.existing.kind:
-            self.add_error(
-                "webhook_url",
-                "알림 서비스를 바꾸려면 새 웹훅 URL을 입력해 주세요.",
-            )
         return cleaned
 
 
