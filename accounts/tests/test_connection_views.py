@@ -48,9 +48,10 @@ class CanvasConnectionViewTests(TestCase):
 
         self.assertEqual(self.client.get(reverse("canvas_connect")).status_code, 405)
 
+    @patch("accounts.views.sync_courses")
     @patch.object(CanvasClient, "profile", return_value=CanvasProfile(1234, "김학재"))
     @patch.object(CanvasClient, "__init__", return_value=None)
-    def test_connect_stores_only_current_users_encrypted_token(self, _init, _profile):
+    def test_connect_stores_only_current_users_encrypted_token(self, _init, _profile, _sync):
         self.client.force_login(self.user)
 
         response = self.client.post(

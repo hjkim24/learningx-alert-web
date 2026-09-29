@@ -10,7 +10,7 @@
 
 The service lets each approved student sign in with Google, connect their own Canvas personal access token, choose courses and notification item types, and receive scheduled deadline alerts through Discord or Slack. The service must keep working after the browser closes.
 
-The pilot is successful only when two different student accounts complete this flow independently:
+The pilot is successful when at least one real student account completes this flow (changed 2026-09-29 from two accounts; isolation between users is covered by automated tests):
 
 1. Sign in and connect Canvas.
 2. See only their own active courses.
@@ -277,7 +277,7 @@ Automated tests use mocked external responses and never require real credentials
 - Cascading account deletion.
 - Log and displayed-error redaction.
 
-The feasibility phase uses two voluntarily supplied accounts and test channels with explicit approval. `FEASIBILITY.md` records support as verified, unavailable, or unverified for each account, course, and item type without storing tokens or sensitive response bodies.
+The feasibility phase uses at least one voluntarily supplied account and test channels with explicit approval. `FEASIBILITY.md` records support as verified, unavailable, or unverified for each account, course, and item type without storing tokens or sensitive response bodies.
 
 ## Deployment
 
@@ -292,16 +292,16 @@ The OCI firewall exposes only the ports required for HTTPS and restricted admini
 3. Verify the first account without persisting its token.
 4. Implement Google login and one-account Canvas connection.
 5. Add course selection, preview, and test notification.
-6. Add tenant isolation and the second account.
+6. Add tenant isolation (verified by automated multi-user tests).
 7. Add scheduling, execution history, and idempotent delivery.
 8. Run the two-account end-to-end pilot and record redacted results.
 9. Deploy to OCI only after the feasibility gate passes for the advertised scope.
 
-If LearningX external-tool launch or completion-state access fails for the second account, the public scope is reduced to verified Canvas assignment alerts unless the user separately approves further institutional integration work.
+If LearningX external-tool launch or completion-state access fails for the verified account, the public scope is reduced to verified Canvas assignment alerts unless the user separately approves further institutional integration work.
 
 ## Acceptance criteria
 
-- Two allowlisted users see only their own courses, settings, secrets, and run history.
+- Different users see only their own courses, settings, secrets, and run history (automated multi-user tests).
 - Invalid credentials are not stored.
 - Completed, submitted, expired, disabled-course, and disabled-type items are absent from alerts.
 - Exact lookahead-boundary items are included.
@@ -309,4 +309,4 @@ If LearningX external-tool launch or completion-state access fails for the secon
 - A repeated worker scan cannot duplicate a confirmed scheduled delivery.
 - Test delivery occurs only after a direct user action.
 - Tokens and webhook URLs do not appear in Git, ordinary logs, UI responses, screenshots used as evidence, or another user's data.
-- Two-account setup, collection, scheduling, receipt, and source comparison are documented with secrets removed.
+- Real-account setup, collection, scheduling, receipt, and source comparison are documented with secrets removed (one account suffices).

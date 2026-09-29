@@ -16,9 +16,9 @@
       <span class="status-number" aria-hidden="true">1</span>
       <span><strong>Google</strong> 확인됨</span>
     </li>
-    <li class="{% if connection %}is-complete{% else %}is-current{% endif %}">
+    <li class="{% if connection and not connection.needs_reconnect %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">2</span>
-      <span><strong>Canvas</strong> {% if connection %}연결됨{% else %}연결 필요{% endif %}</span>
+      <span><strong>Canvas</strong> {% if connection.needs_reconnect %}재연결 필요{% elif connection %}연결됨{% else %}연결 필요{% endif %}</span>
     </li>
     <li class="{% if selected_course_count %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">3</span>
@@ -47,9 +47,17 @@
         </div>
       </div>
 
+      {% if connection.needs_reconnect %}
+        <div class="reconnect-notice" role="alert">
+          <strong>Canvas 재연결이 필요합니다.</strong>
+          <p>저장된 토큰이 만료되었거나 철회되어 예약 알림을 멈췄습니다. 새 토큰을 입력해 다시 연결해 주세요.</p>
+        </div>
+      {% endif %}
       {% if connection %}
         <div class="connected-summary">
-          <p class="connection-label"><span aria-hidden="true"></span> 연결 확인됨</p>
+          {% if not connection.needs_reconnect %}
+            <p class="connection-label"><span aria-hidden="true"></span> 연결 확인됨</p>
+          {% endif %}
           <dl>
             <div>
               <dt>Canvas 사용자</dt>

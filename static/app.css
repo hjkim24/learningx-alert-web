@@ -121,6 +121,23 @@ a {
   border-left-color: var(--alert);
 }
 
+.message-warning {
+  border-left-color: var(--signal);
+}
+
+.reconnect-notice {
+  margin: 0 0 20px;
+  border-left: 4px solid var(--alert);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 14px 18px;
+}
+
+.reconnect-notice p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(20rem, 0.82fr);

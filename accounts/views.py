@@ -65,7 +65,7 @@ def _next_scheduled_at(rule, now, *, current_slot_claimed=False):
 def dashboard(request):
     connection = (
         CanvasConnection.objects.filter(user=request.user)
-        .values("canvas_user_id", "canvas_name", "verified_at")
+        .values("canvas_user_id", "canvas_name", "verified_at", "needs_reconnect")
         .first()
     )
     selected_course_count = CourseSelection.objects.filter(
@@ -79,7 +79,13 @@ def dashboard(request):
     )
     rule = NotificationRule.objects.filter(user=request.user).first()
     next_run = None
-    if connection and selected_course_count and destination and rule:
+    if (
+        connection
+        and not connection["needs_reconnect"]
+        and selected_course_count
+        and destination
+        and rule
+    ):
         now = timezone.now()
         current_slot_claimed = ScheduledRun.objects.filter(
             user=request.user,
@@ -176,6 +182,18 @@ def canvas_connect(request):
             )
         else:
             messages.success(request, "Canvas 계정을 연결했습니다.")
+            try:
+                courses = sync_courses(request.user)
+            except CourseSyncError:
+                messages.warning(
+                    request,
+                    "과목 목록은 불러오지 못했습니다. 과목 선택에서 새로고침해 주세요.",
+                )
+            else:
+                messages.success(
+                    request,
+                    f"수강 과목 {courses.count()}개를 불러왔습니다. 과목 선택에서 알림을 켜 주세요.",
+                )
     return redirect("dashboard")
 
 

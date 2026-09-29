@@ -45,6 +45,7 @@ def claim_due_runs(now):
             alert_selection_filter("user__course_selections__"),
             user__destination__isnull=False,
             user__canvas_connection__isnull=False,
+            user__canvas_connection__needs_reconnect=False,
         )
         .select_related("user")
         .distinct()
