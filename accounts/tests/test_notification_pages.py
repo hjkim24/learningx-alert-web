@@ -70,6 +70,7 @@ class NotificationPageTests(TestCase):
         dashboard = self.client.get(reverse("dashboard"))
         courses = self.client.get(reverse("course_settings"))
         notifications = self.client.get(reverse("notification_settings"))
+        destinations = self.client.get(reverse("destination_settings"))
 
         self.assertContains(dashboard, "과목 선택")
         self.assertContains(dashboard, "알림 설정")
@@ -78,12 +79,12 @@ class NotificationPageTests(TestCase):
         self.assertNotContains(courses, "검증 후 제공")
         self.assertContains(courses, "운영 설정 후 제공", count=1)
         self.assertContains(notifications, "마감 조회 범위")
-        self.assertContains(notifications, "시험 알림")
+        self.assertContains(destinations, "시험 알림")
         self.assertContains(
-            notifications,
+            destinations,
             "저장된 URL은 다시 표시되지 않습니다",
         )
-        for response in (dashboard, courses, notifications):
+        for response in (dashboard, courses, notifications, destinations):
             self.assertNotContains(response, self.webhook_url)
             self.assertNotContains(response, self.destination.encrypted_webhook_url)
 
@@ -93,26 +94,28 @@ class NotificationPageTests(TestCase):
 
         courses = self.client.get(reverse("course_settings"))
         notifications = self.client.get(reverse("notification_settings"))
+        destinations = self.client.get(reverse("destination_settings"))
 
         self.assertNotContains(courses, 'id_form-0-enabled')
         self.assertContains(courses, f'for="id_form-0-include_assignments"')
         self.assertContains(courses, "강의 — 운영 설정 후 제공")
         self.assertNotContains(courses, "필수 학습자료")
         self.assertContains(courses, 'type="checkbox" disabled', count=1)
-        for field_name in (
-            "lookahead_days",
-            "alarms-0-time",
-            "kind",
-            "webhook_url",
+        for page, field_name in (
+            (notifications, "lookahead_days"),
+            (notifications, "alarms-0-time"),
+            (destinations, "kind"),
+            (destinations, "webhook_url"),
         ):
-            self.assertContains(notifications, f'for="id_{field_name}"')
-            self.assertContains(notifications, f'id="id_{field_name}"')
+            self.assertContains(page, f'for="id_{field_name}"')
+            self.assertContains(page, f'id="id_{field_name}"')
         self.assertContains(notifications, 'type="number"')
         self.assertContains(notifications, 'min="1"')
         self.assertContains(notifications, 'max="14"')
         # One saved alarm row plus the hidden template row for "add".
         self.assertContains(notifications, 'type="time"', count=2)
-        self.assertContains(notifications, 'type="password"')
+        self.assertContains(destinations, 'type="password"')
+        self.assertNotContains(notifications, 'type="password"')
 
     def test_notification_settings_requires_login(self):
         self.client.logout()

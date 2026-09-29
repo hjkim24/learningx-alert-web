@@ -3,7 +3,7 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>{% block title %}LearningX Alert{% endblock %}</title>
   <meta name="theme-color" content="#2e6b52">
@@ -22,7 +22,10 @@
     </a>
     {% if user.is_authenticated %}
       <div class="account-menu">
-        <span>{{ user.email|default:user.username }}</span>
+        <a class="account-link" href="{% url 'account_settings' %}"{% if request.resolver_match.url_name == "account_settings" %} aria-current="page"{% endif %}>
+          <span class="account-avatar" aria-hidden="true">{{ user.email|default:user.username|first|upper }}</span>
+          <span class="account-email">{{ user.email|default:user.username }}</span>
+        </a>
         <form method="post" action="{% url 'account_logout' %}">
           {% csrf_token %}
           <button class="text-button" type="submit">로그아웃</button>
@@ -38,7 +41,7 @@
       <nav class="site-nav" aria-label="주 메뉴">
         <a href="{% url 'dashboard' %}"{% if current == "dashboard" %} aria-current="page"{% endif %}>대시보드</a>
         <a href="{% url 'course_settings' %}"{% if current == "course_settings" or current == "course_settings_save" %} aria-current="page"{% endif %}>과목 선택</a>
-        <a href="{% url 'notification_settings' %}"{% if current == "notification_settings" or current == "notification_settings_save" or current == "notification_rule_save" or current == "destination_save" or current == "destination_test" or current == "destination_delete" %} aria-current="page"{% endif %}>알림 설정</a>
+        <a href="{% url 'notification_settings' %}"{% if current == "notification_settings" or current == "notification_settings_save" or current == "notification_rule_save" or current == "destination_settings" or current == "destination_save" or current == "destination_test" or current == "destination_delete" %} aria-current="page"{% endif %}>알림 설정</a>
       </nav>
     {% endwith %}
   {% endif %}

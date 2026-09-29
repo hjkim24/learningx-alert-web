@@ -314,7 +314,7 @@ class PushSubscriptionViewTests(TestCase):
     @override_settings(WEB_PUSH_ENABLED=False)
     def test_disabled_push_refuses_and_hides_panel(self, _dns):
         self.assertEqual(self.subscribe().status_code, 404)
-        page = self.client.get(reverse("notification_settings"))
+        page = self.client.get(reverse("destination_settings"))
         self.assertNotContains(page, "data-push")
 
     def test_unsubscribe_removes_only_matching_browser(self, _dns):
@@ -343,7 +343,7 @@ class PushSubscriptionViewTests(TestCase):
             encrypted_webhook_url=encrypt_secret("https://discord.com/api/webhooks/1/secret"),
         )
 
-        page = self.client.get(reverse("notification_settings"))
+        page = self.client.get(reverse("destination_settings"))
 
         self.assertContains(page, "macOS Chrome")
         self.assertContains(page, "과제 채널")

@@ -102,13 +102,13 @@ class NotificationSettingsSaveTests(TestCase):
         self.assertContains(response, "아직 알림을 받을 곳이 없습니다")
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
-    def test_saves_rule_and_destination_together(self, _dns):
+    def test_schedule_save_ignores_webhook_fields(self, _dns):
+        """Webhooks are added on the 받을 곳 tab; the schedule form never creates one."""
         response = self.post(webhook_url=DISCORD_URL)
 
         self.assertRedirects(response, reverse("notification_settings"))
         self.assertEqual(NotificationRule.objects.get(user=self.user).lookahead_days, 7)
-        destination = Destination.objects.get(user=self.user)
-        self.assertEqual(decrypt_secret(destination.encrypted_webhook_url), DISCORD_URL)
+        self.assertFalse(Destination.objects.filter(user=self.user).exists())
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
     def test_invalid_rule_saves_nothing_and_never_echoes_webhook(self, _dns):
@@ -119,14 +119,14 @@ class NotificationSettingsSaveTests(TestCase):
         self.assertFalse(Destination.objects.filter(user=self.user).exists())
         self.assertNotContains(response, DISCORD_URL, status_code=400)
 
-    def test_invalid_webhook_keeps_existing_rule_unchanged(self):
+    def test_invalid_alarm_keeps_existing_rule_unchanged(self):
         make_rule(self.user, time(8, 0), lookahead_days=3)
 
-        response = self.post(webhook_url="https://example.com/not-a-webhook")
+        response = self.post(**{"alarms-0-days": []})
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(NotificationRule.objects.get(user=self.user).lookahead_days, 3)
-        self.assertFalse(Destination.objects.filter(user=self.user).exists())
+        self.assertContains(response, "data-dirty", status_code=400)
 
     def test_existing_destination_is_kept_when_url_left_blank(self):
         Destination.objects.create(
@@ -170,7 +170,8 @@ class UxPageTests(TestCase):
         self.assertNotContains(response, "자동 알림 실행은 아직 시작되지 않았습니다")
         self.assertContains(response, ">마감 조회 범위</label>")
         self.assertNotContains(response, "범위:</label>")
-        self.assertContains(response, 'aria-current="page"', count=1)
+        # One for the main nav item, one for the 알림 시각 sub-tab.
+        self.assertContains(response, 'aria-current="page"', count=2)
 
     def test_dashboard_warns_when_destination_is_missing(self):
         CanvasConnection.objects.create(

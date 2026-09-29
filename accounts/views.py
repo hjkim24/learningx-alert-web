@@ -330,33 +330,41 @@ def _save_schedule(request, rule_form, alarm_formset):
     return saved_rule
 
 
-def _notification_settings_context(
-    request,
-    *,
-    rule_form=None,
-    alarm_formset=None,
-    destination_form=None,
-):
-    destinations = list(Destination.objects.filter(user=request.user))
+def _notification_settings_context(request, *, rule_form=None, alarm_formset=None):
     rule = NotificationRule.objects.filter(user=request.user).first()
     if rule_form is None:
         rule_form = NotificationRuleForm(instance=rule or NotificationRule())
     if alarm_formset is None:
         alarm_formset = _alarm_formset(rule)
-    if destination_form is None:
-        destination_form = DestinationForm()
-    push_enabled = webpush.web_push_enabled()
     return {
-        "destinations": destinations,
-        "destination_form": destination_form,
-        "destination_limit": Destination.MAX_PER_USER,
+        "destination_count": Destination.objects.filter(user=request.user).count(),
         "rule_form": rule_form,
         "alarm_formset": alarm_formset,
         "alarm_limit": AlarmTime.MAX_PER_RULE,
         "weekday_labels": WEEKDAY_LABELS,
+    }
+
+
+def _destination_settings_context(request, *, destination_form=None):
+    destinations = list(Destination.objects.filter(user=request.user))
+    push_enabled = webpush.web_push_enabled()
+    return {
+        "destinations": destinations,
+        "destination_count": len(destinations),
+        "destination_form": destination_form or DestinationForm(),
+        "destination_limit": Destination.MAX_PER_USER,
         "push_enabled": push_enabled,
         "vapid_public_key": webpush.vapid_public_key() if push_enabled else "",
     }
+
+
+def _render_destinations(request, destination_form, status=400):
+    return render(
+        request,
+        "accounts/destination_settings.html",
+        _destination_settings_context(request, destination_form=destination_form),
+        status=status,
+    )
 
 
 def _add_webhook(request, form):
@@ -389,55 +397,51 @@ def notification_settings(request):
     )
 
 
-@sensitive_post_parameters("webhook_url")
-@sensitive_variables("webhook_url")
+@login_required
+@require_GET
+def destination_settings(request):
+    return render(
+        request,
+        "accounts/destination_settings.html",
+        _destination_settings_context(request),
+    )
+
+
+@login_required
+@require_GET
+def account_settings(request):
+    return render(request, "accounts/account_settings.html")
+
+
 @login_required
 @require_POST
 def notification_settings_save(request):
-    """Save the schedule and, when a URL is given, add a webhook destination.
-
-    Nothing is written unless every submitted part validates, so a bad webhook
-    never leaves a half-saved rule behind.
-    """
+    """Save the lookahead range and alarm rows together, or nothing at all."""
     rule = NotificationRule.objects.filter(user=request.user).first()
     rule_form = NotificationRuleForm(request.POST, instance=rule)
     alarm_formset = _alarm_formset(rule, request.POST)
-    destination_form = DestinationForm(request.POST)
-    adding = bool(request.POST.get("webhook_url", "").strip())
 
-    def rerender():
+    rule_valid = rule_form.is_valid()
+    alarms_valid = alarm_formset.is_valid()
+    if not (rule_valid and alarms_valid):
         return render(
             request,
             "accounts/notification_settings.html",
             _notification_settings_context(
-                request,
-                rule_form=rule_form,
-                alarm_formset=alarm_formset,
-                destination_form=destination_form if adding else None,
+                request, rule_form=rule_form, alarm_formset=alarm_formset
             ),
             status=400,
         )
 
-    rule_valid = rule_form.is_valid()
-    alarms_valid = alarm_formset.is_valid()
-    destination_valid = not adding or destination_form.is_valid()
-    if not (rule_valid and alarms_valid and destination_valid):
-        return rerender()
-
     with transaction.atomic():
-        if adding and not _add_webhook(request, destination_form):
-            return rerender()
         _save_schedule(request, rule_form, alarm_formset)
 
     if Destination.objects.filter(user=request.user).exists():
-        messages.success(
-            request,
-            "알림 설정을 저장하고 알림 대상을 추가했습니다." if adding else "알림 설정을 저장했습니다.",
-        )
+        messages.success(request, "알림 설정을 저장했습니다.")
     else:
         messages.warning(
             request,
-            "알림 시각을 저장했습니다. 알림을 받으려면 웹훅이나 브라우저 푸시를 추가해 주세요.",
+            "알림 시각을 저장했습니다. 알림을 받으려면 받을 곳에서 웹훅이나 브라우저 푸시를 추가해 주세요.",
         )
     return redirect("notification_settings")
 
@@ -474,13 +478,8 @@ def destination_save(request):
     form = DestinationForm(request.POST, require_url=True)
     if form.is_valid() and _add_webhook(request, form):
         messages.success(request, "알림 대상을 추가했습니다.")
-        return redirect("notification_settings")
-    return render(
-        request,
-        "accounts/notification_settings.html",
-        _notification_settings_context(request, destination_form=form),
-        status=400,
-    )
+        return redirect("destination_settings")
+    return _render_destinations(request, form)
 
 
 @login_required
@@ -491,7 +490,7 @@ def destination_delete(request, pk):
         messages.success(request, "알림 대상을 삭제했습니다.")
     else:
         messages.error(request, "알림 대상을 찾을 수 없습니다.")
-    return redirect("notification_settings")
+    return redirect("destination_settings")
 
 
 @sensitive_variables("secret")
@@ -501,7 +500,7 @@ def destination_test(request, pk):
     destination = Destination.objects.filter(user=request.user, pk=pk).first()
     if not destination:
         messages.error(request, "알림 대상을 먼저 저장해 주세요.")
-        return redirect("notification_settings")
+        return redirect("destination_settings")
 
     secret = decrypt_secret(destination.encrypted_webhook_url)
     try:
@@ -522,7 +521,7 @@ def destination_test(request, pk):
             request,
             "이 브라우저의 푸시 구독이 만료되어 삭제했습니다. 해당 기기에서 다시 등록해 주세요.",
         )
-        return redirect("notification_settings")
+        return redirect("destination_settings")
     except DefiniteDeliveryError:
         destination.status = Destination.Status.DEFINITELY_FAILED
         messages.error(request, "시험 알림 전송에 실패했습니다.")
@@ -542,7 +541,7 @@ def destination_test(request, pk):
         )
     destination.last_tested_at = timezone.now()
     destination.save(update_fields=("status", "last_tested_at"))
-    return redirect("notification_settings")
+    return redirect("destination_settings")
 
 
 MAX_PUSH_BODY_BYTES = 8192

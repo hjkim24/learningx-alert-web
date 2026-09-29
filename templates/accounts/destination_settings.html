@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}받을 곳 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <header class="page-heading compact-heading">
+    <div>
+      <h1>알림 설정</h1>
+      <p>언제 조회해서 어디로 보낼지 정합니다. 예약 알림은 설정한 시각에 자동으로 발송됩니다.</p>
+    </div>
+  </header>
+  {% include "accounts/_notification_tabs.html" with active="destinations" %}
+
+  {% if not destinations %}
+    <div class="attention-notice" role="status">
+      <strong>아직 알림을 받을 곳이 없습니다.</strong>
+      <p>아래에서 이 기기의 브라우저 푸시를 켜거나 Discord·Slack 웹훅을 추가하세요.</p>
+    </div>
+  {% endif %}
+
+  {% if push_enabled %}
+    <section class="panel push-panel" aria-labelledby="push-title" data-push
+      data-vapid-key="{{ vapid_public_key }}"
+      data-subscribe-url="{% url 'push_subscribe' %}"
+      data-unsubscribe-url="{% url 'push_unsubscribe' %}">
+      <h2 id="push-title">브라우저 푸시</h2>
+      <p>이 브라우저를 알림 대상으로 추가합니다. 컴퓨터와 휴대폰에서 각각 등록할 수 있습니다.</p>
+      <p class="push-status" data-push-status role="status">브라우저 지원 여부를 확인하는 중입니다.</p>
+      <div class="destination-actions">
+        <button class="primary-button" type="button" data-push-subscribe hidden>이 브라우저에서 알림 받기</button>
+        <button class="secondary-button" type="button" data-push-unsubscribe hidden>이 브라우저 알림 해제</button>
+      </div>
+      <p class="fine-print" data-push-ios hidden>iPhone·iPad는 Safari 공유 메뉴에서 "홈 화면에 추가"한 뒤, 홈 화면 아이콘으로 열어야 알림을 켤 수 있습니다(iOS 16.4 이상).</p>
+      <p class="fine-print">푸시는 브라우저 회사의 푸시 서버를 거쳐 암호화된 채로 전달됩니다. 기기가 꺼져 있거나 알림이 꺼져 있으면 늦게 도착하거나 보이지 않을 수 있으니, 중요한 알림은 웹훅도 함께 등록하는 것을 권합니다.</p>
+    </section>
+  {% endif %}
+
+  <section class="panel" aria-labelledby="destination-status-title">
+    <h2 id="destination-status-title">알림 대상 <span class="term-meta">{{ destinations|length }}/{{ destination_limit }}</span></h2>
+    <p class="fine-print">예약 알림은 아래 모든 대상에 따로 보냅니다. 한 곳이 실패해도 나머지는 그대로 받습니다.</p>
+    {% if destinations %}
+      <ul class="destination-list">
+        {% for destination in destinations %}
+          <li class="destination-row">
+            <div class="destination-name">
+              <span class="kind-chip kind-{{ destination.kind }}">{{ destination.get_kind_display }}</span>
+              <strong>{{ destination.display_name }}</strong>
+              <span class="term-meta">
+                {{ destination.get_status_display }}{% if destination.last_tested_at %} · {{ destination.last_tested_at|date:"m.d H:i" }}{% endif %}
+              </span>
+            </div>
+            <div class="destination-actions">
+              <form method="post" action="{% url 'destination_test' destination.pk %}">
+                {% csrf_token %}
+                <button class="secondary-button" type="submit">시험 알림</button>
+              </form>
+              <form method="post" action="{% url 'destination_delete' destination.pk %}">
+                {% csrf_token %}
+                <button class="danger-button" type="submit" aria-label="{{ destination.display_name }} 삭제">삭제</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="empty-state compact">등록된 알림 대상이 없습니다.</p>
+    {% endif %}
+  </section>
+
+  <details class="panel webhook-panel"{% if destination_form.is_bound %} open{% endif %}>
+    <summary>
+      <h2 id="destination-title">+ 웹훅 추가</h2>
+      <span class="term-meta">Discord · Slack</span>
+    </summary>
+    <form class="webhook-form" method="post" action="{% url 'destination_save' %}">
+      {% csrf_token %}
+      {{ destination_form.non_field_errors }}
+      <div class="field-pair">
+        <div class="field-row">
+          {{ destination_form.kind.label_tag }}
+          {{ destination_form.kind }}
+          {{ destination_form.kind.errors }}
+        </div>
+        <div class="field-row">
+          {{ destination_form.label.label_tag }}
+          {{ destination_form.label }}
+          {{ destination_form.label.errors }}
+        </div>
+      </div>
+      <div class="field-row">
+        {{ destination_form.webhook_url.label_tag }}
+        {{ destination_form.webhook_url }}
+        {{ destination_form.webhook_url.errors }}
+        <small>채널 설정에서 발급한 웹훅 URL을 붙여 넣으세요. 저장된 URL은 다시 표시되지 않습니다.</small>
+      </div>
+      <button class="primary-button" type="submit">웹훅 추가</button>
+    </form>
+  </details>
+{% endblock %}
