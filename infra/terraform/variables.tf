@@ -158,3 +158,9 @@ variable "app_domain" {
   type    = string
   default = "alert.sobok-app.com"
 }
+
+variable "oci_auth" {
+  description = "OCI provider auth: \"APIKey\" (profile with user/fingerprint/key_file) or \"SecurityToken\" (oci session authenticate)."
+  type        = string
+  default     = "ApiKey"
+}
