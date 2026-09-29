@@ -1,4 +1,5 @@
 import unittest
+from urllib.error import HTTPError
 
 from learningx_alert.learningx import LearningXClient, LearningXSessionError, select_feature_tab
 from learningx_alert.models import CapabilityStatus
@@ -32,7 +33,7 @@ class LearningXSafetyTests(unittest.TestCase):
             launch_url="https://learningx.example.edu/verify",
             html='<form action="/login"><input name="token" value="secret"></form>',
         )
-        client = LearningXClient(canvas, {"learningx.example.edu"}, resolve_public=False)
+        client = LearningXClient(canvas, {"learningx.example.edu"}, resolve_public=False, sleep=lambda _s: None)
         with self.assertRaisesRegex(LearningXSessionError, "learningx_token_missing"):
             client.attendance(7)
 
@@ -106,6 +107,81 @@ class LearningXSafetyTests(unittest.TestCase):
         canvas = FakeCanvasForLti.successful()
         LearningXClient(canvas, {"learningx.example.edu"}, resolve_public=False).attendance(7)
         self.assertTrue(all(request.bearer is None for request in canvas.external_requests))
+
+
+class FlakyLaunchCanvas(FakeCanvasForLti):
+    """Canvas that answers the first N launch-page GETs with an HTTP error."""
+
+    def __init__(self, failures: int, code: int = 404) -> None:
+        ok = FakeCanvasForLti.successful()
+        super().__init__(launch_url=ok.launch_url, html=ok.html.decode(), cookie=ok.cookie)
+        self.failures = failures
+        self.code = code
+        self.launch_requests = 0
+
+    def json_path(self, path: str):
+        if "/tabs" in path:
+            return [{"label": "강의콘텐츠", "id": "context_external_tool_297"}]
+        self.launch_requests += 1
+        return {"url": self.launch_url}
+
+    def open_external(self, method: str, url: str, **kwargs):
+        if method == "GET" and self.failures:
+            self.failures -= 1
+            raise HTTPError(url, self.code, "Not Found", {}, None)
+        return super().open_external(method, url, **kwargs)
+
+
+class LaunchRetryTests(unittest.TestCase):
+    def client(self, canvas, sleeps):
+        return LearningXClient(
+            canvas, {"learningx.example.edu"}, resolve_public=False, retry_delay=1.5, sleep=sleeps.append
+        )
+
+    def test_transient_404_is_retried_with_a_fresh_launch_url(self) -> None:
+        canvas, sleeps = FlakyLaunchCanvas(failures=1), []
+
+        self.assertEqual(self.client(canvas, sleeps).modules(7), [])
+
+        self.assertEqual(canvas.launch_requests, 2)
+        self.assertEqual(sleeps, [1.5])
+
+    def test_gives_up_after_the_second_failure(self) -> None:
+        canvas, sleeps = FlakyLaunchCanvas(failures=5), []
+
+        with self.assertRaises(HTTPError) as caught:
+            self.client(canvas, sleeps).modules(7)
+
+        self.assertEqual(caught.exception.code, 404)
+        self.assertEqual(canvas.launch_requests, 2)
+        self.assertEqual(sleeps, [1.5])
+
+    def test_permission_errors_are_not_retried(self) -> None:
+        canvas, sleeps = FlakyLaunchCanvas(failures=1, code=403), []
+
+        with self.assertRaises(HTTPError):
+            self.client(canvas, sleeps).modules(7)
+
+        self.assertEqual(canvas.launch_requests, 1)
+        self.assertEqual(sleeps, [])
+
+    def test_missing_tool_fails_fast(self) -> None:
+        canvas, sleeps = FlakyLaunchCanvas(failures=0), []
+        canvas.json_path = lambda path: [] if "/tabs" in path else {"url": canvas.launch_url}
+
+        with self.assertRaisesRegex(LearningXSessionError, "external_tool_missing"):
+            self.client(canvas, sleeps).modules(7)
+
+        self.assertEqual(sleeps, [])
+
+    def test_successful_token_is_reused_without_another_launch(self) -> None:
+        canvas, sleeps = FlakyLaunchCanvas(failures=0), []
+        client = self.client(canvas, sleeps)
+
+        client.modules(7)
+        client.modules(7)
+
+        self.assertEqual(canvas.launch_requests, 1)
 
 
 class FeatureTabSelectionTests(unittest.TestCase):

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+import time
 from html.parser import HTMLParser
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urljoin
 
 from .canvas import CanvasClient
@@ -28,6 +30,11 @@ class LearningXSessionError(RuntimeError):
     pass
 
 
+# Transient answers worth one more launch; anything else fails fast.
+RETRYABLE_STATUS = {404, 429, 500, 502, 503, 504}
+RETRYABLE_SESSION_ERRORS = {"lti_form_missing", "learningx_token_missing"}
+
+
 class LtiFormParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
@@ -51,8 +58,20 @@ class LtiFormParser(HTMLParser):
 
 
 class LearningXClient:
-    def __init__(self, canvas: CanvasClient, allowed_hosts: set[str], *, resolve_public: bool = True) -> None:
+    def __init__(
+        self,
+        canvas: CanvasClient,
+        allowed_hosts: set[str],
+        *,
+        resolve_public: bool = True,
+        launch_attempts: int = 2,
+        retry_delay: float = 1.5,
+        sleep=time.sleep,
+    ) -> None:
         self.canvas = canvas
+        self.launch_attempts = max(1, launch_attempts)
+        self.retry_delay = retry_delay
+        self.sleep = sleep
         self.allowed_hosts = {host.lower() for host in allowed_hosts}
         self.resolve_public = resolve_public
         self.tokens: dict[tuple[int, str], str] = {}
@@ -68,8 +87,27 @@ class LearningXClient:
         match = re.fullmatch(r"context_external_tool_(\d+)", str(tab.get("id") or ""))
         if not match:
             raise LearningXSessionError("external_tool_id_invalid")
+        tool_id = match.group(1)
+        # Canvas occasionally answers a fresh launch URL with 404/5xx for a
+        # few minutes. Each attempt asks for a new single-use launch URL.
+        for attempt in range(1, self.launch_attempts + 1):
+            try:
+                token = self._launch(course_id, tool_id)
+                break
+            except (HTTPError, URLError, TimeoutError) as error:
+                retryable = not isinstance(error, HTTPError) or error.code in RETRYABLE_STATUS
+                if not retryable or attempt == self.launch_attempts:
+                    raise
+            except LearningXSessionError as error:
+                if str(error) not in RETRYABLE_SESSION_ERRORS or attempt == self.launch_attempts:
+                    raise
+            self.sleep(self.retry_delay)
+        self.tokens[key] = token
+        return token
+
+    def _launch(self, course_id: int, tool_id: str) -> str:
         launch = self.canvas.json_path(
-            f"/api/v1/courses/{course_id}/external_tools/sessionless_launch?id={match.group(1)}"
+            f"/api/v1/courses/{course_id}/external_tools/sessionless_launch?id={tool_id}"
         )
         try:
             launch_url = validate_https_url(
@@ -102,7 +140,6 @@ class LearningXClient:
         token = self.canvas.cookie_value("xn_api_token")
         if not token:
             raise LearningXSessionError("learningx_token_missing")
-        self.tokens[key] = token
         return token
 
     def sessionless_launch(self, course_id: int) -> None:

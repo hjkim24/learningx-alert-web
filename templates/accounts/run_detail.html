@@ -46,8 +46,7 @@
     {% for result in run.course_results.all %}
       <p class="outcome{% if result.status == 'failed' %} outcome-failed{% endif %}">
         <strong>{{ result.course_name }}</strong>
-        <span>{{ result.get_status_display }}{% if result.safe_summary %} · {{ result.safe_summary }}{% endif %}</span>
-        {% if result.error_code %}<code>{{ result.error_code }}</code>{% endif %}
+        <span{% if result.error_code %} data-error-code="{{ result.error_code }}"{% endif %}>{{ result.get_status_display }}{% if result.safe_summary %} · {{ result.safe_summary }}{% endif %}</span>
       </p>
     {% empty %}
       <p class="empty-state compact">저장된 과목 조회 결과가 없습니다.</p>
