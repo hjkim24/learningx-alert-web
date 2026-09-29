@@ -3,7 +3,7 @@ from datetime import time
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import F, Q
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -59,17 +59,62 @@ class NotificationRule(models.Model):
         default=3,
         validators=(MinValueValidator(1), MaxValueValidator(14)),
     )
-    first_time = models.TimeField(default=time(9, 0))
-    second_time = models.TimeField(blank=True, null=True)
+
+
+WEEKDAY_LABELS = ("월", "화", "수", "목", "금", "토", "일")
+EVERY_DAY = 0b1111111
+WEEKDAYS_ONLY = 0b0011111
+WEEKEND_ONLY = 0b1100000
+
+
+def weekdays_summary(mask):
+    """Korean summary of a weekday bitmask (bit 0 = Monday)."""
+    if mask == EVERY_DAY:
+        return "매일"
+    if mask == WEEKDAYS_ONLY:
+        return "평일"
+    if mask == WEEKEND_ONLY:
+        return "주말"
+    return " ".join(label for index, label in enumerate(WEEKDAY_LABELS) if mask & (1 << index))
+
+
+class AlarmTime(models.Model):
+    """One alarm-clock style slot: a KST time on chosen weekdays."""
+
+    MAX_PER_RULE = 5
+
+    rule = models.ForeignKey(
+        NotificationRule,
+        on_delete=models.CASCADE,
+        related_name="alarms",
+    )
+    time = models.TimeField(default=time(9, 0))
+    # Bit 0 = Monday ... bit 6 = Sunday, matching date.weekday().
+    weekdays = models.PositiveSmallIntegerField(
+        default=EVERY_DAY,
+        validators=(MinValueValidator(1), MaxValueValidator(EVERY_DAY)),
+    )
+    enabled = models.BooleanField(default=True)
 
     class Meta:
         constraints = [
+            models.UniqueConstraint(
+                fields=("rule", "time"),
+                name="unique_rule_alarm_time",
+            ),
             models.CheckConstraint(
-                condition=Q(second_time__isnull=True)
-                | ~Q(first_time=F("second_time")),
-                name="notification_times_are_distinct",
-            )
+                condition=Q(weekdays__gte=1) & Q(weekdays__lte=EVERY_DAY),
+                name="alarm_weekdays_in_range",
+            ),
         ]
+        ordering = ("time", "id")
+
+    def runs_on(self, weekday):
+        return bool(self.weekdays & (1 << weekday))
+
+    @property
+    def weekdays_display(self):
+        return weekdays_summary(self.weekdays)
 
 
 class Destination(models.Model):

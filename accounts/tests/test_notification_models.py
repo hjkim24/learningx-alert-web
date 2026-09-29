@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 
-from accounts.models import CourseSelection, Destination, NotificationRule
+from accounts.models import AlarmTime, CourseSelection, Destination, NotificationRule
 
 
 class NotificationModelTests(TestCase):
@@ -37,14 +37,17 @@ class NotificationModelTests(TestCase):
                 course_name="B",
             )
 
-    def test_rule_rejects_equal_daily_times(self):
+    def test_rule_rejects_equal_alarm_times(self):
+        rule = NotificationRule.objects.create(user=self.user, lookahead_days=3)
+        AlarmTime.objects.create(rule=rule, time=time(9, 0))
         with self.assertRaises(IntegrityError), transaction.atomic():
-            NotificationRule.objects.create(
-                user=self.user,
-                lookahead_days=3,
-                first_time=time(9, 0),
-                second_time=time(9, 0),
-            )
+            AlarmTime.objects.create(rule=rule, time=time(9, 0))
+
+    def test_alarm_weekdays_must_select_at_least_one_day(self):
+        rule = NotificationRule.objects.create(user=self.user, lookahead_days=3)
+        for mask in (0, 128):
+            with self.subTest(mask=mask), self.assertRaises(IntegrityError), transaction.atomic():
+                AlarmTime.objects.create(rule=rule, time=time(9, 0), weekdays=mask)
 
     def test_deleting_user_cascades_notification_configuration(self):
         CourseSelection.objects.create(
@@ -52,7 +55,9 @@ class NotificationModelTests(TestCase):
             canvas_course_id=101,
             course_name="A",
         )
-        NotificationRule.objects.create(user=self.user, first_time=time(9, 0))
+        AlarmTime.objects.create(
+            rule=NotificationRule.objects.create(user=self.user), time=time(9, 0)
+        )
         Destination.objects.create(
             user=self.user,
             kind=Destination.Kind.DISCORD,
@@ -63,4 +68,5 @@ class NotificationModelTests(TestCase):
 
         self.assertFalse(CourseSelection.objects.exists())
         self.assertFalse(NotificationRule.objects.exists())
+        self.assertFalse(AlarmTime.objects.exists())
         self.assertFalse(Destination.objects.exists())

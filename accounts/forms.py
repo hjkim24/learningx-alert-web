@@ -1,8 +1,17 @@
+from datetime import time
+
 from django import forms
 from django.conf import settings
 from django.forms import modelformset_factory
 
-from .models import CourseSelection, Destination, NotificationRule
+from .models import (
+    EVERY_DAY,
+    WEEKDAY_LABELS,
+    AlarmTime,
+    CourseSelection,
+    Destination,
+    NotificationRule,
+)
 
 
 class LabelSuffixMixin:
@@ -114,29 +123,94 @@ class NotificationRuleForm(LabelSuffixMixin, forms.ModelForm):
             attrs={"min": 1, "max": 14, "class": "input-short", "inputmode": "numeric"}
         ),
     )
-    first_time = forms.TimeField(
-        label="첫 번째 알림 시간",
-        input_formats=("%H:%M",),
-        widget=forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
-    )
-    second_time = forms.TimeField(
-        label="두 번째 알림 시간",
-        required=False,
-        input_formats=("%H:%M",),
-        widget=forms.TimeInput(format="%H:%M", attrs={"type": "time"}),
-    )
-
     class Meta:
         model = NotificationRule
-        fields = ("lookahead_days", "first_time", "second_time")
+        fields = ("lookahead_days",)
+
+
+WEEKDAY_CHOICES = tuple((str(index), label) for index, label in enumerate(WEEKDAY_LABELS))
+
+
+class AlarmTimeForm(LabelSuffixMixin, forms.ModelForm):
+    time = forms.TimeField(
+        label="시각",
+        input_formats=("%H:%M",),
+        error_messages={"required": "알림 시각을 입력해 주세요."},
+        widget=forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": "alarm-time-input"}),
+    )
+    days = forms.MultipleChoiceField(
+        label="요일",
+        choices=WEEKDAY_CHOICES,
+        error_messages={"required": "요일을 하나 이상 선택해 주세요."},
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "weekday-input"}),
+    )
+    enabled = forms.BooleanField(label="켜기", required=False)
+
+    class Meta:
+        model = AlarmTime
+        fields = ("time", "enabled")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        mask = self.instance.weekdays if self.instance.pk else EVERY_DAY
+        self.initial.setdefault(
+            "days", [str(index) for index in range(7) if mask & (1 << index)]
+        )
+        if not self.instance.pk:
+            self.initial.setdefault("enabled", True)
+            self.initial.setdefault("time", time(9, 0))
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.weekdays = sum(1 << int(day) for day in self.cleaned_data["days"])
+        if commit:
+            instance.save()
+        return instance
+
+
+DUPLICATE_ALARM_MESSAGE = "같은 시각의 알림이 두 개 있습니다. 시각을 바꾸거나 하나를 삭제해 주세요."
+
+
+class BaseAlarmFormSet(forms.BaseInlineFormSet):
+    def get_unique_error_message(self, unique_check):
+        return DUPLICATE_ALARM_MESSAGE
+
+    def _construct_form(self, i, **kwargs):
+        form = super()._construct_form(i, **kwargs)
+        if i >= self.initial_form_count():
+            # A new row prefilled with 09:00 is a real alarm even if untouched.
+            form.empty_permitted = False
+            form.has_changed = lambda: True
+        return form
 
     def clean(self):
-        cleaned = super().clean()
-        first_time = cleaned.get("first_time")
-        second_time = cleaned.get("second_time")
-        if second_time and first_time == second_time:
-            self.add_error(
-                "second_time",
-                "첫 번째 알림 시간과 다른 시간을 선택해 주세요.",
-            )
-        return cleaned
+        super().clean()
+        if any(self.errors):
+            return
+        seen = set()
+        kept = 0
+        for form in self.forms:
+            if not form.cleaned_data or self._should_delete_form(form):
+                continue
+            kept += 1
+            value = form.cleaned_data["time"].replace(second=0, microsecond=0)
+            if value in seen:
+                raise forms.ValidationError(DUPLICATE_ALARM_MESSAGE)
+            seen.add(value)
+        if kept < 1:
+            raise forms.ValidationError("알림 시각은 하나 이상 있어야 합니다.")
+        if kept > AlarmTime.MAX_PER_RULE:
+            raise forms.ValidationError(f"알림 시각은 최대 {AlarmTime.MAX_PER_RULE}개까지 설정할 수 있습니다.")
+
+
+AlarmFormSet = forms.inlineformset_factory(
+    NotificationRule,
+    AlarmTime,
+    form=AlarmTimeForm,
+    formset=BaseAlarmFormSet,
+    extra=0,
+    can_delete=True,
+    max_num=AlarmTime.MAX_PER_RULE,
+    validate_max=True,
+    absolute_max=AlarmTime.MAX_PER_RULE,
+)

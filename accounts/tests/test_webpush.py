@@ -17,6 +17,7 @@ from django.urls import reverse
 
 from accounts import webpush
 from accounts.collection import AlertItem, CollectionResult, CourseOutcome
+from accounts.tests.helpers import make_rule
 from accounts.models import Delivery, Destination, NotificationRule, ScheduledRun
 from accounts.notifications import (
     AmbiguousDeliveryError,
@@ -492,7 +493,7 @@ class MultiDestinationRunTests(TestCase):
             encrypted_token=encrypt_secret("token"),
             verified_at=self.now,
         )
-        NotificationRule.objects.create(user=self.user, first_time=datetime(2026, 1, 1, 9, 0).time())
+        make_rule(self.user, datetime(2026, 1, 1, 9, 0).time())
         ScheduledRun.objects.all().delete()
 
         claimed = claim_due_runs(self.now)

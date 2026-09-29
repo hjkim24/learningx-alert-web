@@ -16,6 +16,7 @@ from accounts.models import (
     RunItem,
     ScheduledRun,
 )
+from accounts.tests.helpers import make_rule
 
 
 class RunHistoryTests(TestCase):
@@ -51,11 +52,7 @@ class RunHistoryTests(TestCase):
             enabled=True,
             include_assignments=True,
         )
-        NotificationRule.objects.create(
-            user=user,
-            first_time=time(9, 0),
-            second_time=time(20, 0),
-        )
+        make_rule(user, time(9, 0), time(20, 0))
         Destination.objects.create(
             user=user,
             kind=Destination.Kind.DISCORD,
@@ -183,5 +180,5 @@ class RunHistoryTests(TestCase):
         self.assertIsNone(response.context["next_run"])
         self.assertContains(
             response,
-            "Canvas, 과목, 알림 시간과 대상을 모두 설정하면 표시됩니다.",
+            "Canvas, 과목, 켜 둔 알림 시각과 대상을 모두 설정하면 표시됩니다.",
         )

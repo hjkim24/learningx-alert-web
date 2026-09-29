@@ -1,5 +1,5 @@
 import hashlib
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
@@ -27,16 +27,44 @@ from .services import decrypt_secret
 SEOUL = ZoneInfo("Asia/Seoul")
 
 
+def active_alarms(rule):
+    """Enabled alarms of a rule; uses the prefetch cache when present."""
+    return [alarm for alarm in rule.alarms.all() if alarm.enabled]
+
+
 def matching_slot(rule, now):
     local_now = now.astimezone(SEOUL)
-    for configured in (rule.first_time, rule.second_time):
-        if configured is None:
+    weekday = local_now.weekday()
+    for alarm in active_alarms(rule):
+        slot_time = alarm.time.replace(second=0, microsecond=0)
+        if (slot_time.hour, slot_time.minute) != (local_now.hour, local_now.minute):
             continue
-        slot_time = configured.replace(second=0, microsecond=0)
-        if (slot_time.hour, slot_time.minute) == (local_now.hour, local_now.minute):
-            local_slot = datetime.combine(local_now.date(), slot_time, tzinfo=SEOUL)
-            return local_slot.astimezone(UTC)
+        if not alarm.runs_on(weekday):
+            continue
+        local_slot = datetime.combine(local_now.date(), slot_time, tzinfo=SEOUL)
+        return local_slot.astimezone(UTC)
     return None
+
+
+def next_alarm_at(rule, now, *, current_slot_claimed=False):
+    """Earliest upcoming alarm (KST datetime) within the next week, or None."""
+    local_now = now.astimezone(SEOUL)
+    local_minute = local_now.replace(second=0, microsecond=0)
+    candidates = []
+    for alarm in active_alarms(rule):
+        slot_time = alarm.time.replace(second=0, microsecond=0)
+        for offset in range(8):
+            day = local_now.date() + timedelta(days=offset)
+            if not alarm.runs_on(day.weekday()):
+                continue
+            candidate = datetime.combine(day, slot_time, tzinfo=SEOUL)
+            if candidate < local_now or (
+                current_slot_claimed and candidate == local_minute
+            ):
+                continue
+            candidates.append(candidate)
+            break
+    return min(candidates) if candidates else None
 
 
 def claim_due_runs(now):
@@ -48,6 +76,7 @@ def claim_due_runs(now):
             user__canvas_connection__needs_reconnect=False,
         )
         .select_related("user")
+        .prefetch_related("alarms")
         .distinct()
     )
     claimed = []
