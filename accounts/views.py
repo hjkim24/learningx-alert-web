@@ -22,6 +22,7 @@ from .forms import (
 )
 from .models import (
     WEEKDAY_LABELS,
+    ensure_default_rule,
     AlarmTime,
     CanvasConnection,
     CourseRunResult,
@@ -185,6 +186,9 @@ def canvas_connect(request):
                 "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
             )
         else:
+            # New users get a working schedule right away (3 days, daily 09:00);
+            # without one the scheduler would silently never run for them.
+            ensure_default_rule(request.user)
             messages.success(request, "Canvas 계정을 연결했습니다.")
             try:
                 courses = sync_courses(request.user)

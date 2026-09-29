@@ -34,6 +34,11 @@
       <strong>등록된 알림 대상이 없어 예약 알림이 발송되지 않습니다.</strong>
       <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
     </div>
+  {% elif not next_run %}
+    <div class="attention-notice" role="status">
+      <strong>켜 둔 알림 시각이 없어 예약 알림이 발송되지 않습니다.</strong>
+      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 알림 시각을 하나 이상 켜 주세요.</p>
+    </div>
   {% endif %}
 
   <ol class="status-rail" aria-label="설정 진행 상태">

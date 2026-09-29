@@ -117,6 +117,25 @@ class AlarmTime(models.Model):
         return weekdays_summary(self.weekdays)
 
 
+DEFAULT_ALARM_TIME = time(9, 0)
+
+
+def ensure_default_rule(user):
+    """Give a user the default schedule (3 days, daily 09:00) if they have none.
+
+    A rule with at least one alarm row is left untouched, including one whose
+    alarms are all switched off: that is the user's choice. Returns the rule.
+    """
+    rule, _ = NotificationRule.objects.get_or_create(user=user)
+    if not rule.alarms.exists():
+        AlarmTime.objects.get_or_create(
+            rule=rule,
+            time=DEFAULT_ALARM_TIME,
+            defaults={"weekdays": EVERY_DAY, "enabled": True},
+        )
+    return rule
+
+
 class Destination(models.Model):
     """One place a user's alerts go. A user may have several.
 

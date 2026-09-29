@@ -11,7 +11,7 @@ from learningx_alert.learningx import LearningXClient, LearningXSessionError
 from learningx_alert.network import UnsafeUrlError
 from learningx_alert.probe import MATERIAL_TYPES
 
-from .models import CanvasConnection, CourseSelection, ExcludedItem, NotificationRule
+from .models import CanvasConnection, CourseSelection, ExcludedItem, ensure_default_rule
 from .services import decrypt_secret
 
 
@@ -348,7 +348,7 @@ def collect_for_user(
     connection = CanvasConnection.objects.get(user=user)
     if connection.needs_reconnect:
         return CollectionResult((), (RECONNECT_OUTCOME,))
-    rule, _ = NotificationRule.objects.get_or_create(user=user)
+    rule = ensure_default_rule(user)
     selections = list(
         CourseSelection.objects.filter(alert_selection_filter(), user=user)
     )
