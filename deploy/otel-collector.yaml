@@ -19,7 +19,7 @@ receivers:
 
   # Outside-in check of the public site through Caddy and TLS. A host-down
   # outage is caught in Grafana by the *absence* of these series, not here.
-  httpcheck/site:
+  http_check/site:
     collection_interval: 60s
     targets:
       - endpoint: https://${env:APP_DOMAIN}/healthz/
@@ -53,7 +53,7 @@ processors:
         action: delete
 
 exporters:
-  otlphttp/grafana:
+  otlp_http/grafana:
     endpoint: ${env:GRAFANA_OTLP_ENDPOINT}
     auth:
       authenticator: basicauth/grafana
@@ -70,6 +70,6 @@ service:
       level: warn
   pipelines:
     metrics:
-      receivers: [otlp, httpcheck/site]
+      receivers: [otlp, http_check/site]
       processors: [memory_limiter, attributes/strip, resource, batch]
-      exporters: [otlphttp/grafana]
+      exporters: [otlp_http/grafana]
