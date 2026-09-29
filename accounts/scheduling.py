@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
 from django.db.models import Count
+from opentelemetry import trace
 from django.views.decorators.debug import sensitive_variables
 
 from . import telemetry
@@ -29,6 +30,7 @@ from .services import decrypt_secret
 
 SEOUL = ZoneInfo("Asia/Seoul")
 logger = logging.getLogger(__name__)
+_tracer = trace.get_tracer("learningx_alert.scheduler")
 _ATTENTION_STATUSES = {
     ScheduledRun.Status.FAILED,
     ScheduledRun.Status.NEEDS_REVIEW,
@@ -394,7 +396,13 @@ def run_due_rules(
     runs = claim_due_runs(now) if claimed_runs is None else claimed_runs
     for run in runs:
         try:
-            execute_run(run, now, collector=collector, sender=sender)
+            # One trace per run: Canvas/LearningX/webhook calls and DB queries
+            # nest under it. Only the run id and final status are attached.
+            with _tracer.start_as_current_span(
+                "scheduled_run", attributes={"learningx.run_id": run.pk}
+            ) as span:
+                execute_run(run, now, collector=collector, sender=sender)
+                span.set_attribute("learningx.run_status", str(run.status))
         except Exception:
             logger.exception("run crashed", extra={"event": "run_crashed", "run_id": run.pk})
             _finish_run(

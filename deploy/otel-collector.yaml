@@ -51,6 +51,22 @@ processors:
         action: delete
       - key: http.url
         action: delete
+      - key: http.target
+        action: delete
+      - key: url.query
+        action: delete
+      - key: http.user_agent
+        action: delete
+      - key: user_agent.original
+        action: delete
+      - key: client.address
+        action: delete
+      - key: http.client_ip
+        action: delete
+      - key: net.peer.ip
+        action: delete
+      - key: db.query.parameters
+        action: delete
 
 exporters:
   otlp_http/grafana:
@@ -71,5 +87,13 @@ service:
   pipelines:
     metrics:
       receivers: [otlp, http_check/site]
+      processors: [memory_limiter, attributes/strip, resource, batch]
+      exporters: [otlp_http/grafana]
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/strip, resource, batch]
+      exporters: [otlp_http/grafana]
+    logs:
+      receivers: [otlp]
       processors: [memory_limiter, attributes/strip, resource, batch]
       exporters: [otlp_http/grafana]

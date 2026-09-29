@@ -6,6 +6,10 @@ from http.client import HTTPConnection, HTTPSConnection
 from urllib.parse import urlsplit
 from urllib.request import HTTPSHandler
 
+from opentelemetry import trace
+
+_tracer = trace.get_tracer("learningx_alert.network")
+
 
 class UnsafeUrlError(ValueError):
     pass
@@ -67,9 +71,36 @@ class PinnedHTTPSConnection(HTTPSConnection):
 class PinnedHTTPSHandler(HTTPSHandler):
     def https_open(self, request):
         _, host, port = https_origin(request.full_url)
-        address = resolve_public_addresses(host, port)[0]
+        method = request.get_method()
+        # One client span per outbound call. Host only, never the path or query:
+        # webhook and push URLs carry their credential in the path.
+        with _tracer.start_as_current_span(
+            f"HTTPS {method} {host}",
+            kind=trace.SpanKind.CLIENT,
+            attributes={
+                "server.address": host,
+                "server.port": port,
+                "http.request.method": method,
+            },
+            record_exception=False,
+            set_status_on_exception=False,
+        ) as span:
+            try:
+                address = resolve_public_addresses(host, port)[0]
 
-        def connection_factory(request_host: str, **kwargs):
-            return PinnedHTTPSConnection(request_host, pinned_address=address, **kwargs)
+                def connection_factory(request_host: str, **kwargs):
+                    return PinnedHTTPSConnection(request_host, pinned_address=address, **kwargs)
 
-        return self.do_open(connection_factory, request, context=self._context)
+                response = self.do_open(connection_factory, request, context=self._context)
+            except Exception as error:
+                # The class name only; messages can echo the URL.
+                span.set_attribute("error.type", type(error).__name__)
+                span.set_status(trace.StatusCode.ERROR)
+                raise
+            status = getattr(response, "status", None)
+            if status is not None:
+                span.set_attribute("http.response.status_code", status)
+                if status >= 400:
+                    span.set_attribute("error.type", str(status))
+                    span.set_status(trace.StatusCode.ERROR)
+            return response
