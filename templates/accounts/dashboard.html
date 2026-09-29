@@ -29,10 +29,10 @@
       <strong>알림을 켠 과목이 없습니다.</strong>
       <p><a href="{% url 'course_settings' %}">과목 선택</a>에서 과제나 강의 알림을 켜 주세요.</p>
     </div>
-  {% elif not destination %}
+  {% elif not destinations %}
     <div class="attention-notice" role="status">
       <strong>알림을 받을 곳이 없어 예약 알림이 발송되지 않습니다.</strong>
-      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 Discord 또는 Slack 웹훅 URL을 저장해 주세요.</p>
+      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
     </div>
   {% endif %}
 
@@ -49,12 +49,12 @@
       <span class="status-number" aria-hidden="true">3</span>
       <a href="{% url 'course_settings' %}"><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</a>
     </li>
-    <li class="{% if destination %}is-complete{% else %}is-current{% endif %}">
+    <li class="{% if destinations %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">4</span>
       <a href="{% url 'notification_settings' %}">
         <strong>알림 대상</strong>
-        {% if destination %}
-          {% if destination.kind == "discord" %}Discord{% else %}Slack{% endif %} 저장됨
+        {% if destinations %}
+          {{ destination_kinds|join:" · " }}{% if destinations|length > 1 %} {{ destinations|length }}곳{% else %} 저장됨{% endif %}
         {% else %}
           설정 필요
         {% endif %}
@@ -106,7 +106,7 @@
       {% endfor %}
       {% for delivery in delivery_problems %}
         <p class="problem-row">
-          <strong>전송 {{ delivery.part_number }}번</strong>
+          <strong>{{ delivery.destination_label|default:delivery.get_destination_kind_display }} · 전송 {{ delivery.part_number }}번</strong>
           <span>{{ delivery.get_status_display }}</span>
           {% if delivery.safe_error_code %}<code>{{ delivery.safe_error_code }}</code>{% endif %}
         </p>

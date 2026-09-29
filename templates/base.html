@@ -6,6 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>{% block title %}LearningX Alert{% endblock %}</title>
+  <meta name="theme-color" content="#2e6b52">
+  <link rel="manifest" href="{% url 'web_manifest' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <meta name="apple-mobile-web-app-title" content="LX Alert">
   <link rel="stylesheet" href="{% static 'app.css' %}">
   <script src="{% static 'app.js' %}" defer></script>
 </head>
@@ -33,7 +38,7 @@
       <nav class="site-nav" aria-label="주 메뉴">
         <a href="{% url 'dashboard' %}"{% if current == "dashboard" %} aria-current="page"{% endif %}>대시보드</a>
         <a href="{% url 'course_settings' %}"{% if current == "course_settings" or current == "course_settings_save" %} aria-current="page"{% endif %}>과목 선택</a>
-        <a href="{% url 'notification_settings' %}"{% if current == "notification_settings" or current == "notification_settings_save" or current == "notification_rule_save" or current == "destination_save" %} aria-current="page"{% endif %}>알림 설정</a>
+        <a href="{% url 'notification_settings' %}"{% if current == "notification_settings" or current == "notification_settings_save" or current == "notification_rule_save" or current == "destination_save" or current == "destination_test" or current == "destination_delete" %} aria-current="page"{% endif %}>알림 설정</a>
       </nav>
     {% endwith %}
   {% endif %}

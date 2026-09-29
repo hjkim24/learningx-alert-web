@@ -62,7 +62,7 @@ class DestinationViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertFalse(Destination.objects.filter(user=self.user).exists())
 
-    @patch("accounts.views.send_webhook_part")
+    @patch("accounts.views.send_to_destination")
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
     def test_create_encrypts_without_sending_or_rendering_url(self, _dns, send):
         response = self.client.post(
@@ -80,34 +80,57 @@ class DestinationViewTests(TestCase):
         self.assertNotContains(response, self.discord_url)
         self.assertNotContains(response, destination.encrypted_webhook_url)
 
-    def test_blank_update_preserves_ciphertext_for_same_provider(self):
-        destination = self.create_destination()
-        original_ciphertext = destination.encrypted_webhook_url
+    @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
+    def test_second_webhook_is_added_alongside_the_first(self, _dns):
+        first = self.create_destination()
 
         response = self.client.post(
             reverse("destination_save"),
-            {"kind": Destination.Kind.DISCORD, "webhook_url": ""},
+            {"kind": Destination.Kind.SLACK, "webhook_url": self.slack_url, "label": "팀"},
             follow=True,
         )
 
         self.assertRedirects(response, reverse("notification_settings"))
-        destination.refresh_from_db()
-        self.assertEqual(destination.encrypted_webhook_url, original_ciphertext)
-        self.assertEqual(destination.kind, Destination.Kind.DISCORD)
+        self.assertEqual(Destination.objects.filter(user=self.user).count(), 2)
+        first.refresh_from_db()
+        self.assertEqual(decrypt_secret(first.encrypted_webhook_url), self.discord_url)
+        added = Destination.objects.exclude(pk=first.pk).get(user=self.user)
+        self.assertEqual((added.kind, added.label), (Destination.Kind.SLACK, "팀"))
+        self.assertNotContains(response, self.slack_url)
 
-    def test_changing_provider_with_blank_url_is_rejected_and_preserves_row(self):
-        destination = self.create_destination()
-        original_ciphertext = destination.encrypted_webhook_url
+    @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
+    def test_same_webhook_twice_is_rejected(self, _dns):
+        payload = {"kind": Destination.Kind.DISCORD, "webhook_url": self.discord_url}
+        self.client.post(reverse("destination_save"), payload)
+
+        response = self.client.post(reverse("destination_save"), payload)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "이미 등록된 웹훅입니다.", status_code=400)
+        self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
+
+    @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
+    def test_destination_limit_is_enforced(self, _dns):
+        for index in range(Destination.MAX_PER_USER):
+            self.create_destination(url=f"https://discord.com/api/webhooks/{index}/token")
 
         response = self.client.post(
             reverse("destination_save"),
-            {"kind": Destination.Kind.SLACK, "webhook_url": ""},
+            {"kind": Destination.Kind.DISCORD, "webhook_url": self.discord_url},
         )
 
         self.assertEqual(response.status_code, 400)
-        destination.refresh_from_db()
-        self.assertEqual(destination.kind, Destination.Kind.DISCORD)
-        self.assertEqual(destination.encrypted_webhook_url, original_ciphertext)
+        self.assertEqual(
+            Destination.objects.filter(user=self.user).count(),
+            Destination.MAX_PER_USER,
+        )
+
+    def test_delete_of_another_users_destination_is_a_no_op(self):
+        other = self.create_destination(self.other)
+
+        self.client.post(reverse("destination_delete", args=[other.pk]))
+
+        self.assertTrue(Destination.objects.filter(pk=other.pk).exists())
 
     def test_delete_removes_only_current_users_destination(self):
         own = self.create_destination()
@@ -117,7 +140,7 @@ class DestinationViewTests(TestCase):
             url=self.slack_url,
         )
 
-        response = self.client.post(reverse("destination_delete"))
+        response = self.client.post(reverse("destination_delete", args=[own.pk]))
 
         self.assertRedirects(
             response,
@@ -128,20 +151,22 @@ class DestinationViewTests(TestCase):
         self.assertTrue(Destination.objects.filter(pk=other.pk).exists())
 
     def test_test_route_rejects_get(self):
-        self.assertEqual(self.client.get(reverse("destination_test")).status_code, 405)
+        pk = self.create_destination().pk
+        self.assertEqual(self.client.get(reverse("destination_test", args=[pk])).status_code, 405)
 
     def test_test_route_requires_csrf(self):
-        self.create_destination()
+        pk = self.create_destination().pk
         client = Client(enforce_csrf_checks=True)
         client.force_login(self.user)
 
-        self.assertEqual(client.post(reverse("destination_test")).status_code, 403)
+        self.assertEqual(client.post(reverse("destination_test", args=[pk])).status_code, 403)
 
-    @patch("accounts.views.send_webhook_part", return_value="message-1")
+    @patch("accounts.views.send_to_destination", return_value="message-1")
     def test_explicit_test_posts_once_and_marks_success(self, send):
         destination = self.create_destination()
+        pk = destination.pk
 
-        response = self.client.post(reverse("destination_test"), follow=True)
+        response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
 
         self.assertRedirects(response, reverse("notification_settings"))
         send.assert_called_once_with(
@@ -157,6 +182,7 @@ class DestinationViewTests(TestCase):
 
     def test_test_result_statuses_use_safe_messages_and_timestamp(self):
         destination = self.create_destination()
+        pk = destination.pk
         cases = (
             (
                 DefiniteDeliveryError("exception-secret-definite"),
@@ -171,10 +197,10 @@ class DestinationViewTests(TestCase):
         )
         for error, expected_status, safe_message in cases:
             with self.subTest(status=expected_status), patch(
-                "accounts.views.send_webhook_part",
+                "accounts.views.send_to_destination",
                 side_effect=error,
             ) as send:
-                response = self.client.post(reverse("destination_test"), follow=True)
+                response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
                 send.assert_called_once()
                 destination.refresh_from_db()
                 self.assertEqual(destination.status, expected_status)
@@ -192,8 +218,9 @@ class DestinationViewTests(TestCase):
         opener_factory,
     ):
         destination = self.create_destination()
+        pk = destination.pk
 
-        response = self.client.post(reverse("destination_test"), follow=True)
+        response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
 
         opener_factory.assert_not_called()
         destination.refresh_from_db()
@@ -212,10 +239,11 @@ class DestinationViewTests(TestCase):
         _opener_factory,
     ):
         destination = self.create_destination()
+        pk = destination.pk
         self.client.raise_request_exception = False
 
         with self.assertLogs("django.request", level="ERROR"):
-            response = self.client.post(reverse("destination_test"))
+            response = self.client.post(reverse("destination_test", args=[pk]))
 
         self.assertEqual(response.status_code, 500)
         self.assertNotContains(response, self.discord_url, status_code=500)
@@ -225,11 +253,12 @@ class DestinationViewTests(TestCase):
             status_code=500,
         )
 
-    @patch("accounts.views.send_webhook_part")
+    @patch("accounts.views.send_to_destination")
     def test_other_users_destination_is_never_tested_or_rendered(self, send):
         other = self.create_destination(self.other)
+        pk = other.pk
 
-        response = self.client.post(reverse("destination_test"), follow=True)
+        response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
 
         send.assert_not_called()
         self.assertContains(response, "알림 대상을 먼저 저장해 주세요.")

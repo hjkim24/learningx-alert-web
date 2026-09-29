@@ -58,7 +58,7 @@
     <h2 id="deliveries-title">전송 결과</h2>
     {% for delivery in run.deliveries.all %}
       <p class="outcome{% if delivery.status == 'definitely_failed' or delivery.status == 'needs_review' %} outcome-failed{% endif %}">
-        <strong>{{ delivery.get_destination_kind_display }} {{ delivery.part_number }}번</strong>
+        <strong>{{ delivery.destination_label|default:delivery.get_destination_kind_display }} {{ delivery.part_number }}번</strong>
         <span>{{ delivery.get_status_display }}{% if delivery.provider_confirmation_id %} · 확인 ID {{ delivery.provider_confirmation_id }}{% endif %}</span>
         {% if delivery.safe_error_code %}<code>{{ delivery.safe_error_code }}</code>{% endif %}
       </p>

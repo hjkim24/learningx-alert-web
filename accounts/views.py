@@ -1,8 +1,11 @@
+import json
 from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
@@ -25,13 +28,20 @@ from .models import (
     NotificationRule,
     ScheduledRun,
 )
+from . import webpush
 from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
+    DestinationLimitError,
+    DuplicateDestinationError,
+    SubscriptionGoneError,
     WebhookValidationError,
     render_notification,
     save_destination,
-    send_webhook_part,
+    save_push_subscription,
+    send_to_destination,
+    target_fingerprint,
+    test_message_for,
 )
 from .services import (
     CanvasConnectionError,
@@ -73,10 +83,8 @@ def dashboard(request):
         alert_selection_filter(),
         user=request.user,
     ).count()
-    destination = (
-        Destination.objects.filter(user=request.user)
-        .values("kind", "status")
-        .first()
+    destinations = list(
+        Destination.objects.filter(user=request.user).values("kind", "label", "status")
     )
     rule = NotificationRule.objects.filter(user=request.user).first()
     next_run = None
@@ -84,7 +92,7 @@ def dashboard(request):
         connection
         and not connection["needs_reconnect"]
         and selected_course_count
-        and destination
+        and destinations
         and rule
     ):
         now = timezone.now()
@@ -124,13 +132,22 @@ def dashboard(request):
                 Delivery.Status.DEFINITELY_FAILED,
                 Delivery.Status.NEEDS_REVIEW,
             ),
-        ).only("part_number", "status", "safe_error_code")
+        ).only(
+            "part_number",
+            "status",
+            "safe_error_code",
+            "destination_kind",
+            "destination_label",
+        )
     return render(
         request,
         "accounts/dashboard.html",
         {
             "connection": connection,
-            "destination": destination,
+            "destinations": destinations,
+            "destination_kinds": sorted(
+                {Destination.Kind(entry["kind"]).label for entry in destinations}
+            ),
             "course_failures": course_failures,
             "delivery_problems": delivery_problems,
             "form": CanvasTokenForm(),
@@ -308,23 +325,47 @@ def _group_items_by_day(items, now):
     return groups
 
 
+WEBHOOK_URL_ERROR = "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요."
+DUPLICATE_ERROR = "이미 등록된 웹훅입니다."
+LIMIT_ERROR = f"알림 대상은 최대 {Destination.MAX_PER_USER}개까지 등록할 수 있습니다."
+
+
 def _notification_settings_context(request, *, rule_form=None, destination_form=None):
-    destination = (
-        Destination.objects.filter(user=request.user)
-        .values("kind", "status", "last_tested_at")
-        .first()
-    )
+    destinations = list(Destination.objects.filter(user=request.user))
     if rule_form is None:
         rule = NotificationRule.objects.filter(user=request.user).first()
         rule_form = NotificationRuleForm(instance=rule or NotificationRule())
     if destination_form is None:
-        initial = {"kind": destination["kind"]} if destination else None
-        destination_form = DestinationForm(initial=initial)
+        destination_form = DestinationForm()
+    push_enabled = webpush.web_push_enabled()
     return {
-        "destination": destination,
+        "destinations": destinations,
         "destination_form": destination_form,
+        "destination_limit": Destination.MAX_PER_USER,
         "rule_form": rule_form,
+        "push_enabled": push_enabled,
+        "vapid_public_key": webpush.vapid_public_key() if push_enabled else "",
     }
+
+
+def _add_webhook(request, form):
+    """Save the form's webhook as a new destination; report errors on the form."""
+    try:
+        save_destination(
+            request.user,
+            form.cleaned_data["kind"],
+            form.cleaned_data["webhook_url"],
+            form.cleaned_data.get("label", ""),
+        )
+    except WebhookValidationError:
+        form.add_error("webhook_url", WEBHOOK_URL_ERROR)
+    except DuplicateDestinationError:
+        form.add_error("webhook_url", DUPLICATE_ERROR)
+    except DestinationLimitError:
+        form.add_error(None, LIMIT_ERROR)
+    else:
+        return True
+    return False
 
 
 @login_required
@@ -342,18 +383,15 @@ def notification_settings(request):
 @login_required
 @require_POST
 def notification_settings_save(request):
-    """Save the schedule and, when touched, the destination in one submit.
+    """Save the schedule and, when a URL is given, add a webhook destination.
 
     Nothing is written unless every submitted part validates, so a bad webhook
     never leaves a half-saved rule behind.
     """
     rule = NotificationRule.objects.filter(user=request.user).first()
     rule_form = NotificationRuleForm(request.POST, instance=rule)
-    existing = Destination.objects.filter(user=request.user).first()
-    webhook_url = request.POST.get("webhook_url", "").strip()
-    kind = request.POST.get("kind", "")
-    destination_touched = bool(webhook_url) or bool(existing and kind != existing.kind)
-    destination_form = DestinationForm(request.POST, existing=existing)
+    destination_form = DestinationForm(request.POST)
+    adding = bool(request.POST.get("webhook_url", "").strip())
 
     def rerender():
         return render(
@@ -362,39 +400,32 @@ def notification_settings_save(request):
             _notification_settings_context(
                 request,
                 rule_form=rule_form,
-                destination_form=destination_form if destination_touched else None,
+                destination_form=destination_form if adding else None,
             ),
             status=400,
         )
 
     rule_valid = rule_form.is_valid()
-    destination_valid = not destination_touched or destination_form.is_valid()
+    destination_valid = not adding or destination_form.is_valid()
     if not (rule_valid and destination_valid):
         return rerender()
 
-    if destination_touched and destination_form.cleaned_data["webhook_url"]:
-        try:
-            save_destination(
-                request.user,
-                destination_form.cleaned_data["kind"],
-                destination_form.cleaned_data["webhook_url"],
-            )
-        except WebhookValidationError:
-            destination_form.add_error(
-                "webhook_url",
-                "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요.",
-            )
+    with transaction.atomic():
+        if adding and not _add_webhook(request, destination_form):
             return rerender()
+        saved_rule = rule_form.save(commit=False)
+        saved_rule.user = request.user
+        saved_rule.save()
 
-    saved_rule = rule_form.save(commit=False)
-    saved_rule.user = request.user
-    saved_rule.save()
-    if existing or destination_touched:
-        messages.success(request, "알림 설정을 저장했습니다.")
+    if Destination.objects.filter(user=request.user).exists():
+        messages.success(
+            request,
+            "알림 설정을 저장하고 알림 대상을 추가했습니다." if adding else "알림 설정을 저장했습니다.",
+        )
     else:
         messages.warning(
             request,
-            "알림 시각을 저장했습니다. 알림을 받으려면 웹훅 URL도 입력해 주세요.",
+            "알림 시각을 저장했습니다. 알림을 받으려면 웹훅이나 브라우저 푸시를 추가해 주세요.",
         )
     return redirect("notification_settings")
 
@@ -423,62 +454,45 @@ def notification_rule_save(request):
 @login_required
 @require_POST
 def destination_save(request):
-    existing = Destination.objects.filter(user=request.user).first()
-    form = DestinationForm(request.POST, existing=existing)
-    if not form.is_valid():
-        return render(
-            request,
-            "accounts/notification_settings.html",
-            _notification_settings_context(request, destination_form=form),
-            status=400,
-        )
-
-    webhook_url = form.cleaned_data["webhook_url"]
-    if webhook_url:
-        try:
-            save_destination(
-                request.user,
-                form.cleaned_data["kind"],
-                webhook_url,
-            )
-        except WebhookValidationError:
-            form.add_error(
-                "webhook_url",
-                "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요.",
-            )
-            return render(
-                request,
-                "accounts/notification_settings.html",
-                _notification_settings_context(request, destination_form=form),
-                status=400,
-            )
-    messages.success(request, "알림 대상을 저장했습니다.")
-    return redirect("notification_settings")
+    """Add one Discord/Slack webhook destination."""
+    form = DestinationForm(request.POST, require_url=True)
+    if form.is_valid() and _add_webhook(request, form):
+        messages.success(request, "알림 대상을 추가했습니다.")
+        return redirect("notification_settings")
+    return render(
+        request,
+        "accounts/notification_settings.html",
+        _notification_settings_context(request, destination_form=form),
+        status=400,
+    )
 
 
 @login_required
 @require_POST
-def destination_delete(request):
-    Destination.objects.filter(user=request.user).delete()
-    messages.success(request, "알림 대상을 삭제했습니다.")
+def destination_delete(request, pk):
+    deleted, _ = Destination.objects.filter(user=request.user, pk=pk).delete()
+    if deleted:
+        messages.success(request, "알림 대상을 삭제했습니다.")
+    else:
+        messages.error(request, "알림 대상을 찾을 수 없습니다.")
     return redirect("notification_settings")
 
 
-@sensitive_variables("webhook_url")
+@sensitive_variables("secret")
 @login_required
 @require_POST
-def destination_test(request):
-    destination = Destination.objects.filter(user=request.user).first()
+def destination_test(request, pk):
+    destination = Destination.objects.filter(user=request.user, pk=pk).first()
     if not destination:
         messages.error(request, "알림 대상을 먼저 저장해 주세요.")
         return redirect("notification_settings")
 
-    webhook_url = decrypt_secret(destination.encrypted_webhook_url)
+    secret = decrypt_secret(destination.encrypted_webhook_url)
     try:
-        send_webhook_part(
+        send_to_destination(
             destination.kind,
-            webhook_url,
-            "LearningX Alert 시험 알림입니다.",
+            secret,
+            test_message_for(destination.kind),
         )
     except WebhookValidationError:
         destination.status = Destination.Status.DEFINITELY_FAILED
@@ -486,6 +500,13 @@ def destination_test(request):
             request,
             "저장된 웹훅 주소를 사용할 수 없습니다. 새 URL을 저장해 주세요.",
         )
+    except SubscriptionGoneError:
+        destination.delete()
+        messages.error(
+            request,
+            "이 브라우저의 푸시 구독이 만료되어 삭제했습니다. 해당 기기에서 다시 등록해 주세요.",
+        )
+        return redirect("notification_settings")
     except DefiniteDeliveryError:
         destination.status = Destination.Status.DEFINITELY_FAILED
         messages.error(request, "시험 알림 전송에 실패했습니다.")
@@ -497,7 +518,71 @@ def destination_test(request):
         )
     else:
         destination.status = Destination.Status.SUCCEEDED
-        messages.success(request, "시험 알림 전송을 확인했습니다.")
+        messages.success(
+            request,
+            "시험 푸시를 보냈습니다. 기기에 알림이 떴는지 확인해 주세요."
+            if destination.kind == Destination.Kind.WEBPUSH
+            else "시험 알림 전송을 확인했습니다.",
+        )
     destination.last_tested_at = timezone.now()
     destination.save(update_fields=("status", "last_tested_at"))
     return redirect("notification_settings")
+
+
+MAX_PUSH_BODY_BYTES = 8192
+
+
+def _json_body(request):
+    if len(request.body) > MAX_PUSH_BODY_BYTES:
+        raise ValueError
+    data = json.loads(request.body)
+    if not isinstance(data, dict):
+        raise ValueError
+    return data
+
+
+@sensitive_variables()
+@login_required
+@require_POST
+def push_subscribe(request):
+    """Register this browser's PushSubscription (JSON body, CSRF header)."""
+    if not webpush.web_push_enabled():
+        return JsonResponse({"ok": False, "error": "push_disabled"}, status=404)
+    try:
+        data = _json_body(request)
+        label = str(data.get("label", ""))[:64]
+        destination, created = save_push_subscription(
+            request.user,
+            data.get("subscription"),
+            label,
+        )
+    except (ValueError, UnicodeDecodeError, webpush.PushValidationError):
+        return JsonResponse({"ok": False, "error": "subscription_invalid"}, status=400)
+    except DestinationLimitError:
+        return JsonResponse({"ok": False, "error": "destination_limit"}, status=409)
+    except DuplicateDestinationError:
+        return JsonResponse({"ok": False, "error": "duplicate"}, status=409)
+    if created:
+        messages.success(request, "이 브라우저를 알림 대상으로 추가했습니다. 시험 알림으로 확인해 보세요.")
+    else:
+        messages.success(request, "이 브라우저의 푸시 구독을 갱신했습니다.")
+    return JsonResponse({"ok": True, "id": destination.pk, "created": created})
+
+
+@sensitive_variables()
+@login_required
+@require_POST
+def push_unsubscribe(request):
+    """Remove the destination matching this browser's endpoint, if any."""
+    try:
+        endpoint = str(_json_body(request).get("endpoint", ""))
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"ok": False, "error": "subscription_invalid"}, status=400)
+    deleted, _ = Destination.objects.filter(
+        user=request.user,
+        kind=Destination.Kind.WEBPUSH,
+        target_fingerprint=target_fingerprint(Destination.Kind.WEBPUSH, endpoint),
+    ).delete()
+    if deleted:
+        messages.success(request, "이 브라우저의 푸시 알림을 해제했습니다.")
+    return JsonResponse({"ok": True, "deleted": bool(deleted)})

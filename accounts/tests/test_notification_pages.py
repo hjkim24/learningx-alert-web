@@ -83,10 +83,10 @@ class NotificationPageTests(TestCase):
         self.assertNotContains(courses, "검증 후 제공")
         self.assertContains(courses, "운영 설정 후 제공", count=1)
         self.assertContains(notifications, "마감 조회 범위")
-        self.assertContains(notifications, "시험 알림 보내기")
+        self.assertContains(notifications, "시험 알림")
         self.assertContains(
             notifications,
-            "웹훅은 저장만으로 전송되지 않습니다",
+            "저장된 URL은 다시 표시되지 않습니다",
         )
         for response in (dashboard, courses, notifications):
             self.assertNotContains(response, self.webhook_url)

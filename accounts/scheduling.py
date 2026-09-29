@@ -17,9 +17,9 @@ from .models import (
 from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
-    render_notification,
-    send_webhook_part,
-    split_message,
+    SubscriptionGoneError,
+    message_parts,
+    send_to_destination,
 )
 from .services import decrypt_secret
 
@@ -43,7 +43,7 @@ def claim_due_runs(now):
     rules = (
         NotificationRule.objects.filter(
             alert_selection_filter("user__course_selections__"),
-            user__destination__isnull=False,
+            user__destinations__isnull=False,
             user__canvas_connection__isnull=False,
             user__canvas_connection__needs_reconnect=False,
         )
@@ -68,11 +68,13 @@ def claim_due_runs(now):
     return tuple(claimed)
 
 
-def delivery_key(run, part_number, part):
+def delivery_key(run, part_number, part, destination_id=None):
     part_hash = hashlib.sha256(part.encode()).hexdigest()
     identity = (
         f"{run.user_id}:{run.scheduled_for.isoformat()}:{part_number}:{part_hash}"
     )
+    if destination_id is not None:
+        identity = f"{identity}:{destination_id}"
     return hashlib.sha256(identity.encode()).hexdigest()
 
 
@@ -88,11 +90,14 @@ def _finish_run(run, status, now, safe_error_code=""):
     return run
 
 
-def _finish_open_deliveries(run, status, safe_error_code, now):
-    Delivery.objects.filter(
+def _finish_open_deliveries(run, status, safe_error_code, now, destination=None):
+    deliveries = Delivery.objects.filter(
         run=run,
         status__in=(Delivery.Status.PENDING, Delivery.Status.SENDING),
-    ).update(
+    )
+    if destination is not None:
+        deliveries = deliveries.filter(destination=destination)
+    deliveries.update(
         status=status,
         safe_error_code=safe_error_code,
         finished_at=now,
@@ -117,7 +122,7 @@ def execute_run(
     run,
     now,
     collector=collect_for_user,
-    sender=send_webhook_part,
+    sender=send_to_destination,
 ):
     run.refresh_from_db(fields=("status",))
     terminal_statuses = {
@@ -176,8 +181,8 @@ def execute_run(
     if not result.items and not has_failures:
         return _finish_run(run, ScheduledRun.Status.EMPTY, now)
 
-    destination = Destination.objects.filter(user_id=run.user_id).first()
-    if destination is None:
+    destinations = tuple(Destination.objects.filter(user_id=run.user_id))
+    if not destinations:
         return _finish_run(
             run,
             ScheduledRun.Status.FAILED,
@@ -185,84 +190,107 @@ def execute_run(
             "destination_missing",
         )
 
-    parts = split_message(render_notification(result, now))
+    plans = [
+        (destination, message_parts(destination.kind, result, now))
+        for destination in destinations
+    ]
     with transaction.atomic():
         Delivery.objects.bulk_create(
             [
                 Delivery(
                     run=run,
+                    destination=destination,
                     destination_kind=destination.kind,
+                    destination_label=destination.display_name[:64],
                     part_number=part_number,
-                    idempotency_key=delivery_key(run, part_number, part),
+                    idempotency_key=delivery_key(
+                        run, part_number, part, destination.pk
+                    ),
                 )
+                for destination, parts in plans
                 for part_number, part in enumerate(parts, start=1)
             ]
         )
-    deliveries = tuple(run.deliveries.all())
 
-    webhook_url = decrypt_secret(destination.encrypted_webhook_url)
-    for delivery, part in zip(deliveries, parts, strict=True):
-        if not _start_delivery(delivery, now):
-            _finish_open_deliveries(
-                run,
-                Delivery.Status.NEEDS_REVIEW,
-                "delivery_state_conflict",
-                now,
-            )
-            return _finish_run(
-                run,
-                ScheduledRun.Status.NEEDS_REVIEW,
-                now,
-                "delivery_state_conflict",
-            )
-        try:
-            receipt = sender(destination.kind, webhook_url, part)
-            Delivery.objects.filter(pk=delivery.pk).update(
-                status=Delivery.Status.SUCCEEDED,
-                provider_confirmation_id=receipt,
-                safe_error_code="",
-                finished_at=now,
-            )
-        except DefiniteDeliveryError:
-            _finish_open_deliveries(
-                run,
-                Delivery.Status.DEFINITELY_FAILED,
-                "delivery_definite",
-                now,
-            )
-            return _finish_run(
-                run,
-                ScheduledRun.Status.FAILED,
-                now,
-                "delivery_definite",
-            )
-        except AmbiguousDeliveryError:
-            _finish_open_deliveries(
-                run,
-                Delivery.Status.NEEDS_REVIEW,
-                "delivery_ambiguous",
-                now,
-            )
-            return _finish_run(
-                run,
-                ScheduledRun.Status.NEEDS_REVIEW,
-                now,
-                "delivery_ambiguous",
-            )
-        except Exception:
-            _finish_open_deliveries(
-                run,
-                Delivery.Status.NEEDS_REVIEW,
-                "delivery_unexpected",
-                now,
-            )
-            return _finish_run(
-                run,
-                ScheduledRun.Status.NEEDS_REVIEW,
-                now,
-                "delivery_unexpected",
-            )
+    # Each destination is independent: one failing does not stop the others.
+    ambiguous_codes = []
+    definite_codes = []
+    for destination, parts in plans:
+        deliveries = tuple(
+            run.deliveries.filter(destination=destination).order_by("part_number")
+        )
+        secret = decrypt_secret(destination.encrypted_webhook_url)
+        for delivery, part in zip(deliveries, parts, strict=True):
+            if not _start_delivery(delivery, now):
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.NEEDS_REVIEW,
+                    "delivery_state_conflict",
+                    now,
+                )
+                return _finish_run(
+                    run,
+                    ScheduledRun.Status.NEEDS_REVIEW,
+                    now,
+                    "delivery_state_conflict",
+                )
+            try:
+                receipt = sender(destination.kind, secret, part)
+                Delivery.objects.filter(pk=delivery.pk).update(
+                    status=Delivery.Status.SUCCEEDED,
+                    provider_confirmation_id=receipt,
+                    safe_error_code="",
+                    finished_at=now,
+                )
+            except SubscriptionGoneError:
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.DEFINITELY_FAILED,
+                    "push_subscription_gone",
+                    now,
+                    destination,
+                )
+                # The browser unsubscribed; drop it so it is not retried forever.
+                destination.delete()
+                definite_codes.append("push_subscription_gone")
+                break
+            except DefiniteDeliveryError:
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.DEFINITELY_FAILED,
+                    "delivery_definite",
+                    now,
+                    destination,
+                )
+                definite_codes.append("delivery_definite")
+                break
+            except AmbiguousDeliveryError:
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.NEEDS_REVIEW,
+                    "delivery_ambiguous",
+                    now,
+                    destination,
+                )
+                ambiguous_codes.append("delivery_ambiguous")
+                break
+            except Exception:
+                _finish_open_deliveries(
+                    run,
+                    Delivery.Status.NEEDS_REVIEW,
+                    "delivery_unexpected",
+                    now,
+                    destination,
+                )
+                ambiguous_codes.append("delivery_unexpected")
+                break
 
+    if ambiguous_codes:
+        return _finish_run(
+            run, ScheduledRun.Status.NEEDS_REVIEW, now, ambiguous_codes[0]
+        )
+    if definite_codes:
+        return _finish_run(run, ScheduledRun.Status.FAILED, now, definite_codes[0])
     return _finish_run(run, ScheduledRun.Status.SUCCEEDED, now)
 
 
@@ -270,7 +298,7 @@ def run_due_rules(
     now,
     claimed_runs=None,
     collector=collect_for_user,
-    sender=send_webhook_part,
+    sender=send_to_destination,
 ):
     runs = claim_due_runs(now) if claimed_runs is None else claimed_runs
     for run in runs:
@@ -289,7 +317,7 @@ def run_due_rules(
 def reconcile_interrupted_runs(
     now,
     collector=collect_for_user,
-    sender=send_webhook_part,
+    sender=send_to_destination,
 ):
     runs = tuple(
         ScheduledRun.objects.filter(

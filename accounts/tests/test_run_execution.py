@@ -248,7 +248,7 @@ class RunExecutionTests(TestCase):
 
     def test_missing_destination_fails_without_delivery(self):
         run = self.create_run()
-        self.user.destination.delete()
+        self.user.destinations.all().delete()
 
         execute_run(
             run,
