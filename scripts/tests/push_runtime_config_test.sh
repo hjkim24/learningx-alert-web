@@ -51,6 +51,7 @@ write_outputs() {
   "app_private_ip": {"value": "10.0.1.31"},
   "backup_bucket": {"value": "learningx-alert-backups"},
   "canvas_base_url": {"value": "https://canvas.skku.edu"},
+  "learningx_allowed_hosts": {"value": "canvas.skku.edu,lx.example.edu"},
   "credential_encryption_keys_ocid": {"value": "ocid1.vaultsecret.keys"},
   "django_secret_key_ocid": {"value": "ocid1.vaultsecret.django"},
   "google_client_id": {"value": "$google_client_id"},
@@ -89,6 +90,7 @@ for expected in \
     "APP_PRIVATE_IP='10.0.1.31'" \
     "GOOGLE_CLIENT_ID='test.apps.googleusercontent.com'" \
     "PILOT_ALLOWED_EMAILS='pilot@example.com'" \
+    "LEARNINGX_ALLOWED_HOSTS='canvas.skku.edu,lx.example.edu'" \
     "DJANGO_SECRET_KEY_OCID='ocid1.vaultsecret.django'" \
     "GOOGLE_CLIENT_SECRET_OCID='ocid1.vaultsecret.google'" \
     "CREDENTIAL_ENCRYPTION_KEYS_OCID='ocid1.vaultsecret.keys'" \

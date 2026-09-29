@@ -120,6 +120,12 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")
+# Hosts the LearningX LTI launch may visit. Empty disables lecture alerts.
+LEARNINGX_ALLOWED_HOSTS = frozenset(
+    host.strip().lower()
+    for host in os.environ.get("LEARNINGX_ALLOWED_HOSTS", "").split(",")
+    if host.strip()
+)
 CREDENTIAL_ENCRYPTION_KEYS = [
     key.strip()
     for key in _secret_setting("CREDENTIAL_ENCRYPTION_KEYS").split(",")

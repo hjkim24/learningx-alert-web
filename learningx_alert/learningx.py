@@ -10,9 +10,18 @@ from .network import UnsafeUrlError, validate_https_url
 
 
 FEATURE_LABELS = {
-    "attendance": re.compile(r"강의[\s/·]*출결|출결현황|출석|attendance", re.I),
-    "modules": re.compile(r"주차.*학습|모듈|강의콘텐츠|module", re.I),
+    "attendance": re.compile(r"강의[\s/·]*출결|출결|출석|attendance|learn\s*status", re.I),
+    "modules": re.compile(r"주차.*학습|모듈|강의\s*콘텐츠|module|lecture\s*contents?", re.I),
 }
+# Tabs of the pre-migration LearningX tool, e.g. "(구) 강의콘텐츠" / "(Old) Lecture Contents".
+LEGACY_TAB_LABEL = re.compile(r"^\s*\((구|old)\)", re.I)
+
+
+def select_feature_tab(tabs, feature: str):
+    """First tab matching the feature, preferring the current tool over a legacy one."""
+    matches = [entry for entry in tabs if FEATURE_LABELS[feature].search(entry.get("label", ""))]
+    current = [entry for entry in matches if not LEGACY_TAB_LABEL.search(entry.get("label", ""))]
+    return (current or matches or [None])[0]
 
 
 class LearningXSessionError(RuntimeError):
@@ -53,7 +62,7 @@ class LearningXClient:
         if key in self.tokens:
             return self.tokens[key]
         tabs = self.canvas.json_path(f"/api/v1/courses/{course_id}/tabs?include[]=external")
-        tab = next((entry for entry in tabs if FEATURE_LABELS[feature].search(entry.get("label", ""))), None)
+        tab = select_feature_tab(tabs, feature)
         if not tab:
             raise LearningXSessionError("external_tool_missing")
         match = re.fullmatch(r"context_external_tool_(\d+)", str(tab.get("id") or ""))

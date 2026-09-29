@@ -67,13 +67,16 @@ def _safe_external_text(value):
     return " ".join(str(value).split()).replace("@", "＠").replace("<", "‹").replace(">", "›")
 
 
+ITEM_TYPE_LABELS = {"assignment": "과제", "lecture": "강의"}
+
+
 def render_notification(result, now):
     lines = [f"LearningX Alert · {now.astimezone(KST):%Y.%m.%d %H:%M} KST"]
     items = sorted(result.items, key=lambda item: item.due_at)
     if items:
         lines.append("")
         for item in items:
-            item_type = "과제" if item.item_type == "assignment" else "알림"
+            item_type = ITEM_TYPE_LABELS.get(item.item_type, "알림")
             lines.extend(
                 (
                     f"[{item_type}] {_safe_external_text(item.course_name)} · {_safe_external_text(item.title)}",
@@ -81,7 +84,7 @@ def render_notification(result, now):
                 )
             )
     else:
-        lines.extend(("", "현재 조회 범위에 알림 대상 과제가 없습니다."))
+        lines.extend(("", "현재 조회 범위에 알림 대상 과제·강의가 없습니다."))
 
     failures = [outcome for outcome in result.outcomes if outcome.status == "failed"]
     if failures:

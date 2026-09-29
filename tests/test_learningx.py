@@ -1,6 +1,6 @@
 import unittest
 
-from learningx_alert.learningx import LearningXClient, LearningXSessionError
+from learningx_alert.learningx import LearningXClient, LearningXSessionError, select_feature_tab
 from learningx_alert.models import CapabilityStatus
 from learningx_alert.probe import probe_learningx
 from tests.fakes import FakeCanvasForLti, StubLearningXClient
@@ -106,3 +106,34 @@ class LearningXSafetyTests(unittest.TestCase):
         canvas = FakeCanvasForLti.successful()
         LearningXClient(canvas, {"learningx.example.edu"}, resolve_public=False).attendance(7)
         self.assertTrue(all(request.bearer is None for request in canvas.external_requests))
+
+
+class FeatureTabSelectionTests(unittest.TestCase):
+    """Labels observed on real SKKU Canvas courses (2021 English/Korean, 2026 Korean)."""
+
+    def labels(self, *labels):
+        return [{"id": f"context_external_tool_{index}", "label": label} for index, label in enumerate(labels)]
+
+    def test_english_legacy_course_finds_lecture_contents_and_learn_status(self) -> None:
+        tabs = self.labels(
+            "Lecture Resources", "Open Board", "Q&A Board", "(Old) Lecture Contents",
+            "ClassMix", "Zoom", "Learn Status", "GradeScope",
+        )
+        self.assertEqual(select_feature_tab(tabs, "modules")["label"], "(Old) Lecture Contents")
+        self.assertEqual(select_feature_tab(tabs, "attendance")["label"], "Learn Status")
+
+    def test_korean_courses_old_and_new(self) -> None:
+        old = self.labels("수업자료실", "(구) 강의콘텐츠", "출결/학습 현황", "GradeScope")
+        new = self.labels("게시판", "강의콘텐츠", "출결현황", "학습 활동 분석", "GradeScope")
+        self.assertEqual(select_feature_tab(old, "modules")["label"], "(구) 강의콘텐츠")
+        self.assertEqual(select_feature_tab(old, "attendance")["label"], "출결/학습 현황")
+        self.assertEqual(select_feature_tab(new, "modules")["label"], "강의콘텐츠")
+        self.assertEqual(select_feature_tab(new, "attendance")["label"], "출결현황")
+
+    def test_current_tool_is_preferred_over_legacy(self) -> None:
+        tabs = self.labels("(구) 강의콘텐츠", "강의콘텐츠")
+        self.assertEqual(select_feature_tab(tabs, "modules")["label"], "강의콘텐츠")
+
+    def test_unrelated_tabs_do_not_match(self) -> None:
+        tabs = self.labels("게시판", "학습 활동 분석", "GradeScope", "Zoom")
+        self.assertIsNone(select_feature_tab(tabs, "modules"))

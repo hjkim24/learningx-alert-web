@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
 from django.views.decorators.http import require_GET, require_POST
 
-from .collection import collect_for_user
+from .collection import alert_selection_filter, collect_for_user
 from .courses import CourseSyncError, sync_courses
 from .forms import (
     CanvasTokenForm,
@@ -69,9 +69,8 @@ def dashboard(request):
         .first()
     )
     selected_course_count = CourseSelection.objects.filter(
+        alert_selection_filter(),
         user=request.user,
-        enabled=True,
-        include_assignments=True,
     ).count()
     destination = (
         Destination.objects.filter(user=request.user)

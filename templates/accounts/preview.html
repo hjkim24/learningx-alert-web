@@ -14,7 +14,7 @@
       <p class="eyebrow">전송 전 확인</p>
       <h1>알림 미리보기</h1>
     </div>
-    <p>현재 설정으로 조회한 미완료 Canvas 과제입니다. 이 화면에서는 전송하지 않습니다.</p>
+    <p>현재 설정으로 조회한 미완료 과제와 강의입니다. 이 화면에서는 전송하지 않습니다.</p>
   </header>
 
   <section class="preview-section" aria-labelledby="preview-items-title">
@@ -22,11 +22,11 @@
     {% for item in result.items %}
       <article class="preview-item">
         <h3>{{ item.title }}</h3>
-        <p>{{ item.course_name }}</p>
+        <p>{{ item.course_name }} · {% if item.item_type == "lecture" %}강의{% else %}과제{% endif %}</p>
         <p>마감 {{ item.due_at|date:"Y.m.d H:i" }} KST</p>
       </article>
     {% empty %}
-      <p>현재 조회 범위에 알림 대상 과제가 없습니다.</p>
+      <p>현재 조회 범위에 알림 대상 과제·강의가 없습니다.</p>
     {% endfor %}
   </section>
 

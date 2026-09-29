@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from django.db import IntegrityError, transaction
 from django.views.decorators.debug import sensitive_variables
 
-from .collection import collect_for_user
+from .collection import alert_selection_filter, collect_for_user
 from .models import (
     CourseRunResult,
     Delivery,
@@ -42,10 +42,9 @@ def matching_slot(rule, now):
 def claim_due_runs(now):
     rules = (
         NotificationRule.objects.filter(
+            alert_selection_filter("user__course_selections__"),
             user__destination__isnull=False,
             user__canvas_connection__isnull=False,
-            user__course_selections__enabled=True,
-            user__course_selections__include_assignments=True,
         )
         .select_related("user")
         .distinct()

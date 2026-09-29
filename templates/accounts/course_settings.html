@@ -14,7 +14,7 @@
       <p class="eyebrow">알림 설정</p>
       <h1>과목 선택</h1>
     </div>
-    <p>알림을 받을 Canvas 과제 과목을 선택합니다.</p>
+    <p>알림을 받을 과목과 항목(과제·강의)을 선택합니다.</p>
   </header>
 
   <form class="secondary-action" method="post" action="{% url 'course_sync' %}">
@@ -33,9 +33,13 @@
         {{ form.non_field_errors }}
         <p class="check-field">{{ form.enabled }} {{ form.enabled.label_tag }}</p>
         <p class="check-field">{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
-        <p class="check-field is-disabled">
-          <label><input type="checkbox" disabled> 강의/출석 — 검증 후 제공</label>
-        </p>
+        {% if form.lectures_available %}
+          <p class="check-field">{{ form.include_lectures }} {{ form.include_lectures.label_tag }}</p>
+        {% else %}
+          <p class="check-field is-disabled">
+            <label><input type="checkbox" disabled> 강의 — 운영 설정 후 제공</label>
+          </p>
+        {% endif %}
         <p class="check-field is-disabled">
           <label><input type="checkbox" disabled> 필수 학습자료 — 검증 후 제공</label>
         </p>

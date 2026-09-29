@@ -19,6 +19,7 @@ x-app: &app
     GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google-client-secret
     PILOT_ALLOWED_EMAILS: ${PILOT_ALLOWED_EMAILS:?PILOT_ALLOWED_EMAILS is required}
     CANVAS_BASE_URL: ${CANVAS_BASE_URL:-https://canvas.skku.edu}
+    LEARNINGX_ALLOWED_HOSTS: ${LEARNINGX_ALLOWED_HOSTS:-}
     CREDENTIAL_ENCRYPTION_KEYS_FILE: /run/secrets/credential-encryption-keys
     DATABASE_PATH: /data/db.sqlite3
   volumes: &app-volumes
