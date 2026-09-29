@@ -85,6 +85,32 @@ class CourseTermTests(TestCase):
         self.assertEqual([group.is_current for group in groups], [False, True, False, False])
         self.assertEqual([group.open for group in groups], [False, True, False, False])
 
+    def test_non_regular_terms_sit_below_first_semester_of_their_year(self):
+        # Names and start dates as SKKU Canvas returns them; recent 비정규 terms have no start.
+        self.course(1, "2026년 2학기", FALL_2026)
+        self.course(2, "2026년 1학기", SPRING_2026)
+        self.course(3, "2026 비정규")
+        self.course(4, "2025 비정규")
+        self.course(5, "2025년 2학기", datetime(2025, 8, 21, 15, tzinfo=UTC))
+        self.course(6, "2021년 비정규", datetime(2021, 2, 3, 15, tzinfo=UTC))
+        self.course(7, "2021년 1학기", datetime(2021, 1, 24, 15, tzinfo=UTC))
+        self.course(8, "2021년 2학기", datetime(2021, 7, 21, 15, tzinfo=UTC))
+        self.course(9, "2022년 하계 계절학기", datetime(2022, 6, 20, 15, tzinfo=UTC))
+        self.course(10, "2022년 1학기", datetime(2022, 2, 1, 15, tzinfo=UTC))
+        self.course(11, "Default Term")
+        self.course(12)
+
+        self.assertEqual(
+            [group.name for group in self.groups()],
+            [
+                "2026년 2학기", "2026년 1학기", "2026 비정규",
+                "2025년 2학기", "2025 비정규",
+                "2022년 하계 계절학기", "2022년 1학기",
+                "2021년 2학기", "2021년 1학기", "2021년 비정규",
+                "Default Term", UNKNOWN_TERM_LABEL,
+            ],
+        )
+
     def test_old_term_with_enabled_course_stays_open(self):
         self.course(1, "2026년 2학기", FALL_2026)
         self.course(2, "2021년 1학기", datetime(2021, 1, 24, 15, tzinfo=UTC), enabled=True, include_assignments=True)

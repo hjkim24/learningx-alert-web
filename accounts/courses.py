@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from urllib.error import HTTPError, URLError
@@ -68,6 +69,31 @@ class TermGroup:
         return self.is_current or self.enabled_count > 0 or self.has_errors
 
 
+TERM_YEAR = re.compile(r"(20\d{2})")
+# Rank inside one year, later in the list = shown first (sorted descending).
+# 비정규 (non-regular) goes to the bottom of its year, below 1학기.
+TERM_KIND_RANKS = (
+    (re.compile(r"동계|겨울|winter", re.I), 4),
+    (re.compile(r"2\s*학기|fall|autumn", re.I), 3),
+    (re.compile(r"하계|여름|summer", re.I), 2),
+    (re.compile(r"1\s*학기|spring", re.I), 1),
+)
+
+
+def term_sort_key(group):
+    """(has_year, year, kind rank, start, name) — sort descending for newest first."""
+    epoch = datetime.min.replace(tzinfo=UTC)
+    match = TERM_YEAR.search(group.name)
+    rank = next((value for pattern, value in TERM_KIND_RANKS if pattern.search(group.name)), 0)
+    return (
+        match is not None,
+        int(match.group(1)) if match else 0,
+        rank,
+        group.start_at or epoch,
+        group.name,
+    )
+
+
 def group_forms_by_term(forms, now):
     """Group course forms by Canvas term, newest term first, unknown term last.
 
@@ -92,12 +118,7 @@ def group_forms_by_term(forms, now):
     started = [group for group in known if group.start_at and group.start_at <= now]
     if started:
         max(started, key=lambda group: group.start_at).is_current = True
-    epoch = datetime.min.replace(tzinfo=UTC)
-    ordered = sorted(
-        known,
-        key=lambda group: (group.start_at or epoch, group.name),
-        reverse=True,
-    )
+    ordered = sorted(known, key=term_sort_key, reverse=True)
     if None in groups:
         ordered.append(groups[None])
     if not started and ordered:
