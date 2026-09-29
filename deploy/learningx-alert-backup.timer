@@ -1,5 +1,5 @@
 [Unit]
-Description=Daily LearningX Alert SQLite backup
+Description=Daily LearningX Alert database backup
 
 [Timer]
 OnCalendar=daily

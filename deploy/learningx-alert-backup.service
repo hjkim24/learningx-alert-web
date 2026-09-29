@@ -1,5 +1,5 @@
 [Unit]
-Description=Back up the LearningX Alert SQLite database
+Description=Back up the LearningX Alert database (mysqldump or SQLite)
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/etc/learningx-alert/runtime.env
