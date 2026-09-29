@@ -11,12 +11,14 @@ class PageContractTests(TestCase):
         self.assertEqual(response.headers["Content-Type"], "text/plain")
         self.assertEqual(response.content, b"ok\n")
 
-    def test_login_explains_the_two_separate_connections(self):
+    def test_login_offers_google_and_points_to_the_canvas_token_step(self):
         response = self.client.get(reverse("account_login"))
 
-        self.assertContains(response, "Google로 계속")
-        self.assertContains(response, "Canvas 연결")
-        self.assertContains(response, "아직 알림은 시작되지 않습니다")
+        self.assertContains(response, "Google로 계속하기")
+        self.assertContains(response, "Canvas 액세스 토큰")
+        self.assertContains(response, reverse("canvas_token_guide"))
+        self.assertContains(response, "초대받은 Google 계정만")
+        self.assertNotContains(response, "두 연결은 서로 다릅니다")
 
     def test_dashboard_has_accessible_token_form(self):
         user = get_user_model().objects.create_user(username="pilot@example.com")
