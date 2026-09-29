@@ -50,6 +50,10 @@ terraform -chdir=infra/terraform init \
 - `django-secret-key`
 - `google-client-secret`
 - `credential-encryption-keys`
+- `database-password`: MySQL 앱 사용자(`learningx`) 비밀번호
+- `grafana-otlp-token`: Grafana Cloud OTLP 전송 토큰(`COMPOSE_PROFILES=telemetry`일 때만 사용)
+
+MySQL admin 비밀번호도 같은 Vault에만 둔다. 운영 호스트의 IAM 정책은 위 다섯 이름만 읽을 수 있다.
 
 값을 바꿀 때는 시크릿 메타데이터 편집이 아니라 상세 화면의 **Versions → Create Secret Version**을 사용한다. 새 버전을 보류 상태로 둘 의도가 없다면 Current로 승격한다.
 
@@ -58,11 +62,12 @@ Google OAuth 웹 애플리케이션 설정은 다음과 같다.
 - 승인 도메인: `sobok-app.com`
 - 승인된 JavaScript 원본: `https://alert.sobok-app.com`
 - 리디렉션 URI: `https://alert.sobok-app.com/accounts/google/login/callback/`
-- 앱이 Testing 상태라면 각 허용 계정을 Google Cloud의 테스트 사용자에도 등록한다.
+- 공개 가입(`signup_open = true`)은 Google이 인증한 이메일만 받는다. `signup_open = false`로 되돌리면 `pilot_allowed_emails` 허용 목록만 로그인할 수 있다.
+- 동의 화면을 "프로덕션"으로 게시하려면 홈페이지(로그인 화면)와 `/privacy/` 주소가 필요하다.
 
 ## 호스트 필수 도구
 
-호스트에는 Docker Engine, Docker Compose 플러그인, OCI CLI, `sqlite3`, `rsync`, `systemd`가 필요하다. Docker는 [공식 Ubuntu apt 저장소](https://docs.docker.com/engine/install/ubuntu/), OCI CLI는 [Oracle 공식 설치 절차](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)를 따른다. 운영 배포는 root로 Docker를 실행하므로 `ubuntu` 사용자를 `docker` 그룹에 추가하지 않는다.
+호스트에는 Docker Engine, Docker Compose 플러그인, OCI CLI, `sqlite3`(SQLite로 되돌릴 때의 백업용), `rsync`, `systemd`가 필요하다. Docker는 [공식 Ubuntu apt 저장소](https://docs.docker.com/engine/install/ubuntu/), OCI CLI는 [Oracle 공식 설치 절차](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/cliinstall.htm)를 따른다. 운영 배포는 root로 Docker를 실행하므로 `ubuntu` 사용자를 `docker` 그룹에 추가하지 않는다.
 
 설치 확인:
 
@@ -130,14 +135,31 @@ ssh ubuntu@168.107.37.170 \
   'sudo systemctl start learningx-alert-backup.service; sudo journalctl -u learningx-alert-backup.service -n 20 --no-pager'
 ```
 
-로그에 나온 `sqlite/...sqlite3` 객체를 내려받아 임시 SQLite 무결성 검사만 수행한다.
+운영 DB는 MySQL HeatWave 무료 DB(사설 IP, TLS)다. 백업 작업은 `mysqldump --single-transaction` 결과를 gzip으로 묶어 `mysql/YYYY/MM/DD/*.sql.gz`로 올리고, 버킷 수명 주기 규칙으로 14일 뒤 지운다. OCI 자동 백업은 무료 등급이라 1일 보관으로 고정돼 있다. `DATABASE_ENGINE`이 SQLite면 예전처럼 `sqlite/...sqlite3` 객체를 만든다.
+
+로그에 나온 객체를 내려받아 무결성 검사만 수행한다. MySQL 덤프는 gzip 무결성과 `mysqldump` 종료 줄을 확인한다.
 
 ```bash
-OBJECT_NAME='sqlite/YYYY/MM/DD/learningx-alert-TIMESTAMP-PID.sqlite3'
+OBJECT_NAME='mysql/YYYY/MM/DD/learningx-alert-TIMESTAMP-PID.sql.gz'
 ssh ubuntu@168.107.37.170 "sudo bash -c 'set -a; source /etc/learningx-alert/runtime.env; set +a; cd /opt/learningx-alert/current; ./deploy/restore-check.sh $OBJECT_NAME'"
 ```
 
-`restore_ok`가 나오기 전에는 운영 DB 교체를 시도하지 않는다. 실제 복원은 서비스 중지, 현재 DB 별도 보존, 검증된 객체 다운로드, `10001:10001`/`0600` 권한 설정, 서비스 시작을 운영자가 명시적으로 승인한 경우에만 수행한다.
+`restore_ok`가 나오기 전에는 운영 DB 교체를 시도하지 않는다. 실제 복원(서비스 중지, 현재 DB 별도 덤프, 검증된 덤프를 새 스키마에 적재, 설정 전환, 서비스 시작)은 운영자가 명시적으로 승인한 경우에만 수행한다. 복원 연습은 아직 하지 않았다.
+
+## 모니터링
+
+`COMPOSE_PROFILES=telemetry`이면 `otel-collector` 컨테이너가 뜨고, 앱의 metric·trace·로그와 호스트 metric을 Grafana Cloud(stack `merryjelly2786`, 도쿄 리전)로 보낸다.
+
+- 앱: 스케줄러 신호·실행·전송·과목 조회 metric, 웹 요청 처리 시간, 외부 호출 시간(호스트·결과만), trace(웹 20%, 예약 실행 100%), 비밀값을 가린 로그
+- 수집기: `/healthz/` 외부 점검, `host_metrics`(CPU, 부하, 메모리, 루트 디스크, 디스크 I/O, 네트워크). 호스트 `/`를 읽기 전용으로 붙이고 root가 아닌 사용자로 실행한다. Docker 소켓은 붙이지 않는다.
+- 수집기가 URL, 쿼리, User-Agent, 클라이언트 IP, 사용자 식별 속성을 한 번 더 지운다.
+- 알림 규칙 3개(스케줄러 멈춤, 예약 알림 실패, 사이트 응답 없음)는 Grafana 폴더 "LearningX Alert"에 있고 contact point `Discord`로 보낸다.
+
+전송 오류 확인:
+
+```bash
+ssh ubuntu@168.107.37.170 'sudo docker logs --since 10m learningx-alert-otel-collector-1 2>&1 | tail -20'
+```
 
 ## 롤백
 

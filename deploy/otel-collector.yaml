@@ -28,7 +28,7 @@ receivers:
   # Host (VM) metrics read from the host's /proc and / mounted read-only at
   # /hostfs. The collector runs as a non-root user, so root-only files stay
   # unreadable. No Docker socket: that would be root-equivalent.
-  hostmetrics:
+  host_metrics:
     collection_interval: 60s
     root_path: /hostfs
     scrapers:
@@ -124,7 +124,7 @@ service:
       processors: [memory_limiter, attributes/strip, resource, batch]
       exporters: [otlp_http/grafana]
     metrics/host:
-      receivers: [hostmetrics]
+      receivers: [host_metrics]
       processors: [memory_limiter, resource/host, resource, batch]
       exporters: [otlp_http/grafana]
     traces:
