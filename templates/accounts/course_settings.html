@@ -26,24 +26,32 @@
     {% csrf_token %}
     {{ formset.management_form }}
     {{ formset.non_form_errors }}
-    {% for form in formset %}
-      <fieldset class="course-row">
-        <legend>{{ form.instance.course_name }}</legend>
-        {{ form.id }}
-        {{ form.non_field_errors }}
-        <p class="check-field">{{ form.enabled }} {{ form.enabled.label_tag }}</p>
-        <p class="check-field">{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
-        {% if form.lectures_available %}
-          <p class="check-field">{{ form.include_lectures }} {{ form.include_lectures.label_tag }}</p>
-        {% else %}
-          <p class="check-field is-disabled">
-            <label><input type="checkbox" disabled> 강의 — 운영 설정 후 제공</label>
-          </p>
-        {% endif %}
-        <p class="check-field is-disabled">
-          <label><input type="checkbox" disabled> 필수 학습자료 — 검증 후 제공</label>
-        </p>
-      </fieldset>
+    {% for group in term_groups %}
+      <details class="term-group"{% if group.open %} open{% endif %}>
+        <summary>
+          <span class="term-name">{{ group.name }}</span>
+          <span class="term-meta">과목 {{ group.forms|length }}개{% if group.enabled_count %} · 알림 {{ group.enabled_count }}개{% endif %}{% if group.is_current %} · 현재 학기{% endif %}</span>
+        </summary>
+        {% for form in group.forms %}
+          <fieldset class="course-row">
+            <legend>{{ form.instance.course_name }}</legend>
+            {{ form.id }}
+            {{ form.non_field_errors }}
+            <p class="check-field">{{ form.enabled }} {{ form.enabled.label_tag }}</p>
+            <p class="check-field">{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
+            {% if form.lectures_available %}
+              <p class="check-field">{{ form.include_lectures }} {{ form.include_lectures.label_tag }}</p>
+            {% else %}
+              <p class="check-field is-disabled">
+                <label><input type="checkbox" disabled> 강의 — 운영 설정 후 제공</label>
+              </p>
+            {% endif %}
+            <p class="check-field is-disabled">
+              <label><input type="checkbox" disabled> 필수 학습자료 — 검증 후 제공</label>
+            </p>
+          </fieldset>
+        {% endfor %}
+      </details>
     {% empty %}
       <p>선택할 수 있는 활성 과목이 없습니다.</p>
     {% endfor %}

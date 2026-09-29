@@ -9,7 +9,7 @@ from django.views.decorators.debug import sensitive_post_parameters, sensitive_v
 from django.views.decorators.http import require_GET, require_POST
 
 from .collection import alert_selection_filter, collect_for_user
-from .courses import CourseSyncError, sync_courses
+from .courses import CourseSyncError, group_forms_by_term, sync_courses
 from .forms import (
     CanvasTokenForm,
     CourseSelectionFormSet,
@@ -196,8 +196,15 @@ def course_settings(request):
     return render(
         request,
         "accounts/course_settings.html",
-        {"formset": formset},
+        _course_settings_context(formset),
     )
+
+
+def _course_settings_context(formset):
+    return {
+        "formset": formset,
+        "term_groups": group_forms_by_term(formset.forms, timezone.now()),
+    }
 
 
 @login_required
@@ -239,7 +246,7 @@ def course_settings_save(request):
     return render(
         request,
         "accounts/course_settings.html",
-        {"formset": formset},
+        _course_settings_context(formset),
         status=400,
     )
 
