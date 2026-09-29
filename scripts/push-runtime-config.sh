@@ -69,6 +69,15 @@ runtime_env=$(
             "SIGNUP_OPEN=" + ($root | optional_flag("signup_open") | @sh),
             "PILOT_ALLOWED_EMAILS=" + ($root | optional_text("pilot_allowed_emails") | @sh),
             "PRIVACY_CONTACT_EMAIL=" + ($root | optional_text("privacy_contact_email") | @sh),
+            (($root | optional_text("database_host")) as $db_host
+              | if $db_host == "" then
+                  "DATABASE_ENGINE=" + ("sqlite" | @sh)
+                else
+                  "DATABASE_ENGINE=" + ("mysql" | @sh),
+                  "DATABASE_HOST=" + ($db_host | @sh),
+                  "DATABASE_PASSWORD_FILE=" + ("/run/secrets/all/database-password" | @sh),
+                  "DATABASE_PASSWORD_OCID=" + ($root | required("database_password_ocid") | @sh)
+                end),
             "CANVAS_BASE_URL=" + ($root | required("canvas_base_url") | @sh),
             "LEARNINGX_ALLOWED_HOSTS=" + ($root | optional_hosts("learningx_allowed_hosts") | @sh),
             "DJANGO_SECRET_KEY_OCID=" + ($root | required("django_secret_key_ocid") | @sh),

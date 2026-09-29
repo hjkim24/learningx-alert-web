@@ -11,6 +11,7 @@ dependencies = [
   "django-allauth[socialaccount]>=65.19.4,<66",
   "cryptography>=50.0.1,<51",
   "gunicorn>=23,<24",
+  "PyMySQL==1.2.3",
 ]
 
 [tool.setuptools.packages.find]

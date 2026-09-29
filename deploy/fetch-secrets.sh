@@ -66,7 +66,14 @@ fetch_bundle "$DJANGO_SECRET_KEY_OCID" django-secret-key
 fetch_bundle "$GOOGLE_CLIENT_SECRET_OCID" google-client-secret
 fetch_bundle "$CREDENTIAL_ENCRYPTION_KEYS_OCID" credential-encryption-keys
 
-for name in django-secret-key google-client-secret credential-encryption-keys; do
+secret_names=(django-secret-key google-client-secret credential-encryption-keys)
+# Optional: only present once the app moves off SQLite.
+if [[ -n "${DATABASE_PASSWORD_OCID:-}" ]]; then
+    fetch_bundle "$DATABASE_PASSWORD_OCID" database-password
+    secret_names+=(database-password)
+fi
+
+for name in "${secret_names[@]}"; do
     install -m 0440 -o "$SECRET_UID" -g "$SECRET_GID" "$download_dir/$name" "$generation_dir/$name"
 done
 
