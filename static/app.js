@@ -190,6 +190,202 @@
     .catch(() => setStatus("서비스 워커를 등록하지 못했습니다. HTTPS 주소로 접속했는지 확인해 주세요."));
 })();
 
+// Time picker: replaces the browser's native <input type="time"> popup with a
+// themed popover (오전/오후 · 시 · 분). The form still submits one HH:MM value;
+// without JS the native input keeps working.
+(() => {
+  const pad = (number) => String(number).padStart(2, "0");
+  const HOURS = Array.from({ length: 12 }, (_, index) => index + 1);
+  const MINUTES = Array.from({ length: 60 }, (_, index) => index);
+  let openPicker = null;
+
+  function parse(value) {
+    const [hours, minutes] = (value || "09:00").split(":").map(Number);
+    return {
+      period: hours >= 12 ? "pm" : "am",
+      hour: hours % 12 === 0 ? 12 : hours % 12,
+      minute: Number.isFinite(minutes) ? minutes : 0,
+    };
+  }
+
+  function format(parts) {
+    const base = parts.hour % 12;
+    return `${pad(parts.period === "pm" ? base + 12 : base)}:${pad(parts.minute)}`;
+  }
+
+  function column(label, name, items, text) {
+    const list = document.createElement("div");
+    list.className = "time-column";
+    list.setAttribute("role", "listbox");
+    list.setAttribute("aria-label", label);
+    list.dataset.part = name;
+    for (const item of items) {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "time-option";
+      option.setAttribute("role", "option");
+      option.dataset.value = String(item);
+      option.textContent = text(item);
+      list.appendChild(option);
+    }
+    return list;
+  }
+
+  function sync(input) {
+    const field = input.closest(".time-field");
+    if (!field) {
+      return;
+    }
+    const parts = parse(input.value);
+    field.querySelector(".time-period").textContent = parts.period === "pm" ? "오후" : "오전";
+    field.querySelector(".time-digits").textContent = `${pad(parts.hour)}:${pad(parts.minute)}`;
+    field.querySelectorAll(".time-column").forEach((list) => {
+      const current = String(parts[list.dataset.part]);
+      list.querySelectorAll(".time-option").forEach((option) => {
+        const selected = option.dataset.value === current;
+        option.setAttribute("aria-selected", selected ? "true" : "false");
+        option.tabIndex = selected ? 0 : -1;
+      });
+    });
+  }
+
+  function close(field, { focusTrigger = false } = {}) {
+    if (!field) {
+      return;
+    }
+    field.querySelector(".time-popover").hidden = true;
+    const trigger = field.querySelector(".time-trigger");
+    trigger.setAttribute("aria-expanded", "false");
+    field.classList.remove("is-open");
+    if (openPicker === field) {
+      openPicker = null;
+    }
+    if (focusTrigger) {
+      trigger.focus();
+    }
+  }
+
+  function open(field) {
+    if (openPicker && openPicker !== field) {
+      close(openPicker);
+    }
+    const popover = field.querySelector(".time-popover");
+    popover.hidden = false;
+    field.classList.add("is-open");
+    field.querySelector(".time-trigger").setAttribute("aria-expanded", "true");
+    openPicker = field;
+    popover.querySelectorAll(".time-column").forEach((list) => {
+      const selected = list.querySelector('[aria-selected="true"]');
+      if (selected) {
+        list.scrollTop = selected.offsetTop - (list.clientHeight - selected.offsetHeight) / 2;
+      }
+    });
+    const first = popover.querySelector('[aria-selected="true"]');
+    if (first) {
+      first.focus({ preventScroll: true });
+    }
+  }
+
+  function enhance(input) {
+    if (!input || input.dataset.enhanced) {
+      return;
+    }
+    input.dataset.enhanced = "true";
+    input.type = "hidden";
+
+    const field = document.createElement("span");
+    field.className = "time-field";
+    input.parentNode.insertBefore(field, input);
+    field.appendChild(input);
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "time-trigger";
+    trigger.setAttribute("aria-haspopup", "dialog");
+    trigger.setAttribute("aria-expanded", "false");
+    if (input.id) {
+      trigger.id = `${input.id}-trigger`;
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      if (label) {
+        label.htmlFor = trigger.id;
+      }
+    }
+    trigger.innerHTML =
+      '<span class="time-period"></span><span class="time-digits"></span>' +
+      '<svg class="time-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+      '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/>' +
+      '<path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+    field.appendChild(trigger);
+
+    const popover = document.createElement("div");
+    popover.className = "time-popover";
+    popover.setAttribute("role", "dialog");
+    popover.setAttribute("aria-label", "알림 시각 선택");
+    popover.hidden = true;
+    const columns = document.createElement("div");
+    columns.className = "time-columns";
+    columns.append(
+      column("오전 또는 오후", "period", ["am", "pm"], (value) => (value === "am" ? "오전" : "오후")),
+      column("시", "hour", HOURS, pad),
+      column("분", "minute", MINUTES, pad)
+    );
+    const footer = document.createElement("div");
+    footer.className = "time-footer";
+    footer.innerHTML = '<button type="button" class="primary-button time-done">완료</button>';
+    popover.append(columns, footer);
+    field.appendChild(popover);
+
+    trigger.addEventListener("click", () => (popover.hidden ? open(field) : close(field)));
+
+    popover.addEventListener("click", (event) => {
+      if (event.target.closest(".time-done")) {
+        close(field, { focusTrigger: true });
+        return;
+      }
+      const option = event.target.closest(".time-option");
+      if (!option) {
+        return;
+      }
+      const parts = parse(input.value);
+      const part = option.closest(".time-column").dataset.part;
+      parts[part] = part === "period" ? option.dataset.value : Number(option.dataset.value);
+      input.value = format(parts);
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      sync(input);
+      option.focus({ preventScroll: true });
+    });
+
+    popover.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        close(field, { focusTrigger: true });
+        return;
+      }
+      const option = event.target.closest(".time-option");
+      if (!option || !["ArrowDown", "ArrowUp"].includes(event.key)) {
+        return;
+      }
+      event.preventDefault();
+      const sibling = event.key === "ArrowDown" ? option.nextElementSibling : option.previousElementSibling;
+      if (sibling) {
+        sibling.click();
+        sibling.scrollIntoView({ block: "nearest" });
+      }
+    });
+
+    sync(input);
+  }
+
+  document.addEventListener("click", (event) => {
+    if (openPicker && !openPicker.contains(event.target)) {
+      close(openPicker);
+    }
+  });
+
+  document.querySelectorAll("[data-alarm-list] .alarm-time-input").forEach(enhance);
+  window.lxTimePicker = { enhance, sync };
+})();
+
 // Alarm editor: add / delete alarm rows (Django inline formset, max 5) and
 // dim a row whose on/off switch is off.
 (() => {
@@ -226,14 +422,14 @@
     list.insertAdjacentHTML("beforeend", html.trim());
     total.value = String(index + 1);
     const row = list.lastElementChild;
-    const time = row.querySelector('input[type="time"]');
+    const time = row.querySelector(".alarm-time-input");
     if (time) {
       // Start the new alarm on the first free whole hour after the latest one,
       // so an untouched new row never collides with an existing time.
       const taken = new Set(
         visibleRows()
           .filter((other) => other !== row)
-          .map((other) => other.querySelector('input[type="time"]').value)
+          .map((other) => other.querySelector(".alarm-time-input").value)
       );
       const latest = [...taken].sort().pop() || "08:00";
       let hour = Number(latest.slice(0, 2));
@@ -245,7 +441,10 @@
           break;
         }
       }
-      time.focus();
+      window.lxTimePicker.enhance(time);
+      window.lxTimePicker.sync(time);
+      const trigger = row.querySelector(".time-trigger");
+      (trigger || time).focus();
     }
     refresh();
   });

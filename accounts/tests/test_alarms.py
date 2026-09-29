@@ -251,3 +251,18 @@ class SchedulerIntegrationTests(TestCase):
 
             self.assertEqual(claim_due_runs(monday_0900), ())
             self.assertEqual(len(claim_due_runs(saturday_0900)), 1)
+
+
+class AssetVersionTests(TestCase):
+    def test_css_and_js_urls_carry_a_content_version(self):
+        from config.context_processors import _asset_version
+
+        user = get_user_model().objects.create_user(username="assets@example.com")
+        self.client.force_login(user)
+        page = self.client.get(reverse("notification_settings"))
+
+        version = _asset_version()
+        self.assertRegex(version, r"^[0-9a-f]{12}$")
+        self.assertContains(page, f"app.css?v={version}")
+        self.assertContains(page, f"app.js?v={version}")
+        self.assertNotContains(page, "휴대폰 알람처럼")
