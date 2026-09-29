@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -27,6 +28,7 @@ from .models import (
     CourseSelection,
     Delivery,
     Destination,
+    ExcludedItem,
     NotificationRule,
     ScheduledRun,
 )
@@ -338,6 +340,9 @@ def _notification_settings_context(request, *, rule_form=None, alarm_formset=Non
         alarm_formset = _alarm_formset(rule)
     return {
         "destination_count": Destination.objects.filter(user=request.user).count(),
+        "excluded_count": ExcludedItem.objects.filter(
+            user=request.user, due_at__gte=timezone.now()
+        ).count(),
         "rule_form": rule_form,
         "alarm_formset": alarm_formset,
         "alarm_limit": AlarmTime.MAX_PER_RULE,
@@ -603,3 +608,88 @@ def push_unsubscribe(request):
     if deleted:
         messages.success(request, "이 브라우저의 푸시 알림을 해제했습니다.")
     return JsonResponse({"ok": True, "deleted": bool(deleted)})
+
+
+EXCLUDABLE_TYPES = {"assignment", "lecture", "material"}
+
+
+def _wants_json(request):
+    return "application/json" in request.headers.get("Accept", "")
+
+
+@login_required
+@require_POST
+def item_exclude(request):
+    """Mute one alert item (from the preview) until its deadline changes."""
+    data = request.POST
+    try:
+        course_id = int(data.get("canvas_course_id", ""))
+        item_type = data.get("item_type", "")
+        external_id = data.get("external_id", "").strip()
+        due_at = datetime.fromisoformat(data.get("due_at", ""))
+        if (
+            item_type not in EXCLUDABLE_TYPES
+            or not external_id
+            or len(external_id) > 128
+            or due_at.tzinfo is None
+        ):
+            raise ValueError
+    except (TypeError, ValueError):
+        if _wants_json(request):
+            return JsonResponse({"ok": False, "error": "invalid_item"}, status=400)
+        messages.error(request, "제외할 항목을 확인하지 못했습니다.")
+        return redirect("excluded_items")
+
+    # Only courses the user actually has; the title is display-only.
+    selection = CourseSelection.objects.filter(
+        user=request.user, canvas_course_id=course_id
+    ).first()
+    if selection is None:
+        if _wants_json(request):
+            return JsonResponse({"ok": False, "error": "unknown_course"}, status=404)
+        messages.error(request, "제외할 항목을 확인하지 못했습니다.")
+        return redirect("excluded_items")
+
+    ExcludedItem.objects.update_or_create(
+        user=request.user,
+        canvas_course_id=course_id,
+        item_type=item_type,
+        external_id=external_id,
+        defaults={
+            "course_name": selection.course_name[:255],
+            "title": data.get("title", "")[:500] or "제목 없음",
+            "due_at": due_at,
+            "created_at": timezone.now(),
+        },
+    )
+    if _wants_json(request):
+        count = ExcludedItem.objects.filter(user=request.user).count()
+        return JsonResponse({"ok": True, "excluded_count": count})
+    messages.success(request, "이 항목의 알림을 껐습니다.")
+    return redirect("excluded_items")
+
+
+@login_required
+@require_POST
+def item_include(request, pk):
+    deleted, _ = ExcludedItem.objects.filter(user=request.user, pk=pk).delete()
+    if _wants_json(request):
+        return JsonResponse({"ok": bool(deleted)}, status=200 if deleted else 404)
+    if deleted:
+        messages.success(request, "이 항목의 알림을 다시 켰습니다. 다음 예약 알림부터 포함됩니다.")
+    return redirect("excluded_items")
+
+
+@login_required
+@require_GET
+def excluded_items(request):
+    now = timezone.now()
+    items = list(ExcludedItem.objects.filter(user=request.user))
+    return render(
+        request,
+        "accounts/excluded_items.html",
+        {
+            "upcoming": [item for item in items if item.due_at >= now],
+            "past": [item for item in items if item.due_at < now],
+        },
+    )

@@ -303,3 +303,36 @@ class Delivery(models.Model):
             )
         ]
         ordering = ("id",)
+
+
+class ExcludedItem(models.Model):
+    """An assignment or lecture the user muted.
+
+    The mute is tied to the deadline it was set against: if the course moves
+    the deadline, the item alerts again (the exclusion is dropped).
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="excluded_items",
+    )
+    canvas_course_id = models.BigIntegerField()
+    course_name = models.CharField(max_length=255)
+    item_type = models.CharField(max_length=32)
+    external_id = models.CharField(max_length=128)
+    title = models.CharField(max_length=500)
+    due_at = models.DateTimeField()
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user", "canvas_course_id", "item_type", "external_id"),
+                name="unique_user_excluded_item",
+            )
+        ]
+        ordering = ("due_at", "id")
+
+    def key(self):
+        return (self.canvas_course_id, self.item_type, self.external_id)

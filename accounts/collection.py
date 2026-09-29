@@ -11,7 +11,7 @@ from learningx_alert.learningx import LearningXClient, LearningXSessionError
 from learningx_alert.network import UnsafeUrlError
 from learningx_alert.probe import MATERIAL_TYPES
 
-from .models import CanvasConnection, CourseSelection, NotificationRule
+from .models import CanvasConnection, CourseSelection, ExcludedItem, NotificationRule
 from .services import decrypt_secret
 
 
@@ -57,6 +57,38 @@ class CourseOutcome:
 class CollectionResult:
     items: tuple[AlertItem, ...]
     outcomes: tuple[CourseOutcome, ...]
+    excluded_count: int = 0
+
+
+def load_exclusions(user):
+    return {exclusion.key(): exclusion for exclusion in ExcludedItem.objects.filter(user=user)}
+
+
+def apply_exclusions(user, items, exclusions=None):
+    """Drop muted items; forget mutes whose deadline has since changed.
+
+    Returns (kept_items, excluded_count).
+    """
+    if exclusions is None:
+        exclusions = load_exclusions(user)
+    if not exclusions:
+        return list(items), 0
+    kept = []
+    stale = []
+    excluded = 0
+    for item in items:
+        exclusion = exclusions.get((item.canvas_course_id, item.item_type, item.external_id))
+        if exclusion is None:
+            kept.append(item)
+        elif exclusion.due_at == item.due_at:
+            excluded += 1
+        else:
+            # The deadline moved: alert again instead of silently muting it.
+            stale.append(exclusion.pk)
+            kept.append(item)
+    if stale:
+        ExcludedItem.objects.filter(pk__in=stale).delete()
+    return kept, excluded
 
 
 @dataclass(frozen=True)
@@ -331,6 +363,8 @@ def collect_for_user(
     upper = now + timedelta(days=rule.lookahead_days)
     items = []
     outcomes = []
+    excluded_total = 0
+    exclusions = load_exclusions(user)
 
     for selection in selections:
         sources = []
@@ -340,6 +374,8 @@ def collect_for_user(
             sources.append(_collect_lectures(learningx, selection, now, upper))
 
         course_items = [item for source in sources for item in source.items]
+        course_items, course_excluded = apply_exclusions(user, course_items, exclusions)
+        excluded_total += course_excluded
         items.extend(course_items)
         no_deadline_count = sum(source.no_deadline_count for source in sources)
         failure = next((source for source in sources if source.error_code), None)
@@ -366,4 +402,5 @@ def collect_for_user(
     return CollectionResult(
         tuple(sorted(items, key=lambda item: item.due_at)),
         tuple(outcomes),
+        excluded_total,
     )
