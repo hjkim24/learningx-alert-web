@@ -22,21 +22,20 @@ printf '%s\n' 'SSH_TARGET=ubuntu@168.107.37.170' > .deploy.env
 
 `backend.hcl`과 `terraform.tfvars`에는 실제 OCI 식별자, Google Client ID, 쉼표로 구분한 정확한 허용 이메일을 입력한다. Google Client Secret은 tfvars에 넣지 않는다.
 
-OCI CLI 세션은 다음 순서로 갱신한다.
+OCI CLI와 Terraform은 `LEARNINGX_ALERT` 프로필의 API 키로 인증한다. 개인 키는 `~/.oci/learningx_alert_api_key.pem`(권한 600, PKCS#1 `RSA PRIVATE KEY` 형식)에만 두고, 공개 키만 OCI 사용자에 등록한다. Terraform의 Go SDK는 PKCS#8 키를 읽지 못해 401을 낸다.
 
-```bash
-oci session refresh --profile LEARNINGX_ALERT
+```ini
+[LEARNINGX_ALERT]
+user=<사용자 OCID>
+fingerprint=<등록한 공개 키 지문>
+key_file=~/.oci/learningx_alert_api_key.pem
+tenancy=<테넌시 OCID>
+region=ap-chuncheon-1
 ```
 
-세션 자체가 만료됐으면 브라우저 인증을 다시 만든다.
+키가 유출됐거나 교체할 때는 콘솔의 사용자 → API 키에서 기존 키를 삭제하고 새 키를 등록한다. 새로 등록한 키는 모든 인증 서버에 퍼지기까지 몇 분 동안 401이 섞여 나올 수 있다. 세션 인증이 필요하면 `-var oci_auth=SecurityToken`과 `oci session authenticate --profile-name LEARNINGX_ALERT --region ap-chuncheon-1`을 쓴다.
 
-```bash
-oci session authenticate \
-  --profile-name LEARNINGX_ALERT \
-  --region ap-chuncheon-1
-```
-
-백엔드를 처음 연결하거나 세션을 다시 만든 뒤에는 다음 명령으로 초기화한다.
+백엔드를 처음 연결하거나 인증 방식을 바꾼 뒤에는 다음 명령으로 초기화한다.
 
 ```bash
 terraform -chdir=infra/terraform init \
