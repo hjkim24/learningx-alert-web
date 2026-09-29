@@ -93,7 +93,7 @@ class AccountDeletionTests(TestCase):
     def test_dashboard_explains_external_revocation_before_deletion(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("notification_settings"))
 
         self.assertContains(response, "Canvas에서 토큰을 폐기")
         self.assertContains(response, "Discord 또는 Slack에서 웹훅을 삭제")

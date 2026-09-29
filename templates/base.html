@@ -27,6 +27,15 @@
     {% endif %}
   </header>
 
+  {% if user.is_authenticated %}
+    {% with current=request.resolver_match.url_name %}
+      <nav class="site-nav" aria-label="주 메뉴">
+        <a href="{% url 'dashboard' %}"{% if current == "dashboard" %} aria-current="page"{% endif %}>대시보드</a>
+        <a href="{% url 'course_settings' %}"{% if current == "course_settings" or current == "course_settings_save" %} aria-current="page"{% endif %}>과목 선택</a>
+        <a href="{% url 'notification_settings' %}"{% if current == "notification_settings" or current == "notification_settings_save" or current == "notification_rule_save" or current == "destination_save" %} aria-current="page"{% endif %}>알림 설정</a>
+      </nav>
+    {% endwith %}
+  {% endif %}
   {% if messages %}
     <div class="message-stack" aria-live="polite">
       {% for message in messages %}

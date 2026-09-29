@@ -310,11 +310,24 @@ class LectureSelectionFormTests(TestCase):
         self.assertTrue(course.include_lectures)
         self.assertFalse(course.include_assignments)
 
-    def test_disabling_course_clears_lecture_flag(self):
+    def test_lecture_toggle_alone_enables_course(self):
         form = CourseSelectionForm({"include_lectures": "on"}, instance=self.course)
 
         self.assertTrue(form.is_valid(), form.errors)
-        self.assertFalse(form.save().include_lectures)
+        saved = form.save()
+        self.assertTrue(saved.include_lectures)
+        self.assertTrue(saved.enabled)
+
+    def test_turning_off_every_item_disables_course(self):
+        self.course.enabled = True
+        self.course.include_lectures = True
+        self.course.save()
+        form = CourseSelectionForm({}, instance=self.course)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        saved = form.save()
+        self.assertFalse(saved.enabled)
+        self.assertFalse(saved.include_lectures)
 
     @override_settings(LEARNINGX_ALLOWED_HOSTS=frozenset())
     def test_lectures_cannot_be_enabled_when_unconfigured(self):

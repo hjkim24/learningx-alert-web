@@ -12,6 +12,11 @@ urlpatterns = [
     path("preview/", views.preview, name="preview"),
     path("notifications/", views.notification_settings, name="notification_settings"),
     path(
+        "notifications/save/",
+        views.notification_settings_save,
+        name="notification_settings_save",
+    ),
+    path(
         "notifications/rule/",
         views.notification_rule_save,
         name="notification_rule_save",

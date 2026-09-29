@@ -3,10 +3,7 @@
 {% block title %}실행 상세 · LearningX Alert{% endblock %}
 
 {% block content %}
-  <nav class="settings-nav" aria-label="실행 이력 메뉴">
-    <a href="{% url 'dashboard' %}">대시보드</a>
-    <a aria-current="page" href="{% url 'run_detail' run.pk %}">실행 상세</a>
-  </nav>
+  <p class="breadcrumb"><a href="{% url 'dashboard' %}">대시보드</a> / 실행 상세</p>
 
   <header class="page-heading">
     <div>

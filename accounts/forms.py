@@ -5,7 +5,15 @@ from django.forms import modelformset_factory
 from .models import CourseSelection, Destination, NotificationRule
 
 
-class CanvasTokenForm(forms.Form):
+class LabelSuffixMixin:
+    """Render labels without Django's default trailing colon."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("label_suffix", "")
+        super().__init__(*args, **kwargs)
+
+
+class CanvasTokenForm(LabelSuffixMixin, forms.Form):
     token = forms.CharField(
         label="Canvas 액세스 토큰",
         max_length=4096,
@@ -14,14 +22,15 @@ class CanvasTokenForm(forms.Form):
     )
 
 
-class CourseSelectionForm(forms.ModelForm):
+class CourseSelectionForm(LabelSuffixMixin, forms.ModelForm):
+    """A course alerts when at least one item type is on; `enabled` follows that."""
+
     class Meta:
         model = CourseSelection
-        fields = ("enabled", "include_assignments", "include_lectures")
+        fields = ("include_assignments", "include_lectures")
         labels = {
-            "enabled": "이 과목 알림 사용",
             "include_assignments": "과제",
-            "include_lectures": "강의·학습자료 (LearningX 출석 대상)",
+            "include_lectures": "강의",
         }
 
     def __init__(self, *args, **kwargs):
@@ -35,16 +44,16 @@ class CourseSelectionForm(forms.ModelForm):
         cleaned = super().clean()
         if not self.lectures_available:
             cleaned["include_lectures"] = False
-        if cleaned.get("enabled") and not (
-            cleaned.get("include_assignments") or cleaned.get("include_lectures")
-        ):
-            raise forms.ValidationError(
-                "알림을 사용할 항목을 하나 이상 선택해 주세요."
-            )
-        if not cleaned.get("enabled"):
-            cleaned["include_assignments"] = False
-            cleaned["include_lectures"] = False
         return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.enabled = bool(
+            instance.include_assignments or instance.include_lectures
+        )
+        if commit:
+            instance.save()
+        return instance
 
 
 CourseSelectionFormSet = modelformset_factory(
@@ -54,7 +63,7 @@ CourseSelectionFormSet = modelformset_factory(
 )
 
 
-class DestinationForm(forms.Form):
+class DestinationForm(LabelSuffixMixin, forms.Form):
     kind = forms.ChoiceField(label="알림 서비스", choices=Destination.Kind.choices)
     webhook_url = forms.CharField(
         label="웹훅 URL",
@@ -86,7 +95,7 @@ class DestinationForm(forms.Form):
         return cleaned
 
 
-class NotificationRuleForm(forms.ModelForm):
+class NotificationRuleForm(LabelSuffixMixin, forms.ModelForm):
     lookahead_days = forms.IntegerField(
         label="마감 조회 범위",
         min_value=1,
@@ -95,7 +104,9 @@ class NotificationRuleForm(forms.ModelForm):
             "min_value": "마감 조회 범위는 1일 이상이어야 합니다.",
             "max_value": "마감 조회 범위는 14일 이하여야 합니다.",
         },
-        widget=forms.NumberInput(attrs={"min": 1, "max": 14}),
+        widget=forms.NumberInput(
+            attrs={"min": 1, "max": 14, "class": "input-short", "inputmode": "numeric"}
+        ),
     )
     first_time = forms.TimeField(
         label="첫 번째 알림 시간",

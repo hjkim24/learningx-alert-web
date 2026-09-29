@@ -29,6 +29,7 @@ from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
     WebhookValidationError,
+    render_notification,
     save_destination,
     send_webhook_part,
 )
@@ -135,6 +136,7 @@ def dashboard(request):
             "form": CanvasTokenForm(),
             "next_run": next_run,
             "recent_runs": recent_runs,
+            "rule": rule,
             "selected_course_count": selected_course_count,
         },
     )
@@ -272,12 +274,36 @@ def course_settings_save(request):
 @login_required
 @require_POST
 def preview(request):
+    now = timezone.now()
     try:
-        result = collect_for_user(request.user, timezone.now())
+        result = collect_for_user(request.user, now)
     except CanvasConnection.DoesNotExist:
         messages.error(request, "먼저 Canvas 계정을 연결해 주세요.")
         return redirect("dashboard")
-    return render(request, "accounts/preview.html", {"result": result})
+    return render(
+        request,
+        "accounts/preview.html",
+        {
+            "result": result,
+            "day_groups": _group_items_by_day(result.items, now),
+            "failed_outcomes": [o for o in result.outcomes if o.status == "failed"],
+            "message_text": render_notification(result, now),
+        },
+    )
+
+
+def _group_items_by_day(items, now):
+    """Group alert items by KST due date with a D-day label, soonest first."""
+    today = now.astimezone(SEOUL).date()
+    groups = []
+    for item in sorted(items, key=lambda entry: entry.due_at):
+        day = item.due_at.astimezone(SEOUL).date()
+        if not groups or groups[-1]["date"] != day:
+            delta = (day - today).days
+            label = "오늘" if delta == 0 else f"D-{delta}" if delta > 0 else f"D+{-delta}"
+            groups.append({"date": day, "dday": label, "items": []})
+        groups[-1]["items"].append(item)
+    return groups
 
 
 def _notification_settings_context(request, *, rule_form=None, destination_form=None):
@@ -307,6 +333,68 @@ def notification_settings(request):
         "accounts/notification_settings.html",
         _notification_settings_context(request),
     )
+
+
+@sensitive_post_parameters("webhook_url")
+@sensitive_variables("webhook_url")
+@login_required
+@require_POST
+def notification_settings_save(request):
+    """Save the schedule and, when touched, the destination in one submit.
+
+    Nothing is written unless every submitted part validates, so a bad webhook
+    never leaves a half-saved rule behind.
+    """
+    rule = NotificationRule.objects.filter(user=request.user).first()
+    rule_form = NotificationRuleForm(request.POST, instance=rule)
+    existing = Destination.objects.filter(user=request.user).first()
+    webhook_url = request.POST.get("webhook_url", "").strip()
+    kind = request.POST.get("kind", "")
+    destination_touched = bool(webhook_url) or bool(existing and kind != existing.kind)
+    destination_form = DestinationForm(request.POST, existing=existing)
+
+    def rerender():
+        return render(
+            request,
+            "accounts/notification_settings.html",
+            _notification_settings_context(
+                request,
+                rule_form=rule_form,
+                destination_form=destination_form if destination_touched else None,
+            ),
+            status=400,
+        )
+
+    rule_valid = rule_form.is_valid()
+    destination_valid = not destination_touched or destination_form.is_valid()
+    if not (rule_valid and destination_valid):
+        return rerender()
+
+    if destination_touched and destination_form.cleaned_data["webhook_url"]:
+        try:
+            save_destination(
+                request.user,
+                destination_form.cleaned_data["kind"],
+                destination_form.cleaned_data["webhook_url"],
+            )
+        except WebhookValidationError:
+            destination_form.add_error(
+                "webhook_url",
+                "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요.",
+            )
+            return rerender()
+
+    saved_rule = rule_form.save(commit=False)
+    saved_rule.user = request.user
+    saved_rule.save()
+    if existing or destination_touched:
+        messages.success(request, "알림 설정을 저장했습니다.")
+    else:
+        messages.warning(
+            request,
+            "알림 시각을 저장했습니다. 알림을 받으려면 웹훅 URL도 입력해 주세요.",
+        )
+    return redirect("notification_settings")
 
 
 @login_required
