@@ -26,20 +26,41 @@
     </div>
   {% endif %}
 
+  {% if result.excluded_count %}
+    <p class="excluded-note" data-excluded-note>
+      알림을 끈 항목 <strong data-excluded-count>{{ result.excluded_count }}</strong>건은 빠져 있습니다.
+      <a href="{% url 'excluded_items' %}">끈 항목 관리</a>
+    </p>
+  {% else %}
+    <p class="excluded-note" data-excluded-note hidden>
+      알림을 끈 항목 <strong data-excluded-count>0</strong>건은 빠져 있습니다.
+      <a href="{% url 'excluded_items' %}">끈 항목 관리</a>
+    </p>
+  {% endif %}
+
   <div class="preview-layout">
     <section class="panel" aria-labelledby="preview-items-title">
-      <h2 id="preview-items-title">알림 대상 {{ result.items|length }}건</h2>
+      <h2 id="preview-items-title">마감 항목 <span data-item-count>{{ result.items|length }}</span>건</h2>
       {% for group in day_groups %}
         <div class="day-group">
           <h3><span class="badge badge-dday{% if group.urgent %} is-urgent{% endif %}">{{ group.dday }}</span> {{ group.date|date:"n월 j일 (D)" }}</h3>
           <ul class="preview-list">
             {% for item in group.items %}
-              <li class="preview-item">
+              <li class="preview-item" data-preview-item>
                 <span class="type-badge type-{{ item.item_type }}">{% if item.item_type == "lecture" %}강의{% elif item.item_type == "material" %}학습자료{% else %}과제{% endif %}</span>
-                <div>
+                <div class="preview-item-text">
                   <strong>{{ item.title }}</strong>
                   <span>{{ item.course_name|course_title }} · {{ item.due_at|date:"H:i" }} 마감</span>
                 </div>
+                <form class="exclude-form" method="post" action="{% url 'item_exclude' %}" data-exclude>
+                  {% csrf_token %}
+                  <input type="hidden" name="canvas_course_id" value="{{ item.canvas_course_id }}">
+                  <input type="hidden" name="item_type" value="{{ item.item_type }}">
+                  <input type="hidden" name="external_id" value="{{ item.external_id }}">
+                  <input type="hidden" name="due_at" value="{{ item.due_at.isoformat }}">
+                  <input type="hidden" name="title" value="{{ item.title }}">
+                  <button class="text-button exclude-button" type="submit" aria-label="{{ item.title }} 알림 끄기">알림 끄기</button>
+                </form>
               </li>
             {% endfor %}
           </ul>
@@ -51,7 +72,7 @@
 
     <section class="panel" aria-labelledby="message-title">
       <h2 id="message-title">보낼 메시지</h2>
-      <p class="fine-print">Discord·Slack에는 아래 텍스트가 그대로 전송됩니다.</p>
+      <p class="fine-print">Discord·Slack에는 아래 텍스트가 그대로 전송됩니다. 알림을 끈 항목은 다시 조회하면 메시지에서도 빠집니다.</p>
       <div class="message-sheet">
         <span class="message-avatar" aria-hidden="true">LX</span>
         <pre class="message-preview">{{ message_text }}</pre>

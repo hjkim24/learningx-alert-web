@@ -1,0 +1,12 @@
+{% load course_names %}
+<li class="excluded-row">
+  <span class="type-badge type-{{ item.item_type }}">{% if item.item_type == "lecture" %}강의{% elif item.item_type == "material" %}학습자료{% else %}과제{% endif %}</span>
+  <div class="preview-item-text">
+    <strong>{{ item.title }}</strong>
+    <span>{{ item.course_name|course_title }} · {{ item.due_at|date:"n월 j일 H:i" }} 마감</span>
+  </div>
+  <form method="post" action="{% url 'item_include' item.pk %}">
+    {% csrf_token %}
+    <button class="secondary-button" type="submit" aria-label="{{ item.title }} 알림 다시 켜기">다시 알림</button>
+  </form>
+</li>

@@ -564,3 +564,50 @@
   });
   refresh();
 })();
+
+// Preview: "알림 끄기" mutes one item in place (no slow re-query). Without JS the
+// form posts normally and lands on the excluded-items page.
+(() => {
+  const forms = document.querySelectorAll("form[data-exclude]");
+  if (!forms.length) {
+    return;
+  }
+  const itemCount = document.querySelector("[data-item-count]");
+  const note = document.querySelector("[data-excluded-note]");
+  const noteCount = note && note.querySelector("[data-excluded-count]");
+
+  forms.forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = form.querySelector("button");
+      button.disabled = true;
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        if (!response.ok) {
+          throw new Error(String(response.status));
+        }
+        const row = form.closest("[data-preview-item]");
+        const group = row.closest(".day-group");
+        row.remove();
+        if (group && !group.querySelector("[data-preview-item]")) {
+          group.remove();
+        }
+        if (itemCount) {
+          itemCount.textContent = String(Math.max(0, Number(itemCount.textContent) - 1));
+        }
+        if (note && noteCount) {
+          noteCount.textContent = String(Number(noteCount.textContent) + 1);
+          note.hidden = false;
+        }
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "다시 시도";
+      }
+    });
+  });
+})();

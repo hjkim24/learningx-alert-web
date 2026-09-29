@@ -55,4 +55,12 @@
       <button class="primary-button" type="submit">변경 사항 저장</button>
     </div>
   </form>
+
+  <a class="panel link-panel" href="{% url 'excluded_items' %}">
+    <span>
+      <strong>알림 끈 항목</strong>
+      <span class="term-meta">{% if excluded_count %}마감 전 {{ excluded_count }}건{% else %}없음{% endif %} · 알림 미리보기에서 항목별로 끌 수 있습니다</span>
+    </span>
+    <span class="link-arrow" aria-hidden="true">›</span>
+  </a>
 {% endblock %}
