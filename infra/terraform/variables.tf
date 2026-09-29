@@ -120,8 +120,22 @@ variable "google_client_id" {
   type = string
 }
 
+variable "signup_open" {
+  description = "Let any Google account with a verified email sign up. False keeps the pilot allowlist."
+  type        = bool
+  default     = false
+}
+
 variable "pilot_allowed_emails" {
-  type = string
+  description = "Comma-separated emails allowed to sign up while signup_open is false."
+  type        = string
+  default     = ""
+}
+
+variable "privacy_contact_email" {
+  description = "Public contact shown on /privacy/."
+  type        = string
+  default     = ""
 }
 
 variable "canvas_base_url" {

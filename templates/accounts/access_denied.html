@@ -4,8 +4,13 @@
 
 {% block content %}
   <section class="notice-page" aria-labelledby="denied-title">
-    <h1 id="denied-title">초대받지 않은 계정이에요</h1>
-    <p>지금은 초대받은 계정만 쓸 수 있어요. 운영자에게 문의해 주세요.</p>
+    {% if signup_open %}
+      <h1 id="denied-title">이 계정으로는 들어올 수 없어요</h1>
+      <p>Google에서 이메일 인증을 마친 계정만 쓸 수 있어요.</p>
+    {% else %}
+      <h1 id="denied-title">초대받지 않은 계정이에요</h1>
+      <p>지금은 초대받은 계정만 쓸 수 있어요. 운영자에게 문의해 주세요.</p>
+    {% endif %}
     <a class="secondary-button" href="{% url 'account_login' %}">다른 계정으로 로그인</a>
   </section>
 {% endblock %}

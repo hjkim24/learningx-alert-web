@@ -46,6 +46,8 @@ USE_TZ = True
 LANGUAGE_CODE = "ko-kr"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_EXCEPTION_REPORTER_FILTER = "config.filters.AlwaysSafeExceptionReporterFilter"
+TEST_RUNNER = "config.test_runner.AppTestRunner"
+RATE_LIMITS_ENABLED = True
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -100,6 +102,9 @@ SOCIALACCOUNT_ONLY = True
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_STORE_TOKENS = False
 SOCIALACCOUNT_LOGIN_ON_GET = False
+# Open sign-up: any Google account with a verified email may join. Off unless
+# explicitly "1", so a missing or mistyped value keeps the allowlist gate.
+SIGNUP_OPEN = os.environ.get("SIGNUP_OPEN", "0") == "1"
 PILOT_ALLOWED_EMAILS = {
     email.strip().casefold()
     for email in os.environ.get("PILOT_ALLOWED_EMAILS", "").split(",")

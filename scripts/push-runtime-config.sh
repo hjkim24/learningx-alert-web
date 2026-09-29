@@ -43,6 +43,20 @@ runtime_env=$(
               else error("invalid Terraform output: " + $name)
               end;
 
+        def optional_text($name):
+            (.[$name].value // "") as $value
+            | if ($value | type) == "string"
+                and (($value | test("[\\r\\n]")) | not)
+              then $value
+              else error("invalid Terraform output: " + $name)
+              end;
+        def optional_flag($name):
+            (.[$name].value // false) as $value
+            | if ($value | type) == "boolean"
+              then (if $value then "1" else "0" end)
+              else error("invalid Terraform output: " + $name)
+              end;
+
         . as $root
         | ($root | required("app_domain")) as $domain
         | [
@@ -52,7 +66,9 @@ runtime_env=$(
             "DJANGO_ALLOWED_HOSTS=" + ($domain | @sh),
             "CSRF_TRUSTED_ORIGINS=" + (("https://" + $domain) | @sh),
             "GOOGLE_CLIENT_ID=" + ($root | required("google_client_id") | @sh),
-            "PILOT_ALLOWED_EMAILS=" + ($root | required("pilot_allowed_emails") | @sh),
+            "SIGNUP_OPEN=" + ($root | optional_flag("signup_open") | @sh),
+            "PILOT_ALLOWED_EMAILS=" + ($root | optional_text("pilot_allowed_emails") | @sh),
+            "PRIVACY_CONTACT_EMAIL=" + ($root | optional_text("privacy_contact_email") | @sh),
             "CANVAS_BASE_URL=" + ($root | required("canvas_base_url") | @sh),
             "LEARNINGX_ALLOWED_HOSTS=" + ($root | optional_hosts("learningx_allowed_hosts") | @sh),
             "DJANGO_SECRET_KEY_OCID=" + ($root | required("django_secret_key_ocid") | @sh),
