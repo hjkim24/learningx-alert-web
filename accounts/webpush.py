@@ -9,6 +9,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import time
 from urllib.parse import urlsplit
 
@@ -33,6 +34,9 @@ PUSH_HOSTS = frozenset(
     }
 )
 PUSH_HOST_SUFFIXES = (".notify.windows.com", ".push.apple.com")
+# Stable Chrome now hands out endpoints on jmt<N>.google.com instead of
+# fcm.googleapis.com; both are Google's push service.
+PUSH_HOST_PATTERNS = (re.compile(r"jmt[0-9]{1,3}\.google\.com"),)
 MAX_ENDPOINT_LENGTH = 2048
 # RFC 8291 section 4: 4096-byte body minus the 86-byte header, delimiter and tag.
 MAX_PLAINTEXT_BYTES = 3993
@@ -59,7 +63,11 @@ def b64url_decode(value):
 
 def is_push_host(host):
     host = (host or "").lower()
-    return host in PUSH_HOSTS or any(host.endswith(suffix) for suffix in PUSH_HOST_SUFFIXES)
+    return (
+        host in PUSH_HOSTS
+        or any(host.endswith(suffix) for suffix in PUSH_HOST_SUFFIXES)
+        or any(pattern.fullmatch(host) for pattern in PUSH_HOST_PATTERNS)
+    )
 
 
 @sensitive_variables()

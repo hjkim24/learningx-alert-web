@@ -577,9 +577,11 @@ def push_subscribe(request):
         return JsonResponse({"ok": False, "error": "destination_limit"}, status=409)
     except DuplicateDestinationError:
         return JsonResponse({"ok": False, "error": "duplicate"}, status=409)
+    # The settings page re-syncs an existing browser subscription on every
+    # load; only a real registration deserves a flash message.
     if created:
         messages.success(request, "이 브라우저를 알림 대상으로 추가했습니다. 시험 알림으로 확인해 보세요.")
-    else:
+    elif not data.get("silent"):
         messages.success(request, "이 브라우저의 푸시 구독을 갱신했습니다.")
     return JsonResponse({"ok": True, "id": destination.pk, "created": created})
 
