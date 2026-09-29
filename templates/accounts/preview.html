@@ -22,7 +22,7 @@
     {% for item in result.items %}
       <article class="preview-item">
         <h3>{{ item.title }}</h3>
-        <p>{{ item.course_name }} · {% if item.item_type == "lecture" %}강의{% else %}과제{% endif %}</p>
+        <p>{{ item.course_name }} · {% if item.item_type == "lecture" %}강의{% elif item.item_type == "material" %}학습자료{% else %}과제{% endif %}</p>
         <p>마감 {{ item.due_at|date:"Y.m.d H:i" }} KST</p>
       </article>
     {% empty %}
