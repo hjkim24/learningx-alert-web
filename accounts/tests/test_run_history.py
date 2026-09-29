@@ -140,7 +140,7 @@ class RunHistoryTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertContains(response, "최근 실행")
-        self.assertContains(response, "다음 예약")
+        self.assertContains(response, "다음 알림")
         self.assertContains(response, "2026.09.26 20:00 KST")
         self.assertContains(response, "assignments_failed")
         self.assertContains(response, reverse("run_detail", args=(self.own_run.pk,)))

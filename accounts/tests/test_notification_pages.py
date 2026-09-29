@@ -99,7 +99,7 @@ class NotificationPageTests(TestCase):
         courses = self.client.get(reverse("course_settings"))
         notifications = self.client.get(reverse("notification_settings"))
 
-        self.assertContains(courses, f'for="id_form-0-enabled"')
+        self.assertNotContains(courses, 'id_form-0-enabled')
         self.assertContains(courses, f'for="id_form-0-include_assignments"')
         self.assertContains(courses, "강의 — 운영 설정 후 제공")
         self.assertNotContains(courses, "필수 학습자료")

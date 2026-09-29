@@ -1,62 +1,72 @@
 {% extends "base.html" %}
+{% load course_names %}
 
 {% block title %}과목 선택 · LearningX Alert{% endblock %}
 
 {% block content %}
-  <nav class="settings-nav" aria-label="설정 메뉴">
-    <a href="{% url 'dashboard' %}">대시보드</a>
-    <a aria-current="page" href="{% url 'course_settings' %}">과목 선택</a>
-    <a href="{% url 'notification_settings' %}">알림 설정</a>
-  </nav>
-
-  <header class="page-heading">
+  <header class="page-heading compact-heading">
     <div>
-      <p class="eyebrow">알림 설정</p>
       <h1>과목 선택</h1>
+      <p>알림을 받을 항목을 과목마다 켜세요. 과제나 강의 중 하나라도 켜면 그 과목이 알림 대상이 됩니다.</p>
     </div>
-    <p>알림을 받을 과목과 항목(과제·강의)을 선택합니다.</p>
+    <form method="post" action="{% url 'course_sync' %}">
+      {% csrf_token %}
+      <button class="secondary-button" type="submit">Canvas 과목 새로고침</button>
+    </form>
   </header>
 
-  <form class="secondary-action" method="post" action="{% url 'course_sync' %}">
-    {% csrf_token %}
-    <button class="secondary-button" type="submit">Canvas 과목 새로고침</button>
-  </form>
-
-  <form class="settings-form" method="post" action="{% url 'course_settings_save' %}">
+  <form class="course-form" method="post" action="{% url 'course_settings_save' %}">
     {% csrf_token %}
     {{ formset.management_form }}
     {{ formset.non_form_errors }}
     {% for group in term_groups %}
       <details class="term-group"{% if group.open %} open{% endif %}>
         <summary>
-          <span class="term-name">{{ group.name }}</span>
-          <span class="term-meta">과목 {{ group.forms|length }}개{% if group.enabled_count %} · 알림 {{ group.enabled_count }}개{% endif %}{% if group.is_current %} · 현재 학기{% endif %}</span>
+          <span class="term-name">{{ group.name }}{% if group.is_current %} <span class="badge badge-signal">현재 학기</span>{% endif %}</span>
+          <span class="term-meta">과목 {{ group.forms|length }}개{% if group.enabled_count %} · 알림 {{ group.enabled_count }}개{% endif %}</span>
         </summary>
-        {% for form in group.forms %}
-          <fieldset class="course-row">
-            <legend>{{ form.instance.course_name }}</legend>
-            {{ form.id }}
-            {{ form.non_field_errors }}
-            <p class="check-field">{{ form.enabled }} {{ form.enabled.label_tag }}</p>
-            <p class="check-field">{{ form.include_assignments }} {{ form.include_assignments.label_tag }}</p>
-            {% if form.lectures_available %}
-              <p class="check-field">{{ form.include_lectures }} {{ form.include_lectures.label_tag }}</p>
-            {% else %}
-              <p class="check-field is-disabled">
-                <label><input type="checkbox" disabled> 강의 — 운영 설정 후 제공</label>
-              </p>
-            {% endif %}
-          </fieldset>
-        {% endfor %}
+        <ul class="course-list">
+          {% for form in group.forms %}
+            {% with parts=form.instance.course_name|course_parts %}
+              <li class="course-item{% if form.instance.enabled %} is-on{% endif %}">
+                {{ form.id }}
+                <div class="course-name">
+                  <strong>{{ parts.title }}</strong>
+                  {% if parts.code %}
+                    <span>{{ parts.code }}-{{ parts.section }}{% if parts.professor %} · {{ parts.professor }}{% endif %}</span>
+                  {% endif %}
+                  {{ form.non_field_errors }}
+                </div>
+                <div class="toggle-group" role="group" aria-label="{{ parts.title }} 알림 항목">
+                  <label class="toggle" for="{{ form.include_assignments.id_for_label }}">
+                    {{ form.include_assignments }}<span>과제</span>
+                  </label>
+                  {% if form.lectures_available %}
+                    <label class="toggle" for="{{ form.include_lectures.id_for_label }}" title="LearningX 출석 대상 영상과 학습자료">
+                      {{ form.include_lectures }}<span>강의</span>
+                    </label>
+                  {% else %}
+                    <label class="toggle is-disabled">
+                      <input type="checkbox" disabled><span>강의 — 운영 설정 후 제공</span>
+                    </label>
+                  {% endif %}
+                </div>
+              </li>
+            {% endwith %}
+          {% endfor %}
+        </ul>
       </details>
     {% empty %}
-      <p>선택할 수 있는 활성 과목이 없습니다.</p>
+      <div class="empty-state">
+        <strong>선택할 수 있는 활성 과목이 없습니다.</strong>
+        <span>Canvas 과목 새로고침을 눌러 수강 과목을 불러오세요.</span>
+      </div>
     {% endfor %}
-    <button class="primary-button" type="submit">저장</button>
-  </form>
-
-  <form class="secondary-action" method="post" action="{% url 'preview' %}">
-    {% csrf_token %}
-    <button class="secondary-button" type="submit">알림 미리보기</button>
+    <p class="fine-print course-legend">강의에는 LearningX 출석 대상 영상과 학습자료가 함께 포함됩니다.</p>
+    <div class="sticky-actions">
+      <span>변경한 뒤 저장해야 반영됩니다.</span>
+      <button class="secondary-button" type="submit" formaction="{% url 'preview' %}" formnovalidate>저장된 설정으로 미리보기</button>
+      <button class="primary-button" type="submit">저장</button>
+    </div>
   </form>
 {% endblock %}

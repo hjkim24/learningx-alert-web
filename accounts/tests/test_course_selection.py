@@ -231,11 +231,13 @@ class CourseSelectionTests(TestCase):
         own.refresh_from_db()
         self.assertFalse(own.enabled)
 
-    def test_enabled_course_requires_assignments(self):
+    def test_turning_off_every_item_disables_course(self):
         own = CourseSelection.objects.create(
             user=self.user,
             canvas_course_id=1,
             course_name="내 과목",
+            enabled=True,
+            include_assignments=True,
         )
         self.client.force_login(self.user)
 
@@ -244,11 +246,24 @@ class CourseSelectionTests(TestCase):
             self.form_data(own, **{"form-0-include_assignments": ""}),
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertContains(
-            response,
-            "알림을 사용할 항목을 하나 이상 선택해 주세요.",
-            status_code=400,
-        )
+        self.assertRedirects(response, reverse("course_settings"))
         own.refresh_from_db()
         self.assertFalse(own.enabled)
+        self.assertFalse(own.include_assignments)
+
+    def test_assignment_toggle_alone_enables_course(self):
+        own = CourseSelection.objects.create(
+            user=self.user,
+            canvas_course_id=1,
+            course_name="내 과목",
+        )
+        self.client.force_login(self.user)
+        data = self.form_data(own)
+        del data["form-0-enabled"]
+
+        response = self.client.post(reverse("course_settings_save"), data)
+
+        self.assertRedirects(response, reverse("course_settings"))
+        own.refresh_from_db()
+        self.assertTrue(own.enabled)
+        self.assertTrue(own.include_assignments)

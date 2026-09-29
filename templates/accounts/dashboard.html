@@ -3,13 +3,38 @@
 {% block title %}대시보드 · LearningX Alert{% endblock %}
 
 {% block content %}
-  <header class="page-heading">
+  <header class="page-heading compact-heading">
     <div>
-      <p class="eyebrow">대시보드</p>
-      <h1>내 알림 준비 상태</h1>
+      <h1>대시보드</h1>
+      <p>다음 알림과 최근 실행 결과를 확인합니다.</p>
     </div>
-    <p>계정 연결부터 과목과 알림 대상 설정까지 현재 상태를 확인합니다.</p>
+    <form method="post" action="{% url 'preview' %}">
+      {% csrf_token %}
+      <button class="primary-button" type="submit"{% if not connection %} disabled{% endif %}>알림 미리보기</button>
+    </form>
   </header>
+
+  {% if connection.needs_reconnect %}
+    <div class="reconnect-notice" role="alert">
+      <strong>Canvas 재연결이 필요합니다.</strong>
+      <p>저장된 토큰이 만료되었거나 철회되어 예약 알림을 멈췄습니다. 아래 Canvas 연결에서 새 토큰을 입력해 다시 연결해 주세요.</p>
+    </div>
+  {% elif not connection %}
+    <div class="attention-notice" role="status">
+      <strong>Canvas 계정을 연결해 주세요.</strong>
+      <p>아래 Canvas 연결에 SKKU Canvas 개인 액세스 토큰을 입력하면 수강 과목을 자동으로 불러옵니다.</p>
+    </div>
+  {% elif not selected_course_count %}
+    <div class="attention-notice" role="status">
+      <strong>알림을 켠 과목이 없습니다.</strong>
+      <p><a href="{% url 'course_settings' %}">과목 선택</a>에서 과제나 강의 알림을 켜 주세요.</p>
+    </div>
+  {% elif not destination %}
+    <div class="attention-notice" role="status">
+      <strong>알림을 받을 곳이 없어 예약 알림이 발송되지 않습니다.</strong>
+      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 Discord 또는 Slack 웹훅 URL을 저장해 주세요.</p>
+    </div>
+  {% endif %}
 
   <ol class="status-rail" aria-label="설정 진행 상태">
     <li class="is-complete">
@@ -18,115 +43,40 @@
     </li>
     <li class="{% if connection and not connection.needs_reconnect %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">2</span>
-      <span><strong>Canvas</strong> {% if connection.needs_reconnect %}재연결 필요{% elif connection %}연결됨{% else %}연결 필요{% endif %}</span>
+      <a href="#canvas-title"><strong>Canvas</strong> {% if connection.needs_reconnect %}재연결 필요{% elif connection %}연결됨{% else %}연결 필요{% endif %}</a>
     </li>
     <li class="{% if selected_course_count %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">3</span>
-      <span><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</span>
+      <a href="{% url 'course_settings' %}"><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</a>
     </li>
-    <li class="{% if destination %}is-complete{% endif %}">
+    <li class="{% if destination %}is-complete{% else %}is-current{% endif %}">
       <span class="status-number" aria-hidden="true">4</span>
-      <span>
+      <a href="{% url 'notification_settings' %}">
         <strong>알림 대상</strong>
         {% if destination %}
           {% if destination.kind == "discord" %}Discord{% else %}Slack{% endif %} 저장됨
         {% else %}
           설정 필요
         {% endif %}
-      </span>
+      </a>
     </li>
   </ol>
 
-  <div class="workspace">
-    <section class="connection-workspace" aria-labelledby="canvas-title">
-      <div class="section-heading">
-        <p class="section-index" aria-hidden="true">02</p>
-        <div>
-          <h2 id="canvas-title">Canvas 계정 연결</h2>
-          <p>개인 액세스 토큰은 확인 후 암호화되어 저장되며 다시 표시되지 않습니다.</p>
-        </div>
-      </div>
-
-      {% if connection.needs_reconnect %}
-        <div class="reconnect-notice" role="alert">
-          <strong>Canvas 재연결이 필요합니다.</strong>
-          <p>저장된 토큰이 만료되었거나 철회되어 예약 알림을 멈췄습니다. 새 토큰을 입력해 다시 연결해 주세요.</p>
-        </div>
-      {% endif %}
-      {% if connection %}
-        <div class="connected-summary">
-          {% if not connection.needs_reconnect %}
-            <p class="connection-label"><span aria-hidden="true"></span> 연결 확인됨</p>
-          {% endif %}
-          <dl>
-            <div>
-              <dt>Canvas 사용자</dt>
-              <dd>{{ connection.canvas_name }}</dd>
-            </div>
-            <div>
-              <dt>Canvas ID</dt>
-              <dd>{{ connection.canvas_user_id }}</dd>
-            </div>
-            <div>
-              <dt>마지막 확인</dt>
-              <dd>{{ connection.verified_at|date:"Y.m.d H:i" }} KST</dd>
-            </div>
-          </dl>
-        </div>
-      {% else %}
-        <div class="empty-state">
-          <strong>아직 연결된 Canvas 계정이 없습니다.</strong>
-          <span>SKKU Canvas에서 발급한 개인 액세스 토큰을 입력해 주세요.</span>
-        </div>
-      {% endif %}
-
-      <form class="token-form" method="post" action="{% url 'canvas_connect' %}">
-        {% csrf_token %}
-        <div class="field-row">
-          {{ form.token.label_tag }}
-          {{ form.token }}
-          <small>토큰은 이 화면에 다시 나타나지 않습니다.</small>
-        </div>
-        <button class="primary-button" type="submit">
-          {% if connection %}새 토큰으로 교체{% else %}연결하기{% endif %}
-        </button>
-      </form>
-
-      {% if connection %}
-        <form class="disconnect-form" method="post" action="{% url 'canvas_disconnect' %}">
-          {% csrf_token %}
-          <button class="danger-button" type="submit">Canvas 연결 해제</button>
-        </form>
-      {% endif %}
-    </section>
-
-    <aside class="next-step" aria-labelledby="next-step-title">
-      <p class="section-index" aria-hidden="true">설정</p>
-      <h2 id="next-step-title">과목과 알림 선택</h2>
-      <p><a class="secondary-button full-width" href="{% url 'course_settings' %}">과목 선택</a></p>
-      <p><a class="secondary-button full-width" href="{% url 'notification_settings' %}">알림 설정</a></p>
-      <form method="post" action="{% url 'preview' %}">
-        {% csrf_token %}
-        <button class="primary-button full-width" type="submit">알림 미리보기</button>
-      </form>
-      <p class="fine-print">예약 실행은 별도 스케줄러가 처리합니다. 시험 전송은 알림 설정에서 직접 실행할 때만 동작합니다.</p>
-    </aside>
-  </div>
-
   <div class="history-grid">
     <section class="history-panel" aria-labelledby="next-run-title">
-      <p class="section-index" aria-hidden="true">예약</p>
-      <h2 id="next-run-title">다음 예약</h2>
+      <h2 id="next-run-title">다음 알림</h2>
       {% if next_run %}
         <p class="schedule-time">{{ next_run|date:"Y.m.d H:i" }} KST</p>
-        <p class="fine-print">표시된 분에 워커가 실행 중일 때 새 실행을 한 번만 생성합니다.</p>
+        <p class="fine-print">
+          마감 {{ rule.lookahead_days }}일 이내 · 매일 {{ rule.first_time|time:"H:i" }}{% if rule.second_time %}, {{ rule.second_time|time:"H:i" }}{% endif %}
+          · <a href="{% url 'notification_settings' %}">변경</a>
+        </p>
       {% else %}
         <p class="empty-state compact">Canvas, 과목, 알림 시간과 대상을 모두 설정하면 표시됩니다.</p>
       {% endif %}
     </section>
 
     <section class="history-panel" aria-labelledby="recent-run-title">
-      <p class="section-index" aria-hidden="true">이력</p>
       <h2 id="recent-run-title">최근 실행</h2>
       {% if recent_runs %}
         <ol class="history-list">
@@ -146,7 +96,6 @@
 
   {% if course_failures or delivery_problems %}
     <section class="history-panel full-panel" aria-labelledby="run-problems-title">
-      <p class="section-index" aria-hidden="true">확인</p>
       <h2 id="run-problems-title">최근 실행에서 확인할 항목</h2>
       {% for outcome in course_failures %}
         <p class="problem-row">
@@ -165,13 +114,52 @@
     </section>
   {% endif %}
 
-  <section class="danger-zone" aria-labelledby="account-delete-title">
-    <p class="section-index" aria-hidden="true">계정</p>
-    <h2 id="account-delete-title">로컬 계정 삭제</h2>
-    <p>먼저 Canvas에서 토큰을 폐기하고 Discord 또는 Slack에서 웹훅을 삭제하세요. 이 작업은 이 서비스에 저장된 연결, 설정, 실행 이력을 모두 삭제하며 되돌릴 수 없습니다.</p>
-    <form method="post" action="{% url 'account_delete' %}">
+  <details class="panel connection-panel"{% if not connection or connection.needs_reconnect %} open{% endif %}>
+    <summary>
+      <h2 id="canvas-title">Canvas 연결</h2>
+      {% if connection %}
+        <span class="term-meta">{% if connection.needs_reconnect %}재연결 필요{% else %}<span class="connection-dot" aria-hidden="true"></span>연결됨{% endif %} · {{ connection.canvas_name }}</span>
+      {% else %}
+        <span class="term-meta">연결 필요</span>
+      {% endif %}
+    </summary>
+
+    {% if connection %}
+      <dl class="destination-summary">
+        <div>
+          <dt>Canvas 사용자</dt>
+          <dd>{{ connection.canvas_name }}</dd>
+        </div>
+        <div>
+          <dt>Canvas ID</dt>
+          <dd>{{ connection.canvas_user_id }}</dd>
+        </div>
+        <div>
+          <dt>마지막 확인</dt>
+          <dd>{{ connection.verified_at|date:"Y.m.d H:i" }} KST</dd>
+        </div>
+      </dl>
+    {% else %}
+      <p class="fine-print">SKKU Canvas → 계정 → 설정 → 새 액세스 토큰에서 발급한 토큰을 입력해 주세요.</p>
+    {% endif %}
+
+    <form class="token-form" method="post" action="{% url 'canvas_connect' %}">
       {% csrf_token %}
-      <button class="danger-button" type="submit">내 로컬 계정과 이력 삭제</button>
+      <div class="field-row">
+        {{ form.token.label_tag }}
+        {{ form.token }}
+        <small>토큰은 확인 후 암호화되어 저장되며 이 화면에 다시 나타나지 않습니다.</small>
+      </div>
+      <button class="primary-button" type="submit">
+        {% if connection %}새 토큰으로 교체{% else %}연결하기{% endif %}
+      </button>
     </form>
-  </section>
+
+    {% if connection %}
+      <form class="disconnect-form" method="post" action="{% url 'canvas_disconnect' %}">
+        {% csrf_token %}
+        <button class="danger-button" type="submit">Canvas 연결 해제</button>
+      </form>
+    {% endif %}
+  </details>
 {% endblock %}
