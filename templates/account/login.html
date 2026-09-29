@@ -26,7 +26,7 @@
         </li>
         <li>
           <strong>Canvas 연결</strong>
-          <span>로그인 후 개인 액세스 토큰을 별도로 연결합니다.</span>
+          <span>로그인 후 개인 액세스 토큰을 별도로 연결합니다. <a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 발급 방법 보기</a></span>
         </li>
       </ol>
       <form method="post" action="{% provider_login_url 'google' process='login' %}">

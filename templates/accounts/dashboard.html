@@ -22,7 +22,7 @@
   {% elif not connection %}
     <div class="attention-notice" role="status">
       <strong>Canvas 계정을 연결해 주세요.</strong>
-      <p>아래 Canvas 연결에 Canvas 개인 액세스 토큰을 입력하면 수강 과목을 자동으로 불러옵니다.</p>
+      <p>아래 Canvas 연결에 Canvas 개인 액세스 토큰을 입력하면 수강 과목을 자동으로 불러옵니다. 토큰이 처음이라면 <a href="{% url 'canvas_token_guide' %}">발급 가이드</a>를 따라 해 보세요.</p>
     </div>
   {% elif not selected_course_count %}
     <div class="attention-notice" role="status">
@@ -137,7 +137,7 @@
         </div>
       </dl>
     {% else %}
-      <p class="fine-print">Canvas → 계정 → 설정 → 새 액세스 토큰에서 발급한 토큰을 입력해 주세요.</p>
+      <p class="fine-print">Canvas → 계정 → 설정 → 새 액세스 토큰에서 발급한 토큰을 입력해 주세요. <a class="guide-link" href="{% url 'canvas_token_guide' %}">스크린샷으로 보는 발급 방법</a></p>
     {% endif %}
 
     <form class="token-form" method="post" action="{% url 'canvas_connect' %}">
