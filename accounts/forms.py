@@ -21,7 +21,7 @@ class CourseSelectionForm(forms.ModelForm):
         labels = {
             "enabled": "이 과목 알림 사용",
             "include_assignments": "과제",
-            "include_lectures": "강의 (LearningX 미수강 영상)",
+            "include_lectures": "강의·학습자료 (LearningX 출석 대상)",
         }
 
     def __init__(self, *args, **kwargs):

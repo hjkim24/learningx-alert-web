@@ -251,6 +251,27 @@ class LectureCollectionTests(TestCase):
 
         self.assertEqual([run.user_id for run in claimed], [self.user.pk])
 
+    def test_attendance_documents_are_labelled_as_materials(self):
+        missing_type = component("x")
+        del missing_type["content_data"]["item_content_data"]
+        self.learningx.items[101] = [
+            component("v", kind="everlec"),
+            component("p", kind="pdf", title="3주차 필독"),
+            component("f", kind="FILE"),
+            component("pdf-no-att", kind="pdf", use_attendance=False),
+            missing_type,
+        ]
+
+        result = self.collect()
+
+        self.assertEqual(
+            [(item.external_id, item.item_type) for item in result.items],
+            [("v", "lecture"), ("p", "material"), ("f", "material"), ("x", "lecture")],
+        )
+        text = render_notification(result, self.now)
+        self.assertIn("[학습자료] 전자회로 · 3주차 필독", text)
+        self.assertIn("[강의] 전자회로 · 강의 v", text)
+
     def test_notification_labels_lectures(self):
         self.learningx.items[101] = [component("a", title="3주차 영상")]
 

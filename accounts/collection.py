@@ -9,6 +9,7 @@ from django.views.decorators.debug import sensitive_variables
 from learningx_alert.canvas import CanvasClient, PaginationError
 from learningx_alert.learningx import LearningXClient, LearningXSessionError
 from learningx_alert.network import UnsafeUrlError
+from learningx_alert.probe import MATERIAL_TYPES
 
 from .models import CanvasConnection, CourseSelection, NotificationRule
 from .services import decrypt_secret
@@ -178,6 +179,13 @@ def _module_items(modules):
         yield from module_items
 
 
+def _attendance_item_type(content):
+    """'material' for attendance-tracked documents (pdf, file, ...), else 'lecture'."""
+    item_content = content.get("item_content_data")
+    content_type = item_content.get("content_type") if isinstance(item_content, dict) else ""
+    return "material" if str(content_type or "").strip().lower() in MATERIAL_TYPES else "lecture"
+
+
 def _collect_lectures(learningx, selection, now, upper):
     """Unfinished LearningX attendance lectures from the weekly modules.
 
@@ -247,7 +255,7 @@ def _collect_lectures(learningx, selection, now, upper):
                 selection.canvas_course_id,
                 selection.course_name,
                 external_id,
-                "lecture",
+                _attendance_item_type(content),
                 str(module_item.get("title") or content.get("title") or "제목 확인 필요"),
                 due_at,
                 "incomplete",
