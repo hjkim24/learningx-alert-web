@@ -200,6 +200,55 @@ assert_contains "$upload_log" "--auth instance_principal"
 assert_contains "$upload_log" "--namespace test-namespace"
 assert_contains "$upload_log" "--bucket-name test-backups"
 
+restore_tmp_mysql="$test_root/restore-tmp-mysql"
+mkdir -p "$restore_tmp_mysql"
+fake_docker="$test_root/docker"
+cat >"$fake_docker" <<'FAKE_DOCKER'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'ARGS %s\n' "$*" >>"$DOCKER_LOG"
+cfg=$(printf '%s\n' "$@" | sed -n 's#^\(.*\):/cfg:ro$#\1#p')
+cat "$cfg/client.cnf" >>"$DOCKER_LOG"
+printf 'CREATE TABLE sample (value TEXT);\n-- Dump completed on 2026-09-30\n'
+FAKE_DOCKER
+chmod +x "$fake_docker"
+secrets_dir="$test_root/secrets"
+mkdir -p "$secrets_dir"
+printf 'pa#ss%%word' >"$secrets_dir/database-password"
+docker_log="$test_root/docker.log"
+mysql_output=$(
+    DATABASE_ENGINE=mysql \
+    DATABASE_HOST=10.0.1.9 \
+    SECRETS_DIR="$secrets_dir" \
+    BACKUP_DIR="$backup_dir" \
+    DOCKER_BIN="$fake_docker" \
+    DOCKER_LOG="$docker_log" \
+    OCI_BIN="$fake_oci" \
+    OCI_LOG="$oci_log" \
+    OCI_NAMESPACE=test-namespace \
+    BACKUP_BUCKET=test-backups \
+    bash deploy/backup.sh
+)
+assert_contains "$mysql_output" "backup_uploaded object=mysql/"
+mysql_backup=$(find "$backup_dir" -type f -name '*.sql.gz' -print -quit)
+[[ -n "$mysql_backup" ]] || fail "mysql backup file was not created"
+assert_equal "$(file_mode "$mysql_backup")" "600"
+docker_calls=$(<"$docker_log")
+assert_contains "$docker_calls" "--single-transaction"
+assert_contains "$docker_calls" 'password="pa#ss%word"'
+assert_not_contains "$(grep '^ARGS' "$docker_log")" "pa#ss"
+[[ -z "$(find "$backup_dir" -mindepth 1 -name '.mysqldump.*' -print -quit)" ]] || fail "mysqldump work dir was not removed"
+
+mysql_restore=$(
+    TMPDIR="$restore_tmp_mysql" \
+    OCI_BIN="$fake_oci" \
+    OCI_DOWNLOAD_SOURCE="$mysql_backup" \
+    OCI_NAMESPACE=test-namespace \
+    BACKUP_BUCKET=test-backups \
+    bash deploy/restore-check.sh mysql/test.sql.gz
+)
+assert_equal "$mysql_restore" "restore_ok object=mysql/test.sql.gz"
+
 missing_output=$(
     DATABASE_PATH="$test_root/missing.sqlite3" \
     BACKUP_DIR="$backup_dir" \
