@@ -1,6 +1,15 @@
 # LearningX Alert Web
 
-SKKU LearningX/Canvas 마감 알림 서비스의 비공개 파일럿입니다. 현재 웹에서는 allowlist 기반 Google 로그인, 사용자별 Canvas 연결, 활성 과목 선택, 미완료 과제 미리보기, 알림 규칙, 여러 알림 대상(Discord·Slack 웹훅, 브라우저 푸시) 설정, 명시적인 시험 전송, 예약 전송 이력을 지원합니다.
+Canvas 과제와 LearningX 강의 마감을 모아 정해 둔 시각에 Discord·Slack 웹훅이나 브라우저 푸시(PWA)로 보내 주는 서비스입니다. 운영 주소는 [alert.sobok-app.com](https://alert.sobok-app.com)입니다. Google 로그인(공개 가입, Google이 인증한 이메일만), 사용자별 Canvas 연결, 과목별 알림 켜기·끄기, 항목별 알림 끄기, 미리보기, 알림 규칙(조회 범위·알림 시각), 여러 알림 대상, 시험 전송, 예약 전송 이력을 지원합니다.
+
+## 구성
+
+- **앱:** Django 5.2(gunicorn), 예약 워커(`run_scheduler`, 매분 확인), django-allauth(Google)
+- **DB:** 운영은 MySQL HeatWave 무료 DB(사설 IP, TLS, PyMySQL), 로컬 기본값은 SQLite. `DATABASE_ENGINE`으로 고릅니다.
+- **배포:** OCI 춘천 ARM 인스턴스 1대에서 Docker Compose(caddy, web, scheduler, otel-collector)로 실행합니다. 인프라는 `infra/terraform`, 시크릿은 OCI Vault에 있습니다.
+- **모니터링:** OpenTelemetry로 metric·trace·로그를 Grafana Cloud에 보내고, 스케줄러 멈춤·예약 알림 실패·사이트 응답 없음을 Discord로 알립니다. 웹훅 경로, 토큰, 이메일, 쿼리 문자열은 보내지 않습니다.
+- **디자인:** [DESIGN.md](DESIGN.md)의 토큰(남색 브랜드, 호박색 마감 신호)을 `static/app.css`가 그대로 씁니다. 앱 아이콘 원본은 `static/icons/*.svg`입니다. 같은 토큰으로 Figma에 디자인 시스템을 만드는 플러그인은 [tools/figma-design-system](tools/figma-design-system/README.md)에 있습니다.
+- **개인정보처리방침:** `/privacy/` (`templates/legal/privacy.html`)
 
 알림 대상은 과목별로 Canvas 과제와 LearningX 강의(주차학습에서 출석 대상인 미수강 항목)를 선택할 수 있습니다. 강의 알림은 `LEARNINGX_ALLOWED_HOSTS`(SKKU는 `canvas.skku.edu`)가 설정된 경우에만 켤 수 있고, 수강 완료 여부나 식별자가 불분명한 강의는 알림에서 빼고 과목을 “확인 실패”로 표시합니다. 출석 대상인 문서(pdf 등)는 같은 선택으로 켜지며 알림에는 `[학습자료]`로 표시됩니다. 별도의 필수 학습자료 유형은 제공하지 않습니다. 시험 알림은 사용자가 버튼을 누른 경우에만 한 번 전송을 시도합니다.
 
@@ -28,7 +37,7 @@ Google OAuth 웹 애플리케이션에는 다음 로컬 콜백을 등록합니�
 http://127.0.0.1:8000/accounts/google/login/callback/
 ```
 
-`.env`에서 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `PILOT_ALLOWED_EMAILS`를 설정한 뒤 환경을 불러오고 실행합니다.
+`.env`에서 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`을 설정합니다. 로컬에서 가입을 열려면 `SIGNUP_OPEN=1`, 닫아 두려면 `PILOT_ALLOWED_EMAILS`에 허용할 이메일을 넣습니다. 그다음 환경을 불러오고 실행합니다.
 
 ```bash
 set -a
@@ -39,7 +48,7 @@ set +a
 
 `.env`, Django secret, Google OAuth secret, Fernet 키는 Git에 커밋하지 않습니다. Canvas 개인 액세스 토큰은 `.env`에 넣지 않고 로그인 후 웹 폼으로만 제출합니다.
 
-웹과 예약 워커는 같은 환경과 SQLite 파일을 사용하는 별도 프로세스로 실행합니다.
+웹과 예약 워커는 같은 환경과 DB를 쓰는 별도 프로세스로 실행합니다.
 
 ```bash
 .venv/bin/python manage.py runserver
@@ -69,13 +78,19 @@ set +a
 
 ## 운영 배포
 
-OCI 운영 환경은 `https://alert.sobok-app.com`에서 실행됩니다. HTTPS 인증서, 공개 health check, 단일 스케줄러, Vault 시크릿 파일 권한, SQLite 백업·복원 무결성, 기존 `tossterm`·Tailscale 공존을 검증했습니다. 배포, 복원, 롤백 절차는 [OCI 운영 런북](docs/operations/oci-production.md)을 따릅니다.
+배포는 `scripts/deploy.sh` 하나로 합니다. 로컬 테스트, 릴리스 업로드, 이미지 빌드, 시크릿 가져오기, 배포 전 DB 백업, 마이그레이션, 재시작, 공개 health check 순서로 실행하고, 테스트가 실패하면 멈춥니다.
+
+- **백업:** 매일 `mysqldump`로 Object Storage에 올리고 14일 보관합니다.
+- **같은 서버의 다른 서비스:** `tossterm`과 Tailscale이 같은 인스턴스에서 돌고 있어서 배포 때마다 함께 확인합니다.
+- **절차:** 배포, 백업 확인, 롤백, 모니터링은 [OCI 운영 런북](docs/operations/oci-production.md)을 따릅니다.
 
 ## 테스트
 
 ```bash
 .venv/bin/python manage.py test
 .venv/bin/python -m unittest discover -s tests -v
+bash deploy/tests/runtime_scripts_test.sh
+bash scripts/tests/deploy_contract_test.sh
 ```
 
 ## 읽기 전용 feasibility probe

@@ -2,23 +2,23 @@
 
 :root {
   /* Brand (school themes may override only these) */
-  --brand: #2e6b52;
-  --brand-strong: #245641;
-  --brand-soft: #e4efe8;
+  --brand: #2c4380;
+  --brand-strong: #223566;
+  --brand-soft: #e5eaf5;
 
   /* Neutrals */
-  --ink: #1d2a24;
-  --muted: #62706a;
-  --mist: #eef2ee;
+  --ink: #1b2233;
+  --muted: #5f6778;
+  --mist: #eef1f6;
   --surface: #ffffff;
-  --surface-2: #f6f8f6;
-  --line: #dce3dd;
+  --surface-2: #f5f7fa;
+  --line: #dadfe8;
 
   /* Status (fixed across themes) */
   --urgent: #e2a93b;
   --urgent-soft: #fbf1da;
-  --lake: #3c6e9e;
-  --lake-soft: #e6eef6;
+  --lake: #276c66;
+  --lake-soft: #e3f1ef;
   --clay: #b8483a;
   --clay-soft: #f8e6e2;
 
@@ -39,8 +39,8 @@
   --r-tag: 999px 999px 999px 4px;
 
   /* Shadow */
-  --shadow-sheet: 0 1px 2px rgb(29 42 36 / 5%), 0 12px 32px -16px rgb(29 42 36 / 18%);
-  --shadow-float: 0 8px 24px -8px rgb(29 42 36 / 22%);
+  --shadow-sheet: 0 1px 2px rgb(27 34 51 / 5%), 0 12px 32px -16px rgb(27 34 51 / 18%);
+  --shadow-float: 0 8px 24px -8px rgb(27 34 51 / 22%);
 
   --page: min(100% - 48px, 72rem);
 }
@@ -154,13 +154,8 @@ time,
 .wordmark-mark {
   width: 34px;
   height: 34px;
-  border-radius: var(--r-tag);
-  background: var(--brand);
-  color: #ffffff;
-  display: grid;
-  place-items: center;
-  font-size: 0.72rem;
-  font-weight: 800;
+  flex: none;
+  display: block;
 }
 
 .security-note,
@@ -204,7 +199,7 @@ time,
 .site-nav a[aria-current="page"] {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgb(29 42 36 / 8%);
+  box-shadow: 0 1px 2px rgb(27 34 51 / 8%);
 }
 
 /* ---------- Page sheet ---------- */
@@ -1035,13 +1030,7 @@ button[aria-busy="true"] {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: var(--r-tag);
-  background: var(--brand);
-  color: #ffffff;
-  display: grid;
-  place-items: center;
-  font-size: 0.68rem;
-  font-weight: 800;
+  display: block;
 }
 
 .message-preview {
@@ -1307,13 +1296,7 @@ button[aria-busy="true"] {
   width: 36px;
   height: 36px;
   flex: none;
-  border-radius: var(--r-tag);
-  background: var(--brand);
-  color: var(--surface);
-  display: grid;
-  place-items: center;
-  font-size: var(--fs-meta);
-  font-weight: 700;
+  display: block;
 }
 
 .demo-push-head {
@@ -1453,7 +1436,7 @@ button[aria-busy="true"] {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgb(238 242 238 / 72%);
+  background: rgb(238 241 246 / 72%);
   backdrop-filter: blur(3px);
   display: grid;
   place-items: center;
@@ -2015,7 +1998,7 @@ button[aria-busy="true"] {
 .sub-tabs a[aria-current="page"] {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgb(29 42 36 / 8%);
+  box-shadow: 0 1px 2px rgb(27 34 51 / 8%);
 }
 
 .sub-tabs a:focus-visible {
@@ -2322,7 +2305,7 @@ button[aria-busy="true"] {
   height: auto;
   border-radius: var(--r-control);
   background: var(--surface);
-  box-shadow: 0 1px 2px rgb(29 42 36 / 8%), inset 0 0 0 1px var(--line);
+  box-shadow: 0 1px 2px rgb(27 34 51 / 8%), inset 0 0 0 1px var(--line);
 }
 
 .guide-shot figcaption {

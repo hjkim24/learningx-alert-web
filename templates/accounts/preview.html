@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load course_names %}
+{% load course_names static %}
 
 {% block title %}알림 미리보기 · LearningX Alert{% endblock %}
 
@@ -71,7 +71,7 @@
       <h2 id="message-title">보낼 메시지</h2>
       <p class="fine-print">Discord·Slack에는 이 내용이 그대로 가요.</p>
       <div class="message-sheet">
-        <span class="message-avatar" aria-hidden="true">LX</span>
+        <img class="message-avatar" src="{% static 'icons/favicon.svg' %}" width="36" height="36" alt="">
         <pre class="message-preview">{{ message_text }}</pre>
       </div>
     </section>

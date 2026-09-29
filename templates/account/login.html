@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load socialaccount %}
+{% load socialaccount static %}
 
 {% block title %}로그인 · LearningX Alert{% endblock %}
 
@@ -35,7 +35,7 @@
 
     <aside class="login-visual" aria-label="알림 예시">
       <div class="demo-push" aria-hidden="true">
-        <span class="demo-push-icon">LX</span>
+        <img class="demo-push-icon" src="{% static 'icons/favicon.svg' %}" width="36" height="36" alt="">
         <div>
           <p class="demo-push-head"><strong>LearningX Alert</strong><span>오전 9:00</span></p>
           <p class="demo-push-title">마감 3건 · 가장 빠른 건 오늘 23:59</p>
