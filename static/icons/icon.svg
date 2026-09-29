@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- LearningX Alert app icon: a bookmark (DESIGN.md "책갈피") with the amber
+       deadline dot. Full-bleed square; the mark stays inside the maskable
+       safe zone (central 80% circle). -->
+  <rect width="512" height="512" fill="#2C4380"/>
+  <path d="M184 136c0-13.3 10.7-24 24-24h96c13.3 0 24 10.7 24 24v252c0 8.6-10 13.3-16.6 7.8L256 350l-55.4 45.8c-6.6 5.5-16.6.8-16.6-7.8z" fill="#FFFFFF"/>
+  <circle cx="320" cy="140" r="46" fill="#2C4380"/>
+  <circle cx="320" cy="140" r="34" fill="#E2A93B"/>
+</svg>

@@ -28,8 +28,8 @@ def manifest(_request):
         "start_url": "/",
         "scope": "/",
         "display": "standalone",
-        "background_color": "#f6f8f6",
-        "theme_color": "#2e6b52",
+        "background_color": "#f5f7fa",
+        "theme_color": "#2c4380",
         "icons": [
             {"src": static("icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
             {"src": static("icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},

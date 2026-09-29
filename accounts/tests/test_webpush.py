@@ -416,6 +416,18 @@ class PwaFileTests(TestCase):
         self.assertEqual(data["display"], "standalone")
         self.assertEqual({icon["sizes"] for icon in data["icons"]}, {"192x192", "512x512"})
 
+    def test_icon_files_exist_and_favicon_redirects(self):
+        from django.conf import settings
+
+        icons = settings.BASE_DIR / "static" / "icons"
+        for name in ("icon-192.png", "icon-512.png", "apple-touch-icon.png", "favicon.ico", "favicon.svg"):
+            self.assertTrue((icons / name).is_file(), name)
+        response = Client().get("/favicon.ico")
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].endswith("icons/favicon.ico"))
+        page = Client().get("/accounts/login/").content.decode()
+        self.assertIn("icons/favicon.svg", page)
+
 
 @override_settings(CREDENTIAL_ENCRYPTION_KEYS=[KEY])
 class MultiDestinationRunTests(TestCase):

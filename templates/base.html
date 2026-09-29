@@ -6,9 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
   <title>{% block title %}LearningX Alert{% endblock %}</title>
-  <meta name="theme-color" content="#2e6b52">
+  <meta name="theme-color" content="#2c4380">
   <link rel="manifest" href="{% url 'web_manifest' %}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'icons/icon-192.png' %}">
+  <link rel="icon" href="{% static 'icons/favicon.ico' %}" sizes="48x48">
+  <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon.svg' %}">
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
   <meta name="apple-mobile-web-app-title" content="LX Alert">
   <link rel="stylesheet" href="{% static 'app.css' %}?v={{ asset_version }}">
@@ -17,7 +18,7 @@
 <body>
   <header class="site-header">
     <a class="wordmark" href="{% url 'dashboard' %}" aria-label="LearningX Alert 홈">
-      <span aria-hidden="true" class="wordmark-mark">LX</span>
+      <img class="wordmark-mark" src="{% static 'icons/favicon.svg' %}" width="34" height="34" alt="">
       <span>LearningX Alert</span>
     </a>
     {% if user.is_authenticated %}

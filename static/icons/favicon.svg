@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Browser favicon: same mark as icon.svg on a rounded tile, drawn larger
+       so it stays legible at 16-32px. -->
+  <rect width="512" height="512" rx="112" fill="#2C4380"/>
+  <path d="M152 112c0-17.7 14.3-32 32-32h144c17.7 0 32 14.3 32 32v300c0 11-12.6 17.2-21.3 10.5L256 368l-82.7 54.5c-8.7 6.7-21.3.5-21.3-10.5z" fill="#FFFFFF"/>
+  <circle cx="352" cy="120" r="72" fill="#2C4380"/>
+  <circle cx="352" cy="120" r="54" fill="#E2A93B"/>
+</svg>
