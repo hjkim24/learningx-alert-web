@@ -93,6 +93,7 @@ for expected in \
     "GOOGLE_CLIENT_ID='test.apps.googleusercontent.com'" \
     "PILOT_ALLOWED_EMAILS='pilot@example.com'" \
     "SIGNUP_OPEN='1'" \
+    "COMPOSE_PROFILES=''" \
     "PRIVACY_CONTACT_EMAIL='help@example.com'" \
     "LEARNINGX_ALLOWED_HOSTS='canvas.skku.edu,lx.example.edu'" \
     "DJANGO_SECRET_KEY_OCID='ocid1.vaultsecret.django'" \

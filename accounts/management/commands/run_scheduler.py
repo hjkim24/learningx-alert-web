@@ -1,5 +1,6 @@
 import fcntl
 import hashlib
+import logging
 import os
 import tempfile
 import time
@@ -10,7 +11,10 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from accounts import telemetry
 from accounts.scheduling import reconcile_interrupted_runs, run_due_rules
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -58,12 +62,24 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        exporting = telemetry.configure_metrics("learningx-alert-scheduler")
+        # stdout, not logging: the worker tests pin time.time(), which every
+        # LogRecord reads.
+        self.stdout.write(f"scheduler starting metrics={'on' if exporting else 'off'}")
         try:
             with scheduler_lock():
                 reconcile_interrupted_runs(timezone.now())
                 while True:
                     scan_started_at = time.time()
-                    runs = run_due_rules(timezone.now())
+                    try:
+                        runs = run_due_rules(timezone.now())
+                    except Exception:
+                        # Counted but still raised: the container restarts, and
+                        # the flat heartbeat plus this line say why.
+                        telemetry.heartbeat.add(1, {"outcome": "error"})
+                        logger.exception("scan failed", extra={"event": "scan_failed"})
+                        raise
+                    telemetry.heartbeat.add(1, {"outcome": "ok"})
                     self.stdout.write(f"scheduled_runs={len(runs)}")
                     if options["once"]:
                         return
@@ -74,3 +90,5 @@ class Command(BaseCommand):
                     time.sleep(seconds_to_next_minute)
         except KeyboardInterrupt:
             self.stdout.write("scheduler stopped")
+        finally:
+            telemetry.shutdown()

@@ -1,10 +1,13 @@
 import hashlib
+import logging
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.views.decorators.debug import sensitive_variables
 
+from . import telemetry
 from .collection import alert_selection_filter, collect_for_user
 from .models import (
     CourseRunResult,
@@ -25,6 +28,12 @@ from .services import decrypt_secret
 
 
 SEOUL = ZoneInfo("Asia/Seoul")
+logger = logging.getLogger(__name__)
+_ATTENTION_STATUSES = {
+    ScheduledRun.Status.FAILED,
+    ScheduledRun.Status.NEEDS_REVIEW,
+    ScheduledRun.Status.INTERRUPTED,
+}
 
 
 def active_alarms(rule):
@@ -116,7 +125,60 @@ def _finish_run(run, status, now, safe_error_code=""):
     run.status = status
     run.safe_error_code = safe_error_code
     run.finished_at = now
+    _record_finished_run(run)
     return run
+
+
+def _record_finished_run(run):
+    """Metrics + one log line per finished run. Never lets telemetry break a run."""
+    try:
+        delay = None
+        if run.started_at and run.scheduled_for:
+            delay = max(0.0, (run.started_at - run.scheduled_for).total_seconds())
+            telemetry.run_delay.record(delay)
+        telemetry.runs.add(1, {"status": run.status})
+
+        delivery_counts = {}
+        for row in (
+            Delivery.objects.filter(run_id=run.pk)
+            .values("destination_kind", "status")
+            .annotate(count=Count("id"))
+        ):
+            telemetry.deliveries.add(
+                row["count"], {"kind": row["destination_kind"], "status": row["status"]}
+            )
+            key = f"{row['destination_kind']}:{row['status']}"
+            delivery_counts[key] = row["count"]
+
+        course_counts = {}
+        for row in (
+            CourseRunResult.objects.filter(run_id=run.pk)
+            .values("status", "error_code")
+            .annotate(count=Count("id"))
+        ):
+            telemetry.course_results.add(
+                row["count"],
+                {"status": row["status"], "error_code": row["error_code"] or "none"},
+            )
+            key = row["status"] + (f":{row['error_code']}" if row["error_code"] else "")
+            course_counts[key] = row["count"]
+
+        level = logging.WARNING if run.status in _ATTENTION_STATUSES else logging.INFO
+        logger.log(
+            level,
+            "run finished",
+            extra={
+                "event": "run_finished",
+                "run_id": run.pk,
+                "status": run.status,
+                "safe_error_code": run.safe_error_code,
+                "delay_seconds": delay,
+                "deliveries": delivery_counts,
+                "courses": course_counts,
+            },
+        )
+    except Exception:  # pragma: no cover - defensive; telemetry must not fail a run
+        logger.exception("run telemetry failed", extra={"event": "telemetry_error"})
 
 
 def _finish_open_deliveries(run, status, safe_error_code, now, destination=None):
@@ -334,6 +396,7 @@ def run_due_rules(
         try:
             execute_run(run, now, collector=collector, sender=sender)
         except Exception:
+            logger.exception("run crashed", extra={"event": "run_crashed", "run_id": run.pk})
             _finish_run(
                 run,
                 ScheduledRun.Status.FAILED,

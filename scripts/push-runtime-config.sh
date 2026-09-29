@@ -78,6 +78,16 @@ runtime_env=$(
                   "DATABASE_PASSWORD_FILE=" + ("/run/secrets/all/database-password" | @sh),
                   "DATABASE_PASSWORD_OCID=" + ($root | required("database_password_ocid") | @sh)
                 end),
+            (($root | optional_text("grafana_otlp_endpoint")) as $otlp
+              | if $otlp == "" then
+                  "COMPOSE_PROFILES=" + ("" | @sh)
+                else
+                  "COMPOSE_PROFILES=" + ("telemetry" | @sh),
+                  "OTEL_EXPORTER_OTLP_ENDPOINT=" + ("http://otel-collector:4318" | @sh),
+                  "GRAFANA_OTLP_ENDPOINT=" + ($otlp | @sh),
+                  "GRAFANA_INSTANCE_ID=" + ($root | required("grafana_instance_id") | @sh),
+                  "GRAFANA_OTLP_TOKEN_OCID=" + ($root | required("grafana_otlp_token_ocid") | @sh)
+                end),
             "CANVAS_BASE_URL=" + ($root | required("canvas_base_url") | @sh),
             "LEARNINGX_ALLOWED_HOSTS=" + ($root | optional_hosts("learningx_allowed_hosts") | @sh),
             "DJANGO_SECRET_KEY_OCID=" + ($root | required("django_secret_key_ocid") | @sh),

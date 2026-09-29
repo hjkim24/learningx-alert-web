@@ -19,4 +19,4 @@ RUN python -m pip install --no-cache-dir .
 
 USER 10001:10001
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "2", "--timeout", "60", "--error-logfile", "-"]
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "2", "--timeout", "60", "--error-logfile", "-", "--access-logfile", "-", "--access-logformat", "{\"ts\":\"%(t)s\",\"logger\":\"gunicorn.access\",\"method\":\"%(m)s\",\"path\":\"%(U)s\",\"status\":%(s)s,\"dur_ms\":%(M)s,\"bytes\":\"%(B)s\"}"]
