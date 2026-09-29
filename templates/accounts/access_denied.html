@@ -4,9 +4,8 @@
 
 {% block content %}
   <section class="notice-page" aria-labelledby="denied-title">
-    <p class="eyebrow">접근 제한</p>
-    <h1 id="denied-title">파일럿에 등록되지 않은 계정입니다</h1>
-    <p>운영자에게 파일럿 참여 계정을 확인해 주세요.</p>
+    <h1 id="denied-title">초대받지 않은 계정이에요</h1>
+    <p>지금은 초대받은 계정만 쓸 수 있어요. 운영자에게 문의해 주세요.</p>
     <a class="secondary-button" href="{% url 'account_login' %}">다른 계정으로 로그인</a>
   </section>
 {% endblock %}

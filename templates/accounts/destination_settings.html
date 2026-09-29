@@ -6,15 +6,14 @@
   <header class="page-heading compact-heading">
     <div>
       <h1>알림 설정</h1>
-      <p>언제 조회해서 어디로 보낼지 정합니다. 예약 알림은 설정한 시각에 자동으로 발송됩니다.</p>
     </div>
   </header>
   {% include "accounts/_notification_tabs.html" with active="destinations" %}
 
   {% if not destinations %}
     <div class="attention-notice" role="status">
-      <strong>아직 등록된 알림 대상이 없습니다.</strong>
-      <p>아래에서 이 기기의 브라우저 푸시를 켜거나 Discord·Slack 웹훅을 추가하세요.</p>
+      <strong>아직 등록된 알림 대상이 없어요.</strong>
+      <p>이 기기에서 푸시를 켜거나 Discord·Slack 웹훅을 추가해 주세요.</p>
     </div>
   {% endif %}
 
@@ -24,20 +23,19 @@
       data-subscribe-url="{% url 'push_subscribe' %}"
       data-unsubscribe-url="{% url 'push_unsubscribe' %}">
       <h2 id="push-title">브라우저 푸시</h2>
-      <p>이 브라우저를 알림 대상으로 추가합니다. 컴퓨터와 휴대폰에서 각각 등록할 수 있습니다.</p>
-      <p class="push-status" data-push-status role="status">브라우저 지원 여부를 확인하는 중입니다.</p>
+      <p>지금 쓰는 브라우저로 알림을 받아요. 컴퓨터와 휴대폰은 따로 등록해야 해요.</p>
+      <p class="push-status" data-push-status role="status">확인하는 중…</p>
       <div class="destination-actions">
         <button class="primary-button" type="button" data-push-subscribe hidden>이 브라우저에서 알림 받기</button>
         <button class="secondary-button" type="button" data-push-unsubscribe hidden>이 브라우저 알림 해제</button>
       </div>
-      <p class="fine-print" data-push-ios hidden>iPhone·iPad는 Safari 공유 메뉴에서 "홈 화면에 추가"한 뒤, 홈 화면 아이콘으로 열어야 알림을 켤 수 있습니다(iOS 16.4 이상).</p>
-      <p class="fine-print">푸시는 브라우저 회사의 푸시 서버를 거쳐 암호화된 채로 전달됩니다. 기기가 꺼져 있거나 알림이 꺼져 있으면 늦게 도착하거나 보이지 않을 수 있으니, 중요한 알림은 웹훅도 함께 등록하는 것을 권합니다.</p>
+      <p class="fine-print" data-push-ios hidden>iPhone·iPad는 Safari 공유 버튼에서 "홈 화면에 추가"를 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어요(iOS 16.4 이상).</p>
+      <p class="fine-print">기기가 꺼져 있거나 알림을 꺼 두면 늦게 오거나 안 보일 수 있어요. 놓치면 안 되는 알림이라면 웹훅도 같이 등록해 두세요.</p>
     </section>
   {% endif %}
 
   <section class="panel" aria-labelledby="destination-status-title">
     <h2 id="destination-status-title">등록된 대상 <span class="term-meta">{{ destinations|length }}/{{ destination_limit }}</span></h2>
-    <p class="fine-print">예약 알림은 아래 모든 대상에 따로 보냅니다. 한 곳이 실패해도 나머지는 그대로 받습니다.</p>
     {% if destinations %}
       <ul class="destination-list">
         {% for destination in destinations %}
@@ -63,7 +61,7 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="empty-state compact">등록된 알림 대상이 없습니다.</p>
+      <p class="empty-state compact">아직 없어요.</p>
     {% endif %}
   </section>
 
@@ -91,7 +89,7 @@
         {{ destination_form.webhook_url.label_tag }}
         {{ destination_form.webhook_url }}
         {{ destination_form.webhook_url.errors }}
-        <small>채널 설정에서 발급한 웹훅 URL을 붙여 넣으세요. 저장된 URL은 다시 표시되지 않습니다.</small>
+        <small>Discord·Slack 채널 설정에서 만든 웹훅 URL을 붙여 넣으세요. 저장한 뒤에는 다시 보여 주지 않아요.</small>
       </div>
       <button class="primary-button" type="submit">웹훅 추가</button>
     </form>

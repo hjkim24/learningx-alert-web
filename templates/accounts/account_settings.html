@@ -6,13 +6,13 @@
   <header class="page-heading compact-heading">
     <div>
       <h1>계정</h1>
-      <p>{{ user.email|default:user.username }}으로 로그인했습니다.</p>
+      <p>{{ user.email|default:user.username }}</p>
     </div>
   </header>
 
   <section class="panel" aria-labelledby="logout-title">
     <h2 id="logout-title">로그아웃</h2>
-    <p class="fine-print">이 기기에서만 로그아웃합니다. 예약 알림은 계속 발송됩니다.</p>
+    <p class="fine-print">이 기기에서만 로그아웃돼요. 예약 알림은 계속 가요.</p>
     <form method="post" action="{% url 'account_logout' %}">
       {% csrf_token %}
       <button class="secondary-button" type="submit">로그아웃</button>
@@ -20,8 +20,8 @@
   </section>
 
   <section class="danger-zone" aria-labelledby="account-delete-title">
-    <h2 id="account-delete-title">로컬 계정 삭제</h2>
-    <p>먼저 Canvas에서 토큰을 폐기하고 Discord 또는 Slack에서 웹훅을 삭제하세요. 브라우저 푸시 구독은 계정과 함께 삭제됩니다. 이 작업은 이 서비스에 저장된 연결, 설정, 실행 이력을 모두 삭제하며 되돌릴 수 없습니다.</p>
+    <h2 id="account-delete-title">계정 삭제</h2>
+    <p>여기 저장된 Canvas 연결, 설정, 알림 기록이 모두 지워지고 되돌릴 수 없어요. Canvas 토큰과 Discord·Slack 웹훅은 각 서비스에서 따로 지워 주세요.</p>
     <form method="post" action="{% url 'account_delete' %}">
       {% csrf_token %}
       <button class="danger-button" type="submit">내 로컬 계정과 이력 삭제</button>

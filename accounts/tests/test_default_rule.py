@@ -139,7 +139,7 @@ class NewUserOnboardingTests(TestCase):
         dashboard = self.client.get(reverse("dashboard"))
 
         self.assertIsNone(dashboard.context["next_run"])
-        self.assertContains(dashboard, "켜 둔 알림 시각이 없어 예약 알림이 발송되지 않습니다.")
+        self.assertContains(dashboard, "켜 둔 알림 시각이 없어서 예약 알림이 가지 않아요.")
 
     def test_preview_before_saving_settings_also_creates_a_usable_schedule(self):
         CanvasConnection.objects.create(

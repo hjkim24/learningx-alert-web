@@ -183,24 +183,24 @@ def canvas_connect(request):
         except CanvasConnectionError:
             messages.error(
                 request,
-                "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
+                "Canvas에 연결하지 못했어요. 토큰을 다시 확인해 주세요.",
             )
         else:
             # New users get a working schedule right away (3 days, daily 09:00);
             # without one the scheduler would silently never run for them.
             ensure_default_rule(request.user)
-            messages.success(request, "Canvas 계정을 연결했습니다.")
+            messages.success(request, "Canvas를 연결했어요.")
             try:
                 courses = sync_courses(request.user)
             except CourseSyncError:
                 messages.warning(
                     request,
-                    "과목 목록은 불러오지 못했습니다. 과목 선택에서 새로고침해 주세요.",
+                    "과목은 불러오지 못했어요. 과목 선택에서 새로고침해 주세요.",
                 )
             else:
                 messages.success(
                     request,
-                    f"수강 과목 {courses.count()}개를 불러왔습니다. 과목 선택에서 알림을 켜 주세요.",
+                    f"수강 과목 {courses.count()}개를 불러왔어요. 과목 선택에서 알림을 켜 주세요.",
                 )
     return redirect("dashboard")
 
@@ -209,7 +209,7 @@ def canvas_connect(request):
 @require_POST
 def canvas_disconnect(request):
     CanvasConnection.objects.filter(user=request.user).delete()
-    messages.success(request, "Canvas 연결을 해제했습니다.")
+    messages.success(request, "Canvas 연결을 해제했어요.")
     return redirect("dashboard")
 
 
@@ -239,14 +239,14 @@ def course_sync(request):
     try:
         sync_courses(request.user)
     except CanvasConnection.DoesNotExist:
-        messages.error(request, "Canvas 계정을 먼저 연결해 주세요.")
+        messages.error(request, "Canvas를 먼저 연결해 주세요.")
     except CourseSyncError:
         messages.error(
             request,
-            "과목 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+            "과목을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.",
         )
     else:
-        messages.success(request, "Canvas 과목 목록을 새로고침했습니다.")
+        messages.success(request, "과목 목록을 새로고침했어요.")
     return redirect("course_settings")
 
 
@@ -264,11 +264,11 @@ def course_settings_save(request):
 
     if formset_is_valid and not forged_id:
         formset.save()
-        messages.success(request, "과목 알림 설정을 저장했습니다.")
+        messages.success(request, "저장했어요.")
         return redirect("course_settings")
 
     if forged_id:
-        messages.error(request, "유효하지 않은 과목이 포함되어 있습니다.")
+        messages.error(request, "저장할 수 없는 과목이 섞여 있어요. 새로고침한 뒤 다시 시도해 주세요.")
     return render(
         request,
         "accounts/course_settings.html",
@@ -284,7 +284,7 @@ def preview(request):
     try:
         result = collect_for_user(request.user, now)
     except CanvasConnection.DoesNotExist:
-        messages.error(request, "먼저 Canvas 계정을 연결해 주세요.")
+        messages.error(request, "Canvas를 먼저 연결해 주세요.")
         return redirect("dashboard")
     return render(
         request,
@@ -315,9 +315,9 @@ def _group_items_by_day(items, now):
     return groups
 
 
-WEBHOOK_URL_ERROR = "Discord 또는 Slack의 유효한 HTTPS 웹훅 URL을 입력해 주세요."
-DUPLICATE_ERROR = "이미 등록된 웹훅입니다."
-LIMIT_ERROR = f"알림 대상은 최대 {Destination.MAX_PER_USER}개까지 등록할 수 있습니다."
+WEBHOOK_URL_ERROR = "Discord나 Slack 웹훅 URL(https://…)을 넣어 주세요."
+DUPLICATE_ERROR = "이미 등록한 웹훅이에요."
+LIMIT_ERROR = f"알림 대상은 최대 {Destination.MAX_PER_USER}개까지 등록할 수 있어요."
 
 
 def _alarm_formset(rule, data=None):
@@ -447,11 +447,11 @@ def notification_settings_save(request):
         _save_schedule(request, rule_form, alarm_formset)
 
     if Destination.objects.filter(user=request.user).exists():
-        messages.success(request, "알림 설정을 저장했습니다.")
+        messages.success(request, "저장했어요.")
     else:
         messages.warning(
             request,
-            "알림 시각을 저장했습니다. 알림을 받으려면 알림 대상에서 웹훅이나 브라우저 푸시를 추가해 주세요.",
+            "저장했어요. 알림을 받으려면 알림 대상을 추가해 주세요.",
         )
     return redirect("notification_settings")
 
@@ -475,7 +475,7 @@ def notification_rule_save(request):
         )
     with transaction.atomic():
         _save_schedule(request, form, alarm_formset)
-    messages.success(request, "알림 규칙을 저장했습니다.")
+    messages.success(request, "저장했어요.")
     return redirect("notification_settings")
 
 
@@ -487,7 +487,7 @@ def destination_save(request):
     """Add one Discord/Slack webhook destination."""
     form = DestinationForm(request.POST, require_url=True)
     if form.is_valid() and _add_webhook(request, form):
-        messages.success(request, "알림 대상을 추가했습니다.")
+        messages.success(request, "알림 대상을 추가했어요.")
         return redirect("destination_settings")
     return _render_destinations(request, form)
 
@@ -497,9 +497,9 @@ def destination_save(request):
 def destination_delete(request, pk):
     deleted, _ = Destination.objects.filter(user=request.user, pk=pk).delete()
     if deleted:
-        messages.success(request, "알림 대상을 삭제했습니다.")
+        messages.success(request, "알림 대상을 삭제했어요.")
     else:
-        messages.error(request, "알림 대상을 찾을 수 없습니다.")
+        messages.error(request, "알림 대상을 찾을 수 없어요.")
     return redirect("destination_settings")
 
 
@@ -509,7 +509,7 @@ def destination_delete(request, pk):
 def destination_test(request, pk):
     destination = Destination.objects.filter(user=request.user, pk=pk).first()
     if not destination:
-        messages.error(request, "알림 대상을 먼저 저장해 주세요.")
+        messages.error(request, "알림 대상을 먼저 추가해 주세요.")
         return redirect("destination_settings")
 
     secret = decrypt_secret(destination.encrypted_webhook_url)
@@ -523,31 +523,31 @@ def destination_test(request, pk):
         destination.status = Destination.Status.DEFINITELY_FAILED
         messages.error(
             request,
-            "저장된 웹훅 주소를 사용할 수 없습니다. 새 URL을 저장해 주세요.",
+            "저장된 웹훅을 쓸 수 없어요. 새 URL로 다시 추가해 주세요.",
         )
     except SubscriptionGoneError:
         destination.delete()
         messages.error(
             request,
-            "이 브라우저의 푸시 구독이 만료되어 삭제했습니다. 해당 기기에서 다시 등록해 주세요.",
+            "이 브라우저의 푸시 등록이 만료돼서 삭제했어요. 그 기기에서 다시 켜 주세요.",
         )
         return redirect("destination_settings")
     except DefiniteDeliveryError:
         destination.status = Destination.Status.DEFINITELY_FAILED
-        messages.error(request, "시험 알림 전송에 실패했습니다.")
+        messages.error(request, "시험 알림을 보내지 못했어요.")
     except AmbiguousDeliveryError:
         destination.status = Destination.Status.NEEDS_REVIEW
         messages.warning(
             request,
-            "전송 결과를 확인할 수 없습니다. 대상 채널을 직접 확인해 주세요.",
+            "전송됐는지 확인하지 못했어요. 채널에 도착했는지 직접 봐 주세요.",
         )
     else:
         destination.status = Destination.Status.SUCCEEDED
         messages.success(
             request,
-            "시험 푸시를 보냈습니다. 기기에 알림이 떴는지 확인해 주세요."
+            "시험 알림을 보냈어요. 기기에 떴는지 확인해 보세요."
             if destination.kind == Destination.Kind.WEBPUSH
-            else "시험 알림 전송을 확인했습니다.",
+            else "시험 알림을 보냈어요.",
         )
     destination.last_tested_at = timezone.now()
     destination.save(update_fields=("status", "last_tested_at"))
@@ -590,9 +590,9 @@ def push_subscribe(request):
     # The settings page re-syncs an existing browser subscription on every
     # load; only a real registration deserves a flash message.
     if created:
-        messages.success(request, "이 브라우저를 알림 대상으로 추가했습니다. 시험 알림으로 확인해 보세요.")
+        messages.success(request, "이 브라우저를 알림 대상에 추가했어요. 시험 알림으로 확인해 보세요.")
     elif not data.get("silent"):
-        messages.success(request, "이 브라우저의 푸시 구독을 갱신했습니다.")
+        messages.success(request, "이 브라우저의 푸시 등록을 갱신했어요.")
     return JsonResponse({"ok": True, "id": destination.pk, "created": created})
 
 
@@ -611,7 +611,7 @@ def push_unsubscribe(request):
         target_fingerprint=target_fingerprint(Destination.Kind.WEBPUSH, endpoint),
     ).delete()
     if deleted:
-        messages.success(request, "이 브라우저의 푸시 알림을 해제했습니다.")
+        messages.success(request, "이 브라우저의 푸시 알림을 껐어요.")
     return JsonResponse({"ok": True, "deleted": bool(deleted)})
 
 
@@ -642,7 +642,7 @@ def item_exclude(request):
     except (TypeError, ValueError):
         if _wants_json(request):
             return JsonResponse({"ok": False, "error": "invalid_item"}, status=400)
-        messages.error(request, "제외할 항목을 확인하지 못했습니다.")
+        messages.error(request, "알림을 끌 항목을 찾지 못했어요.")
         return redirect("excluded_items")
 
     # Only courses the user actually has; the title is display-only.
@@ -652,7 +652,7 @@ def item_exclude(request):
     if selection is None:
         if _wants_json(request):
             return JsonResponse({"ok": False, "error": "unknown_course"}, status=404)
-        messages.error(request, "제외할 항목을 확인하지 못했습니다.")
+        messages.error(request, "알림을 끌 항목을 찾지 못했어요.")
         return redirect("excluded_items")
 
     ExcludedItem.objects.update_or_create(
@@ -670,7 +670,7 @@ def item_exclude(request):
     if _wants_json(request):
         count = ExcludedItem.objects.filter(user=request.user).count()
         return JsonResponse({"ok": True, "excluded_count": count})
-    messages.success(request, "이 항목의 알림을 껐습니다.")
+    messages.success(request, "이 항목의 알림을 껐어요.")
     return redirect("excluded_items")
 
 
@@ -681,7 +681,7 @@ def item_include(request, pk):
     if _wants_json(request):
         return JsonResponse({"ok": bool(deleted)}, status=200 if deleted else 404)
     if deleted:
-        messages.success(request, "이 항목의 알림을 다시 켰습니다. 다음 예약 알림부터 포함됩니다.")
+        messages.success(request, "다시 켰어요. 다음 예약 알림부터 들어가요.")
     return redirect("excluded_items")
 
 

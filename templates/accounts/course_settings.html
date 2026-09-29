@@ -7,7 +7,7 @@
   <header class="page-heading compact-heading">
     <div>
       <h1>과목 선택</h1>
-      <p>알림을 받을 항목을 과목마다 켜세요. 과제나 강의 중 하나라도 켜면 그 과목이 알림 대상이 됩니다.</p>
+      <p>과목마다 알림 받을 항목을 켜세요.</p>
     </div>
     <form method="post" action="{% url 'course_sync' %}">
       {% csrf_token %}
@@ -47,7 +47,7 @@
                     </label>
                   {% else %}
                     <label class="toggle is-disabled">
-                      <input type="checkbox" disabled><span>강의 — 운영 설정 후 제공</span>
+                      <input type="checkbox" disabled><span>강의 (준비 중)</span>
                     </label>
                   {% endif %}
                 </div>
@@ -58,13 +58,13 @@
       </details>
     {% empty %}
       <div class="empty-state">
-        <strong>선택할 수 있는 활성 과목이 없습니다.</strong>
-        <span>Canvas 과목 새로고침을 눌러 수강 과목을 불러오세요.</span>
+        <strong>불러온 과목이 없어요.</strong>
+        <span>Canvas 과목 새로고침을 눌러 주세요.</span>
       </div>
     {% endfor %}
-    <p class="fine-print course-legend">강의에는 LearningX 출석 대상 영상과 학습자료가 함께 포함됩니다.</p>
+    <p class="fine-print course-legend">강의에는 LearningX 출석 대상 영상과 학습자료가 들어가요.</p>
     <div class="sticky-actions">
-      <span>변경한 뒤 저장해야 반영됩니다.</span>
+      <span>저장해야 반영돼요.</span>
       <button class="secondary-button" type="submit" formaction="{% url 'preview' %}" formnovalidate data-loading>저장된 설정으로 미리보기</button>
       <button class="primary-button" type="submit">저장</button>
     </div>

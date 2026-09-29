@@ -118,7 +118,7 @@ class ReconnectRequiredTests(TestCase):
 
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, "Canvas 재연결이 필요합니다.")
+        self.assertContains(response, "Canvas를 다시 연결해 주세요.")
         self.assertContains(response, "재연결 필요")
         self.assertIsNone(response.context["next_run"])
 
@@ -127,7 +127,7 @@ class ReconnectRequiredTests(TestCase):
 
         response = self.client.get(reverse("dashboard"))
 
-        self.assertNotContains(response, "Canvas 재연결이 필요합니다.")
+        self.assertNotContains(response, "Canvas를 다시 연결해 주세요.")
 
 
 @override_settings(CREDENTIAL_ENCRYPTION_KEYS=[KEY], CANVAS_BASE_URL="https://canvas.skku.edu")
@@ -156,7 +156,7 @@ class ConnectAutoSyncTests(TestCase):
             response = self.client.post(reverse("canvas_connect"), {"token": "t"}, follow=True)
 
         sync.assert_called_once_with(self.user)
-        self.assertContains(response, "수강 과목 2개를 불러왔습니다.")
+        self.assertContains(response, "수강 과목 2개를 불러왔어요.")
 
     def test_sync_failure_keeps_connection_and_warns(self):
         with patch("accounts.views.verify_and_store_connection", side_effect=self.fake_verify), \
@@ -164,8 +164,8 @@ class ConnectAutoSyncTests(TestCase):
             response = self.client.post(reverse("canvas_connect"), {"token": "t"}, follow=True)
 
         self.assertTrue(CanvasConnection.objects.filter(user=self.user).exists())
-        self.assertContains(response, "Canvas 계정을 연결했습니다.")
-        self.assertContains(response, "과목 목록은 불러오지 못했습니다.")
+        self.assertContains(response, "Canvas를 연결했어요.")
+        self.assertContains(response, "과목은 불러오지 못했어요.")
 
     def test_failed_verification_does_not_sync(self):
         from accounts.services import CanvasConnectionError

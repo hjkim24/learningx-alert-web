@@ -95,8 +95,8 @@ class AccountDeletionTests(TestCase):
 
         response = self.client.get(reverse("account_settings"))
 
-        self.assertContains(response, "Canvas에서 토큰을 폐기")
-        self.assertContains(response, "Discord 또는 Slack에서 웹훅을 삭제")
+        self.assertContains(response, "각 서비스에서 따로 지워")
+        self.assertContains(response, "Discord·Slack 웹훅은 각 서비스에서 따로 지워")
         self.assertContains(response, f'action="{reverse("account_delete")}"')
 
     def test_account_delete_cascades_local_data_logs_out_and_preserves_other_user(self):

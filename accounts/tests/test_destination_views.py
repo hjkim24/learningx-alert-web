@@ -106,7 +106,7 @@ class DestinationViewTests(TestCase):
         response = self.client.post(reverse("destination_save"), payload)
 
         self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "이미 등록된 웹훅입니다.", status_code=400)
+        self.assertContains(response, "이미 등록한 웹훅이에요.", status_code=400)
         self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
@@ -172,12 +172,12 @@ class DestinationViewTests(TestCase):
         send.assert_called_once_with(
             Destination.Kind.DISCORD,
             self.discord_url,
-            "LearningX Alert 시험 알림입니다.",
+            "LearningX Alert 시험 알림이에요.",
         )
         destination.refresh_from_db()
         self.assertEqual(destination.status, Destination.Status.SUCCEEDED)
         self.assertIsNotNone(destination.last_tested_at)
-        self.assertContains(response, "시험 알림 전송을 확인했습니다.")
+        self.assertContains(response, "시험 알림을 보냈어요.")
         self.assertNotContains(response, self.discord_url)
 
     def test_test_result_statuses_use_safe_messages_and_timestamp(self):
@@ -187,12 +187,12 @@ class DestinationViewTests(TestCase):
             (
                 DefiniteDeliveryError("exception-secret-definite"),
                 Destination.Status.DEFINITELY_FAILED,
-                "시험 알림 전송에 실패했습니다.",
+                "시험 알림을 보내지 못했어요.",
             ),
             (
                 AmbiguousDeliveryError("exception-secret-ambiguous"),
                 Destination.Status.NEEDS_REVIEW,
-                "전송 결과를 확인할 수 없습니다. 대상 채널을 직접 확인해 주세요.",
+                "전송됐는지 확인하지 못했어요. 채널에 도착했는지 직접 봐 주세요.",
             ),
         )
         for error, expected_status, safe_message in cases:
@@ -226,7 +226,7 @@ class DestinationViewTests(TestCase):
         destination.refresh_from_db()
         self.assertEqual(destination.status, Destination.Status.DEFINITELY_FAILED)
         self.assertIsNotNone(destination.last_tested_at)
-        self.assertContains(response, "저장된 웹훅 주소를 사용할 수 없습니다.")
+        self.assertContains(response, "저장된 웹훅을 쓸 수 없어요.")
         self.assertNotContains(response, self.discord_url)
         self.assertNotContains(response, destination.encrypted_webhook_url)
 
@@ -261,6 +261,6 @@ class DestinationViewTests(TestCase):
         response = self.client.post(reverse("destination_test", args=[pk]), follow=True)
 
         send.assert_not_called()
-        self.assertContains(response, "알림 대상을 먼저 저장해 주세요.")
+        self.assertContains(response, "알림 대상을 먼저 추가해 주세요.")
         self.assertNotContains(response, self.discord_url)
         self.assertNotContains(response, other.encrypted_webhook_url)

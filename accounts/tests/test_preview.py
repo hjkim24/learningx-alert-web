@@ -105,7 +105,7 @@ class PreviewTests(TestCase):
         self.assertContains(response, "일부 과제의 제출 상태를 확인하지 못했습니다.")
         self.assertContains(response, 'data-error-code="submission_state_failed"')
         self.assertNotContains(response, "<code>submission_state_failed</code>")
-        self.assertNotContains(response, "잠시 후 다시 미리보기를 열어 주세요.")
+        self.assertNotContains(response, "조금 뒤에 다시 조회해 보세요.")
 
     @patch("accounts.views.collect_for_user")
     def test_canvas_outage_explains_it_is_temporary(self, collect):
@@ -121,7 +121,7 @@ class PreviewTests(TestCase):
         response = self.client.post(reverse("preview"))
 
         self.assertContains(response, "Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.")
-        self.assertContains(response, "잠시 후 다시 미리보기를 열어 주세요.")
+        self.assertContains(response, "조금 뒤에 다시 조회해 보세요.")
         self.assertNotContains(response, "<code>lectures_failed</code>")
 
     @patch("accounts.views.collect_for_user")
@@ -145,4 +145,4 @@ class PreviewTests(TestCase):
         response = self.client.post(reverse("preview"), follow=True)
 
         self.assertRedirects(response, reverse("dashboard"))
-        self.assertContains(response, "먼저 Canvas 계정을 연결해 주세요.")
+        self.assertContains(response, "Canvas를 먼저 연결해 주세요.")

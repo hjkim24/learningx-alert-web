@@ -106,9 +106,9 @@
   if (!supported) {
     if (isIos && !standalone) {
       iosHint.hidden = false;
-      setStatus("홈 화면에 추가한 앱에서만 푸시를 켤 수 있습니다.");
+      setStatus("홈 화면에 추가한 앱에서만 푸시를 켤 수 있어요.");
     } else {
-      setStatus("이 브라우저는 푸시 알림을 지원하지 않습니다.");
+      setStatus("이 브라우저는 푸시 알림을 지원하지 않아요.");
     }
     return;
   }
@@ -139,7 +139,7 @@
   async function refresh() {
     const subscription = await registration.pushManager.getSubscription();
     if (Notification.permission === "denied") {
-      setStatus("브라우저 설정에서 이 사이트의 알림이 차단되어 있습니다. 사이트 설정에서 허용으로 바꿔 주세요.");
+      setStatus("이 사이트의 알림이 차단돼 있어요. 브라우저의 사이트 설정에서 허용으로 바꿔 주세요.");
       subscribeButton.hidden = true;
       unsubscribeButton.hidden = !subscription;
       return subscription;
@@ -147,10 +147,10 @@
     if (!subscription) {
       subscribeButton.hidden = false;
       unsubscribeButton.hidden = true;
-      setStatus("이 브라우저는 아직 등록되지 않았습니다.");
+      setStatus("이 브라우저는 아직 등록하지 않았어요.");
       return subscription;
     }
-    setStatus("서버 등록 상태를 확인하는 중입니다.");
+    setStatus("확인하는 중…");
     const result = await syncWithServer(subscription);
     if (result === "created") {
       // Registered just now (e.g. it had been deleted); show it in the list.
@@ -160,17 +160,17 @@
     if (result === "synced") {
       subscribeButton.hidden = true;
       unsubscribeButton.hidden = false;
-      setStatus("이 브라우저는 푸시를 받도록 등록되어 있습니다.");
+      setStatus("이 브라우저로 푸시를 받고 있어요.");
       return subscription;
     }
     subscribeButton.hidden = false;
     unsubscribeButton.hidden = false;
     setStatus(
       result === "destination_limit"
-        ? "알림 대상이 가득 차서 이 브라우저를 등록하지 못했습니다. 쓰지 않는 대상을 삭제해 주세요."
+        ? "알림 대상이 가득 차서 등록하지 못했어요. 쓰지 않는 대상을 지워 주세요."
         : result === "offline"
-          ? "서버 등록 상태를 확인하지 못했습니다. 연결을 확인한 뒤 새로고침해 주세요."
-          : "이 브라우저의 구독이 서버에 등록되지 않았습니다. '이 브라우저에서 알림 받기'를 다시 눌러 주세요."
+          ? "등록 상태를 확인하지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요."
+          : "서버에 등록되지 않았어요. '이 브라우저에서 알림 받기'를 다시 눌러 주세요."
     );
     return subscription;
   }
@@ -180,7 +180,7 @@
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
-        setStatus("알림 권한을 허용해야 푸시를 받을 수 있습니다.");
+        setStatus("알림 권한을 허용해야 푸시를 받을 수 있어요.");
         return;
       }
       const subscription =
@@ -204,11 +204,11 @@
       }
       setStatus(
         payload.error === "destination_limit"
-          ? "알림 대상이 가득 찼습니다. 쓰지 않는 대상을 삭제한 뒤 다시 시도해 주세요."
-          : "서버가 이 브라우저의 구독을 받지 못했습니다. 잠시 후 다시 시도해 주세요."
+          ? "알림 대상이 가득 찼어요. 쓰지 않는 대상을 지우고 다시 시도해 주세요."
+          : "등록하지 못했어요. 잠시 후 다시 시도해 주세요."
       );
     } catch (error) {
-      setStatus("푸시 등록 중 문제가 생겼습니다. 브라우저 알림 설정을 확인해 주세요.");
+      setStatus("푸시를 켜지 못했어요. 브라우저 알림 설정을 확인해 주세요.");
     } finally {
       subscribeButton.disabled = false;
     }
@@ -224,7 +224,7 @@
       }
       window.location.reload();
     } catch (error) {
-      setStatus("해제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setStatus("끄지 못했어요. 잠시 후 다시 시도해 주세요.");
       unsubscribeButton.disabled = false;
     }
   }
@@ -237,7 +237,7 @@
       unsubscribeButton.addEventListener("click", unsubscribe);
       return refresh();
     })
-    .catch(() => setStatus("서비스 워커를 등록하지 못했습니다. HTTPS 주소로 접속했는지 확인해 주세요."));
+    .catch(() => setStatus("알림 기능을 준비하지 못했어요. https:// 주소로 접속했는지 확인해 주세요."));
 })();
 
 // Time picker: replaces the browser's native <input type="time"> popup with a

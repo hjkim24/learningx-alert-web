@@ -129,7 +129,7 @@ def render_notification(result, now):
                         f"{item.due_at.astimezone(KST):%H:%M}"
                     )
     else:
-        lines.extend(("", "현재 조회 범위에 알림 대상 과제·강의가 없습니다."))
+        lines.extend(("", "조회 기간 안에 마감되는 과제·강의가 없어요."))
 
     failures = [outcome for outcome in result.outcomes if outcome.status == "failed"]
     if failures:
@@ -324,7 +324,7 @@ def render_push_notification(result, now):
             lines.append(f"외 {len(items) - 4}건")
     else:
         title = "마감 알림"
-        lines = ["조회 범위에 알림 대상 과제·강의가 없습니다."]
+        lines = ["조회 기간 안에 마감되는 과제·강의가 없어요."]
     if failures:
         lines.append(f"조회 실패 과목 {len(failures)}개")
     return webpush.push_payload(f"LearningX Alert · {title}", "\n".join(lines))
@@ -337,13 +337,13 @@ def message_parts(kind, result, now):
     return split_message(render_notification(result, now))
 
 
-TEST_MESSAGE = "LearningX Alert 시험 알림입니다."
+TEST_MESSAGE = "LearningX Alert 시험 알림이에요."
 
 
 def test_message_for(kind):
     if kind == Destination.Kind.WEBPUSH:
         return webpush.push_payload(
-            "LearningX Alert", "시험 알림입니다. 이 기기에서 알림을 받을 수 있습니다."
+            "LearningX Alert", "시험 알림이에요. 이 기기로 알림을 받을 수 있어요."
         ).decode()
     return TEST_MESSAGE
 

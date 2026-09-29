@@ -349,4 +349,4 @@ class LectureSelectionFormTests(TestCase):
             response = self.client.get(reverse("course_settings"))
 
         self.assertContains(response, 'for="id_form-0-include_lectures"')
-        self.assertNotContains(response, "강의 — 운영 설정 후 제공")
+        self.assertNotContains(response, "강의 (준비 중)")
