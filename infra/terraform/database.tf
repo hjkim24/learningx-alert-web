@@ -76,3 +76,17 @@ output "database_host" {
 output "database_password_ocid" {
   value = one(data.oci_vault_secrets.database_password.secrets[*].id)
 }
+
+# The DB system lives in the app compartment but plugs a VNIC into the shared
+# subnet in the existing compartment, so its resource principal needs these
+# (Oracle's mandatory MySQL HeatWave policies), scoped to DB systems in the app
+# compartment only.
+resource "oci_identity_policy" "mysql_db_system" {
+  compartment_id = var.tenancy_ocid
+  name           = "learningx-alert-mysql-policy"
+  description    = "Let LearningX Alert MySQL DB systems attach to the shared subnet and NSG"
+  statements = [
+    "Allow any-user to {VNIC_CREATE, VNIC_UPDATE, VNIC_ASSOCIATE_NETWORK_SECURITY_GROUP, VNIC_DISASSOCIATE_NETWORK_SECURITY_GROUP} in compartment id ${var.existing_compartment_ocid} where all {request.principal.type = 'mysqldbsystem', request.resource.compartment.id = '${oci_identity_compartment.app.id}'}",
+    "Allow any-user to {NETWORK_SECURITY_GROUP_UPDATE_MEMBERS} in compartment id ${oci_identity_compartment.app.id} where all {request.principal.type = 'mysqldbsystem', request.resource.compartment.id = '${oci_identity_compartment.app.id}'}",
+  ]
+}
