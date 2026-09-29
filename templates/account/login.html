@@ -7,10 +7,7 @@
   <div class="login-layout">
     <section class="login-main" aria-labelledby="login-title">
       <h1 id="login-title">과제·강의 마감,<br>알림으로 받으세요</h1>
-      <p class="login-lead">
-        Canvas 과제와 LearningX 강의 마감을 모아서, 정해 둔 시각에
-        Discord·Slack·휴대폰으로 보내 드려요.
-      </p>
+      <p class="login-lead">Canvas 과제와 LearningX 강의 마감을 모아서, 정해 둔 시각에 Discord·Slack·휴대폰으로 보내 드려요.</p>
 
       <div class="login-card">
         <form method="post" action="{% provider_login_url 'google' process='login' %}">
@@ -28,10 +25,7 @@
         <p class="fine-print">초대받은 Google 계정만 들어올 수 있어요.</p>
       </div>
 
-      <p class="login-after">
-        로그인한 다음 Canvas 액세스 토큰을 한 번 연결하면 끝나요.
-        <a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법 보기</a>
-      </p>
+      <p class="login-after">로그인한 다음 Canvas 액세스 토큰을 한 번 연결하면 끝나요. <a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법 보기</a></p>
     </section>
 
     <aside class="login-visual" aria-label="알림 예시">

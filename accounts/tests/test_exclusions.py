@@ -170,7 +170,7 @@ class ExclusionViewTests(TestCase):
         response = self.client.post(reverse("item_exclude"), self.data, follow=True)
 
         self.assertRedirects(response, reverse("excluded_items"))
-        self.assertContains(response, "이 항목의 알림을 껐습니다.")
+        self.assertContains(response, "이 항목의 알림을 껐어요.")
         self.assertContains(response, "HW 55")
 
     def test_excluding_twice_does_not_duplicate(self):
@@ -210,7 +210,7 @@ class ExclusionViewTests(TestCase):
         self.client.post(reverse("item_include", args=[other.pk]))
         response = self.client.post(reverse("item_include", args=[own.pk]), follow=True)
 
-        self.assertContains(response, "다시 켰습니다")
+        self.assertContains(response, "다시 켰어요")
         self.assertFalse(ExcludedItem.objects.filter(pk=own.pk).exists())
         self.assertTrue(ExcludedItem.objects.filter(pk=other.pk).exists())
 

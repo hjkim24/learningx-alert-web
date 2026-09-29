@@ -81,7 +81,7 @@ class AlarmSettingsTests(TestCase):
         response = self.save("09:00", existing=[alarm.pk], extra={"alarms-0-DELETE": "on"})
 
         self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "알림 시각은 하나 이상 있어야 합니다.", status_code=400)
+        self.assertContains(response, "알림 시각이 하나 이상 있어야 해요.", status_code=400)
         self.assertTrue(AlarmTime.objects.filter(pk=alarm.pk).exists())
 
     def test_deleting_one_of_two_alarms_keeps_the_other(self):

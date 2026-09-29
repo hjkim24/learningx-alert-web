@@ -77,12 +77,12 @@ class NotificationPageTests(TestCase):
         self.assertNotContains(dashboard, "자동 알림 실행 중")
         self.assertContains(courses, "과제")
         self.assertNotContains(courses, "검증 후 제공")
-        self.assertContains(courses, "운영 설정 후 제공", count=1)
+        self.assertContains(courses, "준비 중", count=1)
         self.assertContains(notifications, "마감 조회 범위")
         self.assertContains(destinations, "시험 알림")
         self.assertContains(
             destinations,
-            "저장된 URL은 다시 표시되지 않습니다",
+            "저장한 뒤에는 다시 보여 주지 않아요",
         )
         for response in (dashboard, courses, notifications, destinations):
             self.assertNotContains(response, self.webhook_url)
@@ -98,7 +98,7 @@ class NotificationPageTests(TestCase):
 
         self.assertNotContains(courses, 'id_form-0-enabled')
         self.assertContains(courses, f'for="id_form-0-include_assignments"')
-        self.assertContains(courses, "강의 — 운영 설정 후 제공")
+        self.assertContains(courses, "강의 (준비 중)")
         self.assertNotContains(courses, "필수 학습자료")
         self.assertContains(courses, 'type="checkbox" disabled', count=1)
         for page, field_name in (
@@ -155,7 +155,7 @@ class NotificationPageTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertContains(response, "같은 시각의 알림이 두 개 있습니다.", status_code=400)
+        self.assertContains(response, "같은 시각의 알림이 두 개 있어요.", status_code=400)
         self.assertEqual(self.alarm_times(self.rule), [time(9, 0)])
 
     def test_valid_one_and_two_time_rules_update_only_current_user(self):

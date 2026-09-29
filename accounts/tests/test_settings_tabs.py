@@ -99,7 +99,7 @@ class AccountPageTests(TestCase):
 
         self.assertContains(page, "pilot@example.com")
         self.assertContains(page, f'action="{reverse("account_delete")}"')
-        self.assertContains(page, "되돌릴 수 없습니다")
+        self.assertContains(page, "되돌릴 수 없어요")
 
 
 class DashboardDestinationLinkTests(TestCase):

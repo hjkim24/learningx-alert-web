@@ -6,15 +6,14 @@
   <header class="page-heading compact-heading">
     <div>
       <h1>알림 설정</h1>
-      <p>언제 조회해서 어디로 보낼지 정합니다. 예약 알림은 설정한 시각에 자동으로 발송됩니다.</p>
     </div>
   </header>
   {% include "accounts/_notification_tabs.html" with active="schedule" %}
 
   {% if not destination_count %}
     <div class="attention-notice" role="status">
-      <strong>아직 등록된 알림 대상이 없습니다.</strong>
-      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가하기 전까지 예약 알림은 발송되지 않습니다.</p>
+      <strong>아직 등록된 알림 대상이 없어요.</strong>
+      <p><a href="{% url 'destination_settings' %}">알림 대상</a>을 추가해야 예약 알림이 가요.</p>
     </div>
   {% endif %}
 
@@ -27,7 +26,7 @@
         {{ rule_form.lookahead_days.label_tag }}
         <span class="input-with-unit">{{ rule_form.lookahead_days }}<span>일</span></span>
         {{ rule_form.lookahead_days.errors }}
-        <small>오늘부터 1–14일 안에 마감되는 미완료 과제와 미수강 강의를 알립니다.</small>
+        <small>아직 하지 않은 과제·강의 중 이 기간 안에 마감되는 것만 알려요. 1~14일로 정할 수 있어요.</small>
       </div>
       <div class="alarm-editor" data-alarm-editor data-alarm-limit="{{ alarm_limit }}">
         <div class="alarm-heading">
@@ -51,7 +50,7 @@
     </section>
 
     <div class="sticky-actions save-bar" data-save-bar{% if rule_form.is_bound or alarm_formset.is_bound %} data-dirty{% endif %}>
-      <span>저장하지 않은 변경 사항이 있습니다.</span>
+      <span>저장하지 않은 변경 사항이 있어요.</span>
       <button class="primary-button" type="submit">변경 사항 저장</button>
     </div>
   </form>
@@ -59,7 +58,7 @@
   <a class="panel link-panel" href="{% url 'excluded_items' %}">
     <span>
       <strong>알림 끈 항목</strong>
-      <span class="term-meta">{% if excluded_count %}마감 전 {{ excluded_count }}건{% else %}없음{% endif %} · 알림 미리보기에서 항목별로 끌 수 있습니다</span>
+      <span class="term-meta">{% if excluded_count %}마감 전 {{ excluded_count }}건{% else %}없음{% endif %} · 미리보기에서 항목마다 끌 수 있어요</span>
     </span>
     <span class="link-arrow" aria-hidden="true">›</span>
   </a>

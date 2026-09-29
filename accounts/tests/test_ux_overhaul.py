@@ -98,8 +98,8 @@ class NotificationSettingsSaveTests(TestCase):
         self.assertRedirects(response, reverse("notification_settings"))
         self.assertEqual(NotificationRule.objects.get(user=self.user).lookahead_days, 7)
         self.assertFalse(Destination.objects.filter(user=self.user).exists())
-        self.assertContains(response, "웹훅이나 브라우저 푸시를 추가해 주세요")
-        self.assertContains(response, "아직 등록된 알림 대상이 없습니다")
+        self.assertContains(response, "알림 대상을 추가해 주세요")
+        self.assertContains(response, "아직 등록된 알림 대상이 없어요")
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
     def test_schedule_save_ignores_webhook_fields(self, _dns):
@@ -192,7 +192,7 @@ class UxPageTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertContains(response, 'aria-label="주 메뉴"')
-        self.assertContains(response, "등록된 알림 대상이 없어 예약 알림이 발송되지 않습니다")
+        self.assertContains(response, "등록된 알림 대상이 없어서 예약 알림이 가지 않아요")
         self.assertNotContains(response, "내 로컬 계정과 이력 삭제")
         self.assertContains(response, 'action="/connection/preview/" data-loading')
         self.assertContains(response, 'id="loading-veil"')

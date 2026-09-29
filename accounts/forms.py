@@ -106,7 +106,7 @@ class DestinationForm(LabelSuffixMixin, forms.Form):
     def clean(self):
         cleaned = super().clean()
         if self.require_url and not cleaned.get("webhook_url"):
-            self.add_error("webhook_url", "웹훅 URL을 입력해 주세요.")
+            self.add_error("webhook_url", "웹훅 URL을 넣어 주세요.")
         return cleaned
 
 
@@ -116,8 +116,8 @@ class NotificationRuleForm(LabelSuffixMixin, forms.ModelForm):
         min_value=1,
         max_value=14,
         error_messages={
-            "min_value": "마감 조회 범위는 1일 이상이어야 합니다.",
-            "max_value": "마감 조회 범위는 14일 이하여야 합니다.",
+            "min_value": "조회 범위는 1일 이상이어야 해요.",
+            "max_value": "조회 범위는 14일 이하여야 해요.",
         },
         widget=forms.NumberInput(
             attrs={"min": 1, "max": 14, "class": "input-short", "inputmode": "numeric"}
@@ -135,7 +135,7 @@ class AlarmTimeForm(LabelSuffixMixin, forms.ModelForm):
     time = forms.TimeField(
         label="시각",
         input_formats=("%H:%M",),
-        error_messages={"required": "알림 시각을 입력해 주세요."},
+        error_messages={"required": "알림 시각을 넣어 주세요."},
         widget=forms.TimeInput(format="%H:%M", attrs={"type": "time", "class": "alarm-time-input"}),
     )
     days = forms.MultipleChoiceField(
@@ -168,7 +168,7 @@ class AlarmTimeForm(LabelSuffixMixin, forms.ModelForm):
         return instance
 
 
-DUPLICATE_ALARM_MESSAGE = "같은 시각의 알림이 두 개 있습니다. 시각을 바꾸거나 하나를 삭제해 주세요."
+DUPLICATE_ALARM_MESSAGE = "같은 시각의 알림이 두 개 있어요. 시각을 바꾸거나 하나를 지워 주세요."
 
 
 class BaseAlarmFormSet(forms.BaseInlineFormSet):
@@ -198,9 +198,9 @@ class BaseAlarmFormSet(forms.BaseInlineFormSet):
                 raise forms.ValidationError(DUPLICATE_ALARM_MESSAGE)
             seen.add(value)
         if kept < 1:
-            raise forms.ValidationError("알림 시각은 하나 이상 있어야 합니다.")
+            raise forms.ValidationError("알림 시각이 하나 이상 있어야 해요.")
         if kept > AlarmTime.MAX_PER_RULE:
-            raise forms.ValidationError(f"알림 시각은 최대 {AlarmTime.MAX_PER_RULE}개까지 설정할 수 있습니다.")
+            raise forms.ValidationError(f"알림 시각은 최대 {AlarmTime.MAX_PER_RULE}개까지 만들 수 있어요.")
 
 
 AlarmFormSet = forms.inlineformset_factory(

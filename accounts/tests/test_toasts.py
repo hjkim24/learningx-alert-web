@@ -13,7 +13,7 @@ class ToastMarkupTests(TestCase):
         response = self.client.post(reverse("canvas_disconnect"), follow=True)
 
         self.assertContains(response, 'class="message-stack" aria-live="polite" data-toasts')
-        self.assertContains(response, "Canvas 연결을 해제했습니다.")
+        self.assertContains(response, "Canvas 연결을 해제했어요.")
         self.assertContains(response, 'aria-label="알림 닫기"')
         self.assertNotContains(response, 'data-toast role="alert"')
 

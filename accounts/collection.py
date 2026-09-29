@@ -140,7 +140,7 @@ def _collect_assignments(client, selection, now, upper):
     except EXPECTED_ERRORS:
         return _SourceResult(
             error_code="assignments_failed",
-            safe_summary="Canvas 응답 오류로 과제 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 과제를 확인하지 못했어요.",
         )
 
     items = []
@@ -189,14 +189,14 @@ def _collect_assignments(client, selection, now, upper):
         return _SourceResult(
             tuple(items),
             "submission_state_failed",
-            "일부 과제의 제출 상태를 확인하지 못했습니다.",
+            "일부 과제의 제출 여부를 확인하지 못했어요.",
             no_deadline_count,
         )
     if due_failed:
         return _SourceResult(
             tuple(items),
             "assignment_due_invalid",
-            "일부 과제의 마감 시간을 확인하지 못했습니다.",
+            "일부 과제의 마감 시간을 확인하지 못했어요.",
             no_deadline_count,
         )
     return _SourceResult(tuple(items), no_deadline_count=no_deadline_count)
@@ -231,7 +231,7 @@ def _collect_lectures(learningx, selection, now, upper):
     if learningx is None:
         return _SourceResult(
             error_code="learningx_not_configured",
-            safe_summary="강의 알림이 아직 설정되지 않았습니다.",
+            safe_summary="강의 알림은 아직 준비 중이에요.",
         )
     try:
         module_items = list(_module_items(learningx.modules(selection.canvas_course_id)))
@@ -239,16 +239,16 @@ def _collect_lectures(learningx, selection, now, upper):
         if str(error) == "external_tool_missing":
             return _SourceResult(
                 error_code="lectures_unsupported",
-                safe_summary="이 과목에는 LearningX 주차학습이 없습니다.",
+                safe_summary="이 과목에는 LearningX 주차학습이 없어요.",
             )
         return _SourceResult(
             error_code="lectures_failed",
-            safe_summary="Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 강의를 확인하지 못했어요.",
         )
     except EXPECTED_ERRORS:
         return _SourceResult(
             error_code="lectures_failed",
-            safe_summary="Canvas 응답 오류로 강의 목록을 확인하지 못했습니다.",
+            safe_summary="Canvas 응답 오류로 강의를 확인하지 못했어요.",
         )
 
     items = []
@@ -301,14 +301,14 @@ def _collect_lectures(learningx, selection, now, upper):
         return _SourceResult(
             tuple(items),
             "lecture_completion_unknown",
-            "일부 강의의 수강 완료 여부를 확인하지 못했습니다.",
+            "일부 강의의 수강 여부를 확인하지 못했어요.",
             no_deadline_count,
         )
     if due_failed:
         return _SourceResult(
             tuple(items),
             "lecture_due_invalid",
-            "일부 강의의 마감 시간을 확인하지 못했습니다.",
+            "일부 강의의 마감 시간을 확인하지 못했어요.",
             no_deadline_count,
         )
     return _SourceResult(tuple(items), no_deadline_count=no_deadline_count)
@@ -319,7 +319,7 @@ RECONNECT_OUTCOME = CourseOutcome(
     "Canvas 연결",
     "failed",
     "canvas_reconnect_required",
-    "Canvas 토큰이 만료되었거나 철회되었습니다. 사이트에서 Canvas를 다시 연결해 주세요.",
+    "Canvas 토큰이 만료됐거나 삭제됐어요. 사이트에서 Canvas를 다시 연결해 주세요.",
 )
 
 

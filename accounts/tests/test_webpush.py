@@ -312,7 +312,7 @@ class PushSubscriptionViewTests(TestCase):
         page = self.client.get(reverse("destination_settings"))
 
         self.assertFalse(response.json()["created"])
-        self.assertNotContains(page, "푸시 구독을 갱신했습니다")
+        self.assertNotContains(page, "푸시 등록을 갱신했어요")
         self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
 
     def test_silent_resync_recreates_a_deleted_destination(self, _dns):
@@ -397,7 +397,7 @@ class PushSubscriptionViewTests(TestCase):
         destination = Destination.objects.get(user=self.user)
         with patch("accounts.views.send_to_destination", side_effect=SubscriptionGoneError("gone")):
             response = self.client.post(reverse("destination_test", args=[destination.pk]), follow=True)
-        self.assertContains(response, "푸시 구독이 만료되어 삭제했습니다")
+        self.assertContains(response, "푸시 등록이 만료돼서 삭제했어요")
         self.assertFalse(Destination.objects.filter(pk=destination.pk).exists())
 
 

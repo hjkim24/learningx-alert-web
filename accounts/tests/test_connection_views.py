@@ -84,7 +84,7 @@ class CanvasConnectionViewTests(TestCase):
 
         self.assertContains(
             response,
-            "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
+            "Canvas에 연결하지 못했어요. 토큰을 다시 확인해 주세요.",
         )
         self.assertNotContains(response, "submitted-secret-must-not-appear")
         self.assertFalse(CanvasConnection.objects.exists())
@@ -120,7 +120,7 @@ class CanvasConnectionViewTests(TestCase):
 
         self.assertContains(
             response,
-            "Canvas 연결을 확인하지 못했습니다. 토큰을 다시 확인해 주세요.",
+            "Canvas에 연결하지 못했어요. 토큰을 다시 확인해 주세요.",
         )
         self.assertNotContains(response, token)
         self.assertFalse(CanvasConnection.objects.exists())

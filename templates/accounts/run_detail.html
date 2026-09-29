@@ -37,7 +37,7 @@
         <p class="fine-print">{{ item.item_type }} · {{ item.observed_state }}</p>
       </article>
     {% empty %}
-      <p class="empty-state compact">저장된 알림 항목이 없습니다.</p>
+      <p class="empty-state compact">포함된 항목이 없어요.</p>
     {% endfor %}
   </section>
 
@@ -49,7 +49,7 @@
         <span{% if result.error_code %} data-error-code="{{ result.error_code }}"{% endif %}>{{ result.get_status_display }}{% if result.safe_summary %} · {{ result.safe_summary }}{% endif %}</span>
       </p>
     {% empty %}
-      <p class="empty-state compact">저장된 과목 조회 결과가 없습니다.</p>
+      <p class="empty-state compact">조회 결과가 없어요.</p>
     {% endfor %}
   </section>
 
@@ -62,7 +62,7 @@
         {% if delivery.safe_error_code %}<code>{{ delivery.safe_error_code }}</code>{% endif %}
       </p>
     {% empty %}
-      <p class="empty-state compact">전송 시도 기록이 없습니다.</p>
+      <p class="empty-state compact">전송 기록이 없어요.</p>
     {% endfor %}
   </section>
 {% endblock %}

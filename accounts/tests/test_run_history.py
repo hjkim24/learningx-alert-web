@@ -180,5 +180,5 @@ class RunHistoryTests(TestCase):
         self.assertIsNone(response.context["next_run"])
         self.assertContains(
             response,
-            "Canvas, 과목, 켜 둔 알림 시각과 대상을 모두 설정하면 표시됩니다.",
+            "위 설정을 마치면 여기에 나와요.",
         )
