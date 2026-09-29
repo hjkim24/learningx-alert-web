@@ -441,7 +441,7 @@ def notification_settings_save(request):
     else:
         messages.warning(
             request,
-            "알림 시각을 저장했습니다. 알림을 받으려면 받을 곳에서 웹훅이나 브라우저 푸시를 추가해 주세요.",
+            "알림 시각을 저장했습니다. 알림을 받으려면 알림 대상에서 웹훅이나 브라우저 푸시를 추가해 주세요.",
         )
     return redirect("notification_settings")
 

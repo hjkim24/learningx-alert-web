@@ -9,7 +9,7 @@ from accounts.tests.helpers import make_rule
 
 
 class SettingsTabTests(TestCase):
-    """알림 설정 is split into 알림 시각 (batch save) and 받을 곳 (instant actions)."""
+    """알림 설정 is split into 알림 시각 (batch save) and 알림 대상 (instant actions)."""
 
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -26,8 +26,8 @@ class SettingsTabTests(TestCase):
             self.assertContains(page, f'href="{reverse("notification_settings")}"')
             self.assertContains(page, f'href="{reverse("destination_settings")}"')
         self.assertContains(schedule, 'aria-current="page">알림 시각</a>')
-        self.assertContains(destinations, "받을 곳", html=False)
-        self.assertContains(destinations, 'aria-current="page">\n    받을 곳')
+        self.assertContains(destinations, "<title>알림 대상 · LearningX Alert</title>")
+        self.assertContains(destinations, 'aria-current="page">\n    알림 대상')
 
     def test_schedule_tab_holds_only_batch_saved_settings(self):
         page = self.client.get(reverse("notification_settings"))

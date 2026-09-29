@@ -31,8 +31,8 @@
     </div>
   {% elif not destinations %}
     <div class="attention-notice" role="status">
-      <strong>알림을 받을 곳이 없어 예약 알림이 발송되지 않습니다.</strong>
-      <p><a href="{% url 'destination_settings' %}">받을 곳</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
+      <strong>등록된 알림 대상이 없어 예약 알림이 발송되지 않습니다.</strong>
+      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 Discord·Slack 웹훅이나 브라우저 푸시를 추가해 주세요.</p>
     </div>
   {% endif %}
 

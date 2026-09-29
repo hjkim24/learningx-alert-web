@@ -1,6 +1,6 @@
 <nav class="sub-tabs" aria-label="알림 설정 메뉴">
   <a href="{% url 'notification_settings' %}"{% if active == "schedule" %} aria-current="page"{% endif %}>알림 시각</a>
   <a href="{% url 'destination_settings' %}"{% if active == "destinations" %} aria-current="page"{% endif %}>
-    받을 곳{% if destination_count %} <span class="tab-count">{{ destination_count }}</span>{% endif %}
+    알림 대상{% if destination_count %} <span class="tab-count">{{ destination_count }}</span>{% endif %}
   </a>
 </nav>

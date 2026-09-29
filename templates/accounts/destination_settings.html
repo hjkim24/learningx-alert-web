@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}받을 곳 · LearningX Alert{% endblock %}
+{% block title %}알림 대상 · LearningX Alert{% endblock %}
 
 {% block content %}
   <header class="page-heading compact-heading">
@@ -13,7 +13,7 @@
 
   {% if not destinations %}
     <div class="attention-notice" role="status">
-      <strong>아직 알림을 받을 곳이 없습니다.</strong>
+      <strong>아직 등록된 알림 대상이 없습니다.</strong>
       <p>아래에서 이 기기의 브라우저 푸시를 켜거나 Discord·Slack 웹훅을 추가하세요.</p>
     </div>
   {% endif %}
@@ -36,7 +36,7 @@
   {% endif %}
 
   <section class="panel" aria-labelledby="destination-status-title">
-    <h2 id="destination-status-title">알림 대상 <span class="term-meta">{{ destinations|length }}/{{ destination_limit }}</span></h2>
+    <h2 id="destination-status-title">등록된 대상 <span class="term-meta">{{ destinations|length }}/{{ destination_limit }}</span></h2>
     <p class="fine-print">예약 알림은 아래 모든 대상에 따로 보냅니다. 한 곳이 실패해도 나머지는 그대로 받습니다.</p>
     {% if destinations %}
       <ul class="destination-list">
