@@ -183,10 +183,10 @@ def execute_run(
                 CourseRunResult(
                     run=run,
                     canvas_course_id=outcome.canvas_course_id,
-                    course_name=outcome.course_name,
+                    course_name=outcome.course_name[:255],
                     status=outcome.status,
                     error_code=outcome.error_code,
-                    safe_summary=outcome.safe_summary,
+                    safe_summary=outcome.safe_summary[:255],
                 )
                 for outcome in result.outcomes
             ]
@@ -198,9 +198,9 @@ def execute_run(
                     canvas_course_id=item.canvas_course_id,
                     external_id=item.external_id,
                     item_type=item.item_type,
-                    title=item.title,
+                    title=item.title[:500],
                     due_at=item.due_at,
-                    observed_state=item.observed_state,
+                    observed_state=item.observed_state[:64],
                 )
                 for item in result.items
             ]

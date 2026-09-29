@@ -59,7 +59,7 @@ def verify_and_store_connection(*, user, token, client_class=CanvasClient):
             user=user,
             defaults={
                 "canvas_user_id": canvas_user_id,
-                "canvas_name": canvas_name,
+                "canvas_name": canvas_name[:255],
                 "encrypted_token": encrypt_secret(normalized_token),
                 "verified_at": timezone.now(),
                 "needs_reconnect": False,
