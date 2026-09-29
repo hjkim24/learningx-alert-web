@@ -217,5 +217,6 @@ class UxPageTests(TestCase):
 
         self.assertContains(response, "D-2")
         self.assertContains(response, "보낼 메시지")
-        self.assertContains(response, "[강의] 디지털시스템_ICE3024_42(임완수) · week 5")
+        self.assertContains(response, "- [강의] week 5")
+        self.assertContains(response, "\n디지털시스템\n", html=False)
         self.assertContains(response, "<span>디지털시스템 ·", html=False)

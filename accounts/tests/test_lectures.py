@@ -269,15 +269,16 @@ class LectureCollectionTests(TestCase):
             [("v", "lecture"), ("p", "material"), ("f", "material"), ("x", "lecture")],
         )
         text = render_notification(result, self.now)
-        self.assertIn("[학습자료] 전자회로 · 3주차 필독", text)
-        self.assertIn("[강의] 전자회로 · 강의 v", text)
+        self.assertIn("- [학습자료] 3주차 필독 ·", text)
+        self.assertIn("- [강의] 강의 v ·", text)
+        self.assertIn("\n전자회로\n", text)
 
     def test_notification_labels_lectures(self):
         self.learningx.items[101] = [component("a", title="3주차 영상")]
 
         text = render_notification(self.collect(), self.now)
 
-        self.assertIn("[강의] 전자회로 · 3주차 영상", text)
+        self.assertIn("- [강의] 3주차 영상 ·", text)
 
     def test_completion_values(self):
         for value, expected in (

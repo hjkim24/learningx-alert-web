@@ -453,7 +453,7 @@ class MultiDestinationRunTests(TestCase):
         push_payload = json.loads(self.calls[2][2])
         self.assertIn("마감 알림 1건", push_payload["title"])
         self.assertIn("HW", push_payload["body"])
-        self.assertIn("[과제] 전자회로 · HW", self.calls[0][2])
+        self.assertIn("전자회로\n- [과제] HW ·", self.calls[0][2])
         deliveries = list(Delivery.objects.filter(run=run))
         self.assertEqual(len(deliveries), 3)
         self.assertEqual({d.destination_label for d in deliveries}, {"디스코드", "슬랙", "macOS Chrome"})
