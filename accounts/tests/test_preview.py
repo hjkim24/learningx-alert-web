@@ -97,7 +97,8 @@ class PreviewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "증폭기 과제")
-        self.assertContains(response, "2026.09.27 00:30")
+        self.assertContains(response, "9월 27일")
+        self.assertContains(response, "증폭기 과제 · 00:30")
         self.assertContains(response, "마감 없음 2건")
         self.assertContains(response, "확인 실패")
         self.assertContains(response, "일부 과제의 제출 상태를 확인하지 못했습니다.")

@@ -19,6 +19,7 @@ from learningx_alert.network import (
 )
 
 from . import webpush
+from .templatetags.course_names import split_course_name
 from .models import Destination
 from .services import encrypt_secret
 
@@ -87,19 +88,46 @@ def _safe_external_text(value):
 ITEM_TYPE_LABELS = {"assignment": "과제", "lecture": "강의", "material": "학습자료"}
 
 
+WEEKDAYS_KO = ("월", "화", "수", "목", "금", "토", "일")
+
+
+def _day_heading(day, today):
+    delta = (day - today).days
+    dday = "오늘" if delta == 0 else f"D-{delta}" if delta > 0 else f"D+{-delta}"
+    return f"■ {day.month}월 {day.day}일 ({WEEKDAYS_KO[day.weekday()]}) · {dday}"
+
+
+def _group_by_day_and_course(items):
+    """[(day, [(course_title, [items...]), ...]), ...], each level by earliest due."""
+    days = {}
+    for item in sorted(items, key=lambda entry: entry.due_at):
+        day = item.due_at.astimezone(KST).date()
+        title = split_course_name(item.course_name)["title"] or item.course_name
+        courses = days.setdefault(day, {})
+        courses.setdefault((item.canvas_course_id, title), []).append(item)
+    return [
+        (day, [(title, entries) for (_course_id, title), entries in courses.items()])
+        for day, courses in days.items()
+    ]
+
+
 def render_notification(result, now):
-    lines = [f"LearningX Alert · {now.astimezone(KST):%Y.%m.%d %H:%M} KST"]
-    items = sorted(result.items, key=lambda item: item.due_at)
+    """Chat message: items grouped by KST due date, then by course."""
+    local_now = now.astimezone(KST)
+    items = list(result.items)
+    lines = [f"LearningX Alert · {local_now:%Y.%m.%d %H:%M} KST"]
     if items:
-        lines.append("")
-        for item in items:
-            item_type = ITEM_TYPE_LABELS.get(item.item_type, "알림")
-            lines.extend(
-                (
-                    f"[{item_type}] {_safe_external_text(item.course_name)} · {_safe_external_text(item.title)}",
-                    f"마감 {item.due_at.astimezone(KST):%Y.%m.%d %H:%M} KST",
-                )
-            )
+        lines.append(f"마감 {len(items)}건")
+        for day, courses in _group_by_day_and_course(items):
+            lines.extend(("", _day_heading(day, local_now.date())))
+            for title, entries in courses:
+                lines.append(_safe_external_text(title))
+                for item in entries:
+                    item_type = ITEM_TYPE_LABELS.get(item.item_type, "알림")
+                    lines.append(
+                        f"- [{item_type}] {_safe_external_text(item.title)} · "
+                        f"{item.due_at.astimezone(KST):%H:%M}"
+                    )
     else:
         lines.extend(("", "현재 조회 범위에 알림 대상 과제·강의가 없습니다."))
 
