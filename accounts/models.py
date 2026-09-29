@@ -16,6 +16,8 @@ class CanvasConnection(models.Model):
     canvas_name = models.CharField(max_length=255)
     encrypted_token = models.TextField()
     verified_at = models.DateTimeField()
+    # Set when Canvas rejects the stored token (HTTP 401); cleared on reconnect.
+    needs_reconnect = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Canvas connection for user {self.user_id}"

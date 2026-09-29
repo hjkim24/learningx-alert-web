@@ -23,6 +23,12 @@ class FakeCanvasClient:
         self.assignment_errors = set()
         self.submission_errors = set()
         self.requested_course_ids = []
+        self.profile_error = None
+
+    def profile(self):
+        if self.profile_error is not None:
+            raise self.profile_error
+        return object()
 
     def assignments(self, course_id):
         self.requested_course_ids.append(course_id)

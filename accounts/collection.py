@@ -279,6 +279,27 @@ def _collect_lectures(learningx, selection, now, upper):
     return _SourceResult(tuple(items), no_deadline_count=no_deadline_count)
 
 
+RECONNECT_OUTCOME = CourseOutcome(
+    0,
+    "Canvas 연결",
+    "failed",
+    "canvas_reconnect_required",
+    "Canvas 토큰이 만료되었거나 철회되었습니다. 사이트에서 Canvas를 다시 연결해 주세요.",
+)
+
+
+def _token_rejected(client):
+    """True only when Canvas definitively rejects the token (HTTP 401)."""
+    try:
+        client.profile()
+    except HTTPError as error:
+        return error.code == 401
+    except EXPECTED_ERRORS:
+        # Network trouble is not a token problem; courses report it themselves.
+        return False
+    return False
+
+
 def default_learningx_factory(canvas_client):
     if not settings.LEARNINGX_ALLOWED_HOSTS:
         return None
@@ -293,12 +314,17 @@ def collect_for_user(
     learningx_factory=default_learningx_factory,
 ):
     connection = CanvasConnection.objects.get(user=user)
+    if connection.needs_reconnect:
+        return CollectionResult((), (RECONNECT_OUTCOME,))
     rule, _ = NotificationRule.objects.get_or_create(user=user)
     selections = list(
         CourseSelection.objects.filter(alert_selection_filter(), user=user)
     )
     token = decrypt_secret(connection.encrypted_token)
     client = client_class(settings.CANVAS_BASE_URL, token)
+    if _token_rejected(client):
+        CanvasConnection.objects.filter(pk=connection.pk).update(needs_reconnect=True)
+        return CollectionResult((), (RECONNECT_OUTCOME,))
     learningx = None
     if any(selection.include_lectures for selection in selections):
         learningx = learningx_factory(client)
