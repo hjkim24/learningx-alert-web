@@ -58,6 +58,8 @@ write_outputs() {
   "google_client_secret_ocid": {"value": "ocid1.vaultsecret.google"},
   "object_storage_namespace": {"value": "testnamespace"},
   "pilot_allowed_emails": {"value": "pilot@example.com"},
+  "signup_open": {"value": true},
+  "privacy_contact_email": {"value": "help@example.com"},
   "forbidden_extra": {"value": "content-secret-value-base64"}
 }
 JSON
@@ -90,6 +92,8 @@ for expected in \
     "APP_PRIVATE_IP='10.0.1.31'" \
     "GOOGLE_CLIENT_ID='test.apps.googleusercontent.com'" \
     "PILOT_ALLOWED_EMAILS='pilot@example.com'" \
+    "SIGNUP_OPEN='1'" \
+    "PRIVACY_CONTACT_EMAIL='help@example.com'" \
     "LEARNINGX_ALLOWED_HOSTS='canvas.skku.edu,lx.example.edu'" \
     "DJANGO_SECRET_KEY_OCID='ocid1.vaultsecret.django'" \
     "GOOGLE_CLIENT_SECRET_OCID='ocid1.vaultsecret.google'" \

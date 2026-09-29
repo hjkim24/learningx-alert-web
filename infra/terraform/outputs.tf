@@ -62,6 +62,14 @@ output "google_client_id" {
   value = var.google_client_id
 }
 
+output "signup_open" {
+  value = var.signup_open
+}
+
+output "privacy_contact_email" {
+  value = var.privacy_contact_email
+}
+
 output "pilot_allowed_emails" {
   value = var.pilot_allowed_emails
 }

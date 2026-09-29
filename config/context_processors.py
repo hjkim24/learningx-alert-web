@@ -25,4 +25,4 @@ def _asset_version():
 
 
 def assets(_request):
-    return {"asset_version": _asset_version()}
+    return {"asset_version": _asset_version(), "signup_open": settings.SIGNUP_OPEN}

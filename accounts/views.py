@@ -33,7 +33,7 @@ from .models import (
     NotificationRule,
     ScheduledRun,
 )
-from . import webpush
+from . import throttle, webpush
 from .notifications import (
     AmbiguousDeliveryError,
     DefiniteDeliveryError,
@@ -173,6 +173,9 @@ def account_delete(request):
 @login_required
 @require_POST
 def canvas_connect(request):
+    if not throttle.allow(request.user, "canvas_connect"):
+        messages.error(request, throttle.LIMITED_MESSAGE)
+        return redirect("dashboard")
     form = CanvasTokenForm(request.POST)
     if form.is_valid():
         try:
@@ -280,6 +283,9 @@ def course_settings_save(request):
 @login_required
 @require_POST
 def preview(request):
+    if not throttle.allow(request.user, "preview"):
+        messages.error(request, throttle.LIMITED_MESSAGE)
+        return redirect("dashboard")
     now = timezone.now()
     try:
         result = collect_for_user(request.user, now)
@@ -510,6 +516,10 @@ def destination_test(request, pk):
     destination = Destination.objects.filter(user=request.user, pk=pk).first()
     if not destination:
         messages.error(request, "알림 대상을 먼저 추가해 주세요.")
+        return redirect("destination_settings")
+
+    if not throttle.allow(request.user, "destination_test"):
+        messages.error(request, throttle.LIMITED_MESSAGE)
         return redirect("destination_settings")
 
     secret = decrypt_secret(destination.encrypted_webhook_url)
