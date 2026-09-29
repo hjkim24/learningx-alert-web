@@ -3,6 +3,8 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
+from config.logging import logging_config
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -47,6 +49,7 @@ LANGUAGE_CODE = "ko-kr"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_EXCEPTION_REPORTER_FILTER = "config.filters.AlwaysSafeExceptionReporterFilter"
 TEST_RUNNER = "config.test_runner.AppTestRunner"
+LOGGING = logging_config(os.environ.get("LOG_LEVEL", "INFO").upper())
 RATE_LIMITS_ENABLED = True
 
 INSTALLED_APPS = [

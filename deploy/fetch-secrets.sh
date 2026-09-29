@@ -72,6 +72,10 @@ if [[ -n "${DATABASE_PASSWORD_OCID:-}" ]]; then
     fetch_bundle "$DATABASE_PASSWORD_OCID" database-password
     secret_names+=(database-password)
 fi
+if [[ -n "${GRAFANA_OTLP_TOKEN_OCID:-}" ]]; then
+    fetch_bundle "$GRAFANA_OTLP_TOKEN_OCID" grafana-otlp-token
+    secret_names+=(grafana-otlp-token)
+fi
 
 for name in "${secret_names[@]}"; do
     install -m 0440 -o "$SECRET_UID" -g "$SECRET_GID" "$download_dir/$name" "$generation_dir/$name"

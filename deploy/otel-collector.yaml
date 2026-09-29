@@ -1,0 +1,75 @@
+# OpenTelemetry Collector for LearningX Alert (runs only with COMPOSE_PROFILES=telemetry).
+#
+# Apps push OTLP/HTTP to this collector on the internal compose network (no host
+# port is published). The collector adds host-side checks and forwards to Grafana
+# Cloud's OTLP gateway. The gateway credential is read from the secret set that
+# deploy/fetch-secrets.sh writes; it never appears in this file or in env.
+
+extensions:
+  basicauth/grafana:
+    client_auth:
+      username: ${env:GRAFANA_INSTANCE_ID}
+      password: ${file:/run/secrets/all/grafana-otlp-token}
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # Outside-in check of the public site through Caddy and TLS. A host-down
+  # outage is caught in Grafana by the *absence* of these series, not here.
+  httpcheck/site:
+    collection_interval: 60s
+    targets:
+      - endpoint: https://${env:APP_DOMAIN}/healthz/
+        method: GET
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 150
+    spike_limit_mib: 40
+  batch:
+    timeout: 10s
+  resource:
+    attributes:
+      - key: service.namespace
+        value: learningx-alert
+        action: upsert
+  # Belt and braces: drop any attribute that could identify a person even if a
+  # future instrument adds one by mistake.
+  attributes/strip:
+    actions:
+      - key: user.id
+        action: delete
+      - key: enduser.id
+        action: delete
+      - key: user.email
+        action: delete
+      - key: url.full
+        action: delete
+      - key: http.url
+        action: delete
+
+exporters:
+  otlphttp/grafana:
+    endpoint: ${env:GRAFANA_OTLP_ENDPOINT}
+    auth:
+      authenticator: basicauth/grafana
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
+      queue_size: 500
+
+service:
+  extensions: [basicauth/grafana]
+  telemetry:
+    logs:
+      level: warn
+  pipelines:
+    metrics:
+      receivers: [otlp, httpcheck/site]
+      processors: [memory_limiter, attributes/strip, resource, batch]
+      exporters: [otlphttp/grafana]

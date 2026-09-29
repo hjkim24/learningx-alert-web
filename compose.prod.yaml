@@ -1,11 +1,19 @@
 name: learningx-alert
 
+x-logging: &logging
+  # Bounded local logs (docker's json-file default never rotates).
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 x-app: &app
   build:
     context: .
     dockerfile: Dockerfile
   image: learningx-alert:${IMAGE_TAG:-local}
   restart: unless-stopped
+  logging: *logging
   user: "10001:10001"
   read_only: true
   tmpfs:
@@ -27,6 +35,9 @@ x-app: &app
     DATABASE_ENGINE: ${DATABASE_ENGINE:-sqlite}
     DATABASE_HOST: ${DATABASE_HOST:-}
     DATABASE_PASSWORD_FILE: ${DATABASE_PASSWORD_FILE:-}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    # Empty unless the telemetry profile is on; the SDK stays a no-op then.
+    OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
   volumes: &app-volumes
     - /var/lib/learningx-alert:/data
     - /run/learningx-alert/secrets/django-secret-key:/run/secrets/django-secret-key:ro
@@ -39,6 +50,7 @@ services:
   caddy:
     image: caddy:2.10.2-alpine
     restart: unless-stopped
+    logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-alert.sobok-app.com}
     ports:
@@ -82,3 +94,20 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.161.0
+    profiles: ["telemetry"]
+    restart: unless-stopped
+    logging: *logging
+    user: "10001:10001"
+    read_only: true
+    mem_limit: 256m
+    command: ["--config=/etc/otelcol/config.yaml"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-alert.sobok-app.com}
+      GRAFANA_OTLP_ENDPOINT: ${GRAFANA_OTLP_ENDPOINT:-}
+      GRAFANA_INSTANCE_ID: ${GRAFANA_INSTANCE_ID:-}
+    volumes:
+      - ./deploy/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      - /run/learningx-alert/secrets:/run/secrets/all:ro
