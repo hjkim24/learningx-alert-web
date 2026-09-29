@@ -111,3 +111,5 @@ services:
     volumes:
       - ./deploy/otel-collector.yaml:/etc/otelcol/config.yaml:ro
       - /run/learningx-alert/secrets:/run/secrets/all:ro
+      # Host filesystem for hostmetrics (read-only, no propagation back).
+      - /:/hostfs:ro,rslave

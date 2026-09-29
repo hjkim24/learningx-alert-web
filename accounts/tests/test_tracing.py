@@ -3,6 +3,8 @@ from unittest import mock
 from urllib.request import Request
 
 from django.test import SimpleTestCase
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import InMemoryMetricReader
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -50,6 +52,51 @@ class OutboundSpanTests(SimpleTestCase):
         self.assertEqual(second.attributes["error.type"], "OSError")
         self.assertEqual(second.events, ())  # exception message not recorded
         self.assertNotIn("abc", repr(dict(second.attributes)))
+
+
+class OutboundDurationMetricTests(SimpleTestCase):
+    def setUp(self):
+        self.reader = InMemoryMetricReader()
+        provider = MeterProvider(metric_readers=[self.reader])
+        histogram = provider.get_meter("test").create_histogram("learningx.outbound.duration", unit="s")
+        for target, value in (
+            ("_outbound_duration", histogram),
+            ("_tracer", TracerProvider().get_tracer("test")),
+        ):
+            patcher = mock.patch.object(network, target, value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        resolve = mock.patch.object(network, "resolve_public_addresses", return_value=("203.0.113.5",))
+        resolve.start()
+        self.addCleanup(resolve.stop)
+
+    def _points(self):
+        data = self.reader.get_metrics_data()
+        return [
+            point
+            for resource in data.resource_metrics
+            for scope in resource.scope_metrics
+            for metric in scope.metrics
+            for point in metric.data.data_points
+        ]
+
+    def test_records_host_and_outcome_only(self):
+        handler = network.PinnedHTTPSHandler()
+        with mock.patch.object(handler, "do_open", return_value=SimpleNamespace(status=204)):
+            handler.https_open(Request("https://discord.com/api/webhooks/1/secret-token", method="POST"))
+        with mock.patch.object(handler, "do_open", return_value=SimpleNamespace(status=404)):
+            handler.https_open(Request("https://canvas.skku.edu/api/v1/x?access_token=abc"))
+        with mock.patch.object(handler, "do_open", side_effect=OSError("boom")):
+            with self.assertRaises(OSError):
+                handler.https_open(Request("https://canvas.skku.edu/api/v1/y"))
+        attrs = sorted((dict(p.attributes)["server.address"], dict(p.attributes)["outcome"], p.count) for p in self._points())
+        self.assertEqual(
+            attrs,
+            [("canvas.skku.edu", "error", 1), ("canvas.skku.edu", "http_error", 1), ("discord.com", "ok", 1)],
+        )
+        for point in self._points():
+            self.assertEqual(set(point.attributes), {"server.address", "outcome"})
+        self.assertNotIn("secret-token", repr([dict(p.attributes) for p in self._points()]))
 
 
 class RequestSpanScrubTests(SimpleTestCase):

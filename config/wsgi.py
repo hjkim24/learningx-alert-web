@@ -15,6 +15,9 @@ django.setup(set_prefix=False)
 if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "").strip():
     from accounts import telemetry
 
+    # Metrics first so the Django instrumentor's request-duration histogram
+    # and the outbound-call histogram bind to the real provider.
+    telemetry.configure_metrics("learningx-alert-web")
     telemetry.configure_tracing_and_logs(
         "learningx-alert-web",
         sample_ratio=float(os.environ.get("OTEL_TRACES_SAMPLE_RATIO", "0.2")),
