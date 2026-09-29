@@ -95,6 +95,7 @@ class SubscriptionValidationTests(TestCase):
             "https://updates.push.services.mozilla.com/wpush/v2/abc",
             "https://web.push.apple.com/QPdE",
             "https://wns2-par02p.notify.windows.com/w/?token=abc",
+            "https://jmt17.google.com/fcm/send/abc:APA91b",
         ):
             with self.subTest(endpoint=endpoint):
                 subscription, _ = browser_subscription(endpoint)
@@ -108,6 +109,10 @@ class SubscriptionValidationTests(TestCase):
             "https://fcm.googleapis.com:8443/fcm/send/x",
             "https://user:pw@fcm.googleapis.com/fcm/send/x",
             "https://fcm.googleapis.com.evil.com/x",
+            "https://jmt17.google.com.evil.com/x",
+            "https://evil-jmt17.google.com/x",
+            "https://jmtx.google.com/x",
+            "https://google.com/fcm/send/x",
         ):
             with self.subTest(endpoint=endpoint):
                 subscription, _ = browser_subscription(endpoint)
@@ -294,6 +299,42 @@ class PushSubscriptionViewTests(TestCase):
             json.loads(decrypt_secret(destination.encrypted_webhook_url))["keys"],
             renewed["keys"],
         )
+
+    def test_silent_resync_of_existing_browser_shows_no_message(self, _dns):
+        self.subscribe()
+        self.client.get(reverse("destination_settings"))  # consume the "added" flash
+
+        response = self.client.post(
+            reverse("push_subscribe"),
+            data=json.dumps({"subscription": self.subscription, "label": "macOS Chrome", "silent": True}),
+            content_type="application/json",
+        )
+        page = self.client.get(reverse("destination_settings"))
+
+        self.assertFalse(response.json()["created"])
+        self.assertNotContains(page, "푸시 구독을 갱신했습니다")
+        self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
+
+    def test_silent_resync_recreates_a_deleted_destination(self, _dns):
+        self.subscribe()
+        Destination.objects.filter(user=self.user).delete()
+
+        response = self.client.post(
+            reverse("push_subscribe"),
+            data=json.dumps({"subscription": self.subscription, "silent": True}),
+            content_type="application/json",
+        )
+
+        self.assertTrue(response.json()["created"])
+        self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
+
+    def test_chrome_jmt_endpoint_registers(self, _dns):
+        subscription, _ = browser_subscription("https://jmt17.google.com/fcm/send/abc:APA91b")
+
+        response = self.subscribe(subscription)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Destination.objects.filter(user=self.user, kind="webpush").exists())
 
     def test_invalid_subscription_is_rejected(self, _dns):
         bad, _ = browser_subscription("https://evil.example.com/push")

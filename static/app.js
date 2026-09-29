@@ -115,6 +115,27 @@
 
   let registration = null;
 
+  // Tell the server about a subscription the browser already holds. The
+  // browser-side subscription alone proves nothing: the server may have
+  // rejected it, or the destination may have been deleted since.
+  async function syncWithServer(subscription) {
+    try {
+      const response = await post(panel.dataset.subscribeUrl, {
+        subscription: subscription.toJSON(),
+        label: deviceLabel(),
+        silent: true,
+      });
+      if (response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        return payload.created ? "created" : "synced";
+      }
+      const payload = await response.json().catch(() => ({}));
+      return payload.error || "rejected";
+    } catch (error) {
+      return "offline";
+    }
+  }
+
   async function refresh() {
     const subscription = await registration.pushManager.getSubscription();
     if (Notification.permission === "denied") {
@@ -123,9 +144,34 @@
       unsubscribeButton.hidden = !subscription;
       return subscription;
     }
-    subscribeButton.hidden = Boolean(subscription);
-    unsubscribeButton.hidden = !subscription;
-    setStatus(subscription ? "이 브라우저는 푸시를 받도록 등록되어 있습니다." : "이 브라우저는 아직 등록되지 않았습니다.");
+    if (!subscription) {
+      subscribeButton.hidden = false;
+      unsubscribeButton.hidden = true;
+      setStatus("이 브라우저는 아직 등록되지 않았습니다.");
+      return subscription;
+    }
+    setStatus("서버 등록 상태를 확인하는 중입니다.");
+    const result = await syncWithServer(subscription);
+    if (result === "created") {
+      // Registered just now (e.g. it had been deleted); show it in the list.
+      window.location.reload();
+      return subscription;
+    }
+    if (result === "synced") {
+      subscribeButton.hidden = true;
+      unsubscribeButton.hidden = false;
+      setStatus("이 브라우저는 푸시를 받도록 등록되어 있습니다.");
+      return subscription;
+    }
+    subscribeButton.hidden = false;
+    unsubscribeButton.hidden = false;
+    setStatus(
+      result === "destination_limit"
+        ? "알림 대상이 가득 차서 이 브라우저를 등록하지 못했습니다. 쓰지 않는 대상을 삭제해 주세요."
+        : result === "offline"
+          ? "서버 등록 상태를 확인하지 못했습니다. 연결을 확인한 뒤 새로고침해 주세요."
+          : "이 브라우저의 구독이 서버에 등록되지 않았습니다. '이 브라우저에서 알림 받기'를 다시 눌러 주세요."
+    );
     return subscription;
   }
 
@@ -152,10 +198,14 @@
         return;
       }
       const payload = await response.json().catch(() => ({}));
+      if (payload.error === "subscription_invalid") {
+        // Drop the rejected browser subscription so a retry starts clean.
+        await subscription.unsubscribe().catch(() => {});
+      }
       setStatus(
         payload.error === "destination_limit"
           ? "알림 대상이 가득 찼습니다. 쓰지 않는 대상을 삭제한 뒤 다시 시도해 주세요."
-          : "등록하지 못했습니다. 잠시 후 다시 시도해 주세요."
+          : "서버가 이 브라우저의 구독을 받지 못했습니다. 잠시 후 다시 시도해 주세요."
       );
     } catch (error) {
       setStatus("푸시 등록 중 문제가 생겼습니다. 브라우저 알림 설정을 확인해 주세요.");
