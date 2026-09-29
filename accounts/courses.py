@@ -41,8 +41,8 @@ def sync_courses(user, client_class=CanvasClient):
                 user=user,
                 canvas_course_id=course.id,
                 defaults={
-                    "course_name": course.name,
-                    "term_name": course.term_name,
+                    "course_name": course.name[:255],
+                    "term_name": (course.term_name or "")[:128],
                     "term_start_at": course.term_start_at,
                 },
             )

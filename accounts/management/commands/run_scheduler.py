@@ -1,5 +1,6 @@
 import fcntl
 import hashlib
+import os
 import tempfile
 import time
 from contextlib import contextmanager
@@ -14,8 +15,21 @@ from accounts.scheduling import reconcile_interrupted_runs, run_due_rules
 
 @contextmanager
 def scheduler_lock():
-    database_name = str(settings.DATABASES["default"]["NAME"])
-    if database_name.startswith("file:") and "mode=memory" in database_name:
+    database = settings.DATABASES["default"]
+    database_name = str(database["NAME"])
+    if database["ENGINE"] != "django.db.backends.sqlite3":
+        # Server databases have no file to sit next to; keep the lock on the
+        # shared data volume (DATABASE_PATH's directory) so every container on
+        # this host contends for the same file.
+        database_key = hashlib.sha256(
+            f"{database.get('HOST', '')}/{database_name}".encode()
+        ).hexdigest()[:16]
+        data_path = os.environ.get("DATABASE_PATH", "")
+        lock_dir = Path(data_path).parent if data_path else Path(tempfile.gettempdir())
+        if not lock_dir.is_dir():
+            lock_dir = Path(tempfile.gettempdir())
+        lock_path = lock_dir / f"learningx-alert-{database_key}.scheduler.lock"
+    elif database_name.startswith("file:") and "mode=memory" in database_name:
         database_key = hashlib.sha256(database_name.encode()).hexdigest()[:16]
         lock_path = Path(tempfile.gettempdir()) / f"learningx-alert-{database_key}.lock"
     else:
