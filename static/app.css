@@ -1062,12 +1062,18 @@ button[aria-busy="true"] {
   border-radius: var(--r-control);
   background: var(--surface);
   display: grid;
-  grid-template-columns: minmax(10rem, 0.6fr) 1fr auto;
+  /* Fixed first track: each row is its own grid, so a content-sized column
+     would start the status text at a different x for every course name. */
+  grid-template-columns: minmax(0, 16rem) minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   margin: 0;
   padding: 10px 16px;
   font-size: var(--fs-small);
+}
+
+.outcome > strong {
+  overflow-wrap: anywhere;
 }
 
 .outcome span,
