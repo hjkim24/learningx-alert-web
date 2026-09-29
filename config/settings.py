@@ -5,14 +5,39 @@ from cryptography.fernet import Fernet
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _secret_setting(name: str) -> str:
+    file_variable = f"{name}_FILE"
+    file_path = os.environ.get(file_variable, "").strip()
+    if not file_path:
+        return os.environ.get(name, "")
+    try:
+        value = Path(file_path).read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        raise RuntimeError(
+            f"{file_variable} must reference a readable non-empty UTF-8 file"
+        ) from None
+    if not value:
+        raise RuntimeError(
+            f"{file_variable} must reference a readable non-empty UTF-8 file"
+        )
+    return value
+
+
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-DJANGO_SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+DJANGO_SECRET_KEY = _secret_setting("DJANGO_SECRET_KEY")
 SECRET_KEY = DJANGO_SECRET_KEY or "local-development-only"
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
     if host.strip()
+]
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -41,6 +66,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
 TEMPLATES = [
@@ -80,7 +106,7 @@ PILOT_ALLOWED_EMAILS = {
 }
 SOCIALACCOUNT_ADAPTER = "accounts.adapters.PilotSocialAccountAdapter"
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_CLIENT_SECRET = _secret_setting("GOOGLE_CLIENT_SECRET")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
@@ -96,7 +122,7 @@ SOCIALACCOUNT_PROVIDERS = {
 CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")
 CREDENTIAL_ENCRYPTION_KEYS = [
     key.strip()
-    for key in os.environ.get("CREDENTIAL_ENCRYPTION_KEYS", "").split(",")
+    for key in _secret_setting("CREDENTIAL_ENCRYPTION_KEYS").split(",")
     if key.strip()
 ]
 
@@ -125,3 +151,5 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = "Lax"
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

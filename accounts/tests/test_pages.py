@@ -4,6 +4,13 @@ from django.urls import reverse
 
 
 class PageContractTests(TestCase):
+    def test_healthz_is_public_and_minimal(self):
+        response = self.client.get(reverse("healthz"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["Content-Type"], "text/plain")
+        self.assertEqual(response.content, b"ok\n")
+
     def test_login_explains_the_two_separate_connections(self):
         response = self.client.get(reverse("account_login"))
 

@@ -1,0 +1,21 @@
+[Unit]
+Description=LearningX Alert production containers
+Wants=network-online.target
+Requires=docker.service
+After=network-online.target docker.service
+ConditionPathExists=/etc/learningx-alert/runtime.env
+ConditionPathExists=/opt/learningx-alert/current/compose.prod.yaml
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/learningx-alert/runtime.env
+WorkingDirectory=/opt/learningx-alert/current
+ExecStartPre=/opt/learningx-alert/current/deploy/fetch-secrets.sh
+ExecStart=/usr/bin/docker compose -p learningx-alert -f /opt/learningx-alert/current/compose.prod.yaml up -d --wait
+ExecStop=/usr/bin/docker compose -p learningx-alert -f /opt/learningx-alert/current/compose.prod.yaml down
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

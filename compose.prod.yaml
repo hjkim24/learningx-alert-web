@@ -1,0 +1,76 @@
+name: learningx-alert
+
+x-app: &app
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: learningx-alert:${IMAGE_TAG:-local}
+  restart: unless-stopped
+  user: "10001:10001"
+  read_only: true
+  tmpfs:
+    - /tmp
+  environment: &app-environment
+    DJANGO_DEBUG: "0"
+    DJANGO_SECRET_KEY_FILE: /run/secrets/django-secret-key
+    DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-alert.sobok-app.com}
+    CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://alert.sobok-app.com}
+    GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?GOOGLE_CLIENT_ID is required}
+    GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google-client-secret
+    PILOT_ALLOWED_EMAILS: ${PILOT_ALLOWED_EMAILS:?PILOT_ALLOWED_EMAILS is required}
+    CANVAS_BASE_URL: ${CANVAS_BASE_URL:-https://canvas.skku.edu}
+    CREDENTIAL_ENCRYPTION_KEYS_FILE: /run/secrets/credential-encryption-keys
+    DATABASE_PATH: /data/db.sqlite3
+  volumes: &app-volumes
+    - /var/lib/learningx-alert:/data
+    - /run/learningx-alert/secrets/django-secret-key:/run/secrets/django-secret-key:ro
+    - /run/learningx-alert/secrets/google-client-secret:/run/secrets/google-client-secret:ro
+    - /run/learningx-alert/secrets/credential-encryption-keys:/run/secrets/credential-encryption-keys:ro
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:-alert.sobok-app.com}
+    ports:
+      - "${APP_PRIVATE_IP:-10.0.1.31}:80:80"
+      - "${APP_PRIVATE_IP:-10.0.1.31}:443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./static:/srv/static:ro
+      - /var/lib/learningx-alert/caddy/data:/data
+      - /var/lib/learningx-alert/caddy/config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    <<: *app
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import os, urllib.request;
+          request = urllib.request.Request('http://127.0.0.1:8000/healthz/', headers={'Host': os.environ['DJANGO_ALLOWED_HOSTS'].split(',')[0]});
+          assert urllib.request.urlopen(request, timeout=2).read() == b'ok\n'
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  scheduler:
+    <<: *app
+    command: ["python", "manage.py", "run_scheduler"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; os.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
