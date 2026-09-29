@@ -37,20 +37,16 @@
   {% endif %}
 
   <ol class="status-rail" aria-label="설정 진행 상태">
-    <li class="is-complete">
-      <span class="status-number" aria-hidden="true">1</span>
-      <span><strong>Google</strong> 확인됨</span>
-    </li>
     <li class="{% if connection and not connection.needs_reconnect %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">2</span>
+      <span class="status-number" aria-hidden="true">1</span>
       <a href="#canvas-title"><strong>Canvas</strong> {% if connection.needs_reconnect %}재연결 필요{% elif connection %}연결됨{% else %}연결 필요{% endif %}</a>
     </li>
     <li class="{% if selected_course_count %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">3</span>
+      <span class="status-number" aria-hidden="true">2</span>
       <a href="{% url 'course_settings' %}"><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</a>
     </li>
     <li class="{% if destinations %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">4</span>
+      <span class="status-number" aria-hidden="true">3</span>
       <a href="{% url 'notification_settings' %}">
         <strong>알림 대상</strong>
         {% if destinations %}
@@ -68,11 +64,12 @@
       {% if next_run %}
         <p class="schedule-time">{{ next_run|date:"Y.m.d H:i" }} KST</p>
         <p class="fine-print">
-          마감 {{ rule.lookahead_days }}일 이내 · 매일 {{ rule.first_time|time:"H:i" }}{% if rule.second_time %}, {{ rule.second_time|time:"H:i" }}{% endif %}
+          마감 {{ rule.lookahead_days }}일 이내 ·
+          {% for alarm in active_alarms %}{{ alarm.time|time:"H:i" }} {{ alarm.weekdays_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
           · <a href="{% url 'notification_settings' %}">변경</a>
         </p>
       {% else %}
-        <p class="empty-state compact">Canvas, 과목, 알림 시간과 대상을 모두 설정하면 표시됩니다.</p>
+        <p class="empty-state compact">Canvas, 과목, 켜 둔 알림 시각과 대상을 모두 설정하면 표시됩니다.</p>
       {% endif %}
     </section>
 

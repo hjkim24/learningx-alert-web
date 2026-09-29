@@ -13,6 +13,7 @@ from accounts.models import (
     Destination,
     NotificationRule,
 )
+from accounts.tests.helpers import alarm_post_data, make_rule
 from accounts.services import encrypt_secret
 
 
@@ -41,16 +42,8 @@ class NotificationPageTests(TestCase):
             enabled=True,
             include_assignments=True,
         )
-        self.rule = NotificationRule.objects.create(
-            user=self.user,
-            lookahead_days=3,
-            first_time=time(9, 0),
-        )
-        self.other_rule = NotificationRule.objects.create(
-            user=self.other,
-            lookahead_days=5,
-            first_time=time(10, 0),
-        )
+        self.rule = make_rule(self.user, time(9, 0), lookahead_days=3)
+        self.other_rule = make_rule(self.other, time(10, 0), lookahead_days=5)
         self.webhook_url = "https://discord.com/api/webhooks/123/stored-secret"
         self.destination = Destination.objects.create(
             user=self.user,
@@ -59,14 +52,16 @@ class NotificationPageTests(TestCase):
         )
         self.client.force_login(self.user)
 
-    def rule_data(self, **overrides):
-        data = {
-            "lookahead_days": "3",
-            "first_time": "09:00",
-            "second_time": "",
-        }
-        data.update(overrides)
+    def rule_data(self, *alarms, lookahead_days="3"):
+        """POST data that edits the user's existing alarm rows in place."""
+        existing = list(self.rule.alarms.values_list("pk", flat=True)) if self.rule.pk else []
+        alarms = alarms or ("09:00",)
+        data = alarm_post_data(*alarms, existing=existing[: len(alarms)])
+        data["lookahead_days"] = lookahead_days
         return data
+
+    def alarm_times(self, rule):
+        return list(rule.alarms.values_list("time", flat=True))
 
     @patch("accounts.views.sync_courses")
     def test_pages_show_truthful_configuration_scope_without_secrets(self, sync):
@@ -106,8 +101,7 @@ class NotificationPageTests(TestCase):
         self.assertContains(courses, 'type="checkbox" disabled', count=1)
         for field_name in (
             "lookahead_days",
-            "first_time",
-            "second_time",
+            "alarms-0-time",
             "kind",
             "webhook_url",
         ):
@@ -116,6 +110,7 @@ class NotificationPageTests(TestCase):
         self.assertContains(notifications, 'type="number"')
         self.assertContains(notifications, 'min="1"')
         self.assertContains(notifications, 'max="14"')
+        # One saved alarm row plus the hidden template row for "add".
         self.assertContains(notifications, 'type="time"', count=2)
         self.assertContains(notifications, 'type="password"')
 
@@ -153,23 +148,17 @@ class NotificationPageTests(TestCase):
     def test_equal_times_return_korean_error_and_preserve_rule(self):
         response = self.client.post(
             reverse("notification_rule_save"),
-            self.rule_data(first_time="09:00", second_time="09:00"),
+            self.rule_data("09:00", "09:00"),
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertContains(
-            response,
-            "첫 번째 알림 시간과 다른 시간을 선택해 주세요.",
-            status_code=400,
-        )
-        self.rule.refresh_from_db()
-        self.assertEqual(self.rule.first_time, time(9, 0))
-        self.assertIsNone(self.rule.second_time)
+        self.assertContains(response, "같은 시각의 알림이 두 개 있습니다.", status_code=400)
+        self.assertEqual(self.alarm_times(self.rule), [time(9, 0)])
 
     def test_valid_one_and_two_time_rules_update_only_current_user(self):
         response = self.client.post(
             reverse("notification_rule_save"),
-            self.rule_data(lookahead_days="7", first_time="08:30"),
+            self.rule_data("08:30", lookahead_days="7"),
         )
 
         self.assertRedirects(
@@ -179,16 +168,11 @@ class NotificationPageTests(TestCase):
         )
         self.rule.refresh_from_db()
         self.assertEqual(self.rule.lookahead_days, 7)
-        self.assertEqual(self.rule.first_time, time(8, 30))
-        self.assertIsNone(self.rule.second_time)
+        self.assertEqual(self.alarm_times(self.rule), [time(8, 30)])
 
         response = self.client.post(
             reverse("notification_rule_save"),
-            self.rule_data(
-                lookahead_days="7",
-                first_time="08:30",
-                second_time="18:00",
-            ),
+            self.rule_data("08:30", "18:00", lookahead_days="7"),
         )
 
         self.assertRedirects(
@@ -196,18 +180,17 @@ class NotificationPageTests(TestCase):
             reverse("notification_settings"),
             fetch_redirect_response=False,
         )
-        self.rule.refresh_from_db()
         self.other_rule.refresh_from_db()
-        self.assertEqual(self.rule.second_time, time(18, 0))
+        self.assertEqual(self.alarm_times(self.rule), [time(8, 30), time(18, 0)])
         self.assertEqual(self.other_rule.lookahead_days, 5)
-        self.assertEqual(self.other_rule.first_time, time(10, 0))
+        self.assertEqual(self.alarm_times(self.other_rule), [time(10, 0)])
 
     def test_valid_post_creates_rule_for_current_user_only(self):
         self.rule.delete()
 
         response = self.client.post(
             reverse("notification_rule_save"),
-            self.rule_data(lookahead_days="4", first_time="07:15"),
+            {"lookahead_days": "4", **alarm_post_data("07:15")},
         )
 
         self.assertRedirects(
@@ -217,6 +200,6 @@ class NotificationPageTests(TestCase):
         )
         created = NotificationRule.objects.get(user=self.user)
         self.assertEqual(created.lookahead_days, 4)
-        self.assertEqual(created.first_time, time(7, 15))
+        self.assertEqual(self.alarm_times(created), [time(7, 15)])
         self.other_rule.refresh_from_db()
         self.assertEqual(self.other_rule.lookahead_days, 5)

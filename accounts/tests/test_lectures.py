@@ -9,7 +9,7 @@ from django.utils import timezone
 
 from accounts.collection import collect_for_user, lecture_completion
 from accounts.forms import CourseSelectionForm
-from accounts.models import CanvasConnection, CourseSelection, NotificationRule
+from accounts.models import AlarmTime, CanvasConnection, CourseSelection, NotificationRule
 from accounts.notifications import render_notification
 from accounts.scheduling import claim_due_runs
 from accounts.services import encrypt_secret
@@ -244,8 +244,8 @@ class LectureCollectionTests(TestCase):
         )
         rule = NotificationRule.objects.get(user=self.user)
         slot = datetime(2026, 9, 26, 0, 0, tzinfo=UTC)  # 09:00 KST
-        rule.first_time = datetime(2026, 9, 26, 9, 0).time()
-        rule.save()
+        rule.alarms.all().delete()
+        AlarmTime.objects.create(rule=rule, time=datetime(2026, 9, 26, 9, 0).time())
 
         claimed = claim_due_runs(slot)
 

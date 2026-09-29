@@ -1,0 +1,27 @@
+<li class="alarm-row{% if form.instance.pk and not form.instance.enabled %} is-off{% endif %}" data-alarm-row>
+  {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+  <div class="alarm-main">
+    <label class="visually-hidden" for="{{ form.time.id_for_label }}">알림 시각</label>
+    {{ form.time }}
+    <fieldset class="weekday-picker">
+      <legend class="visually-hidden">요일</legend>
+      {% for option in form.days %}
+        <label class="day-chip">{{ option.tag }}<span>{{ option.choice_label }}</span></label>
+      {% endfor %}
+    </fieldset>
+  </div>
+  <div class="alarm-controls">
+    <label class="switch" title="이 알림 켜기/끄기">
+      {{ form.enabled }}
+      <span class="switch-track" aria-hidden="true"></span>
+      <span class="visually-hidden">이 알림 켜기</span>
+    </label>
+    {% if form.DELETE %}
+      <span class="visually-hidden">{{ form.DELETE }}</span>
+    {% endif %}
+    <button class="text-button alarm-delete" type="button" data-alarm-delete>삭제</button>
+  </div>
+  {% if form.errors %}
+    <div class="alarm-errors">{{ form.time.errors }}{{ form.days.errors }}{{ form.non_field_errors }}</div>
+  {% endif %}
+</li>

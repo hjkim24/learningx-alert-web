@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.collection import AlertItem, CollectionResult, CourseOutcome
+from accounts.tests.helpers import alarm_post_data, make_rule
 from accounts.models import CanvasConnection, CourseSelection, Destination, NotificationRule
 from accounts.services import decrypt_secret, encrypt_secret
 from accounts.templatetags.course_names import split_course_name
@@ -80,8 +81,7 @@ class NotificationSettingsSaveTests(TestCase):
     def post(self, **overrides):
         data = {
             "lookahead_days": "7",
-            "first_time": "09:00",
-            "second_time": "",
+            **alarm_post_data("09:00"),
             "kind": Destination.Kind.DISCORD,
             "webhook_url": "",
         }
@@ -91,7 +91,7 @@ class NotificationSettingsSaveTests(TestCase):
     def test_rule_only_save_warns_that_destination_is_missing(self):
         response = self.client.post(
             self.url,
-            {"lookahead_days": "7", "first_time": "09:00", "kind": "discord", "webhook_url": ""},
+            {"lookahead_days": "7", **alarm_post_data("09:00"), "kind": "discord", "webhook_url": ""},
             follow=True,
         )
 
@@ -120,7 +120,7 @@ class NotificationSettingsSaveTests(TestCase):
         self.assertNotContains(response, DISCORD_URL, status_code=400)
 
     def test_invalid_webhook_keeps_existing_rule_unchanged(self):
-        NotificationRule.objects.create(user=self.user, lookahead_days=3, first_time=time(8, 0))
+        make_rule(self.user, time(8, 0), lookahead_days=3)
 
         response = self.post(webhook_url="https://example.com/not-a-webhook")
 

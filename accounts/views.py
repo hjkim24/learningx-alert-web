@@ -1,5 +1,4 @@
 import json
-from datetime import datetime, timedelta
 
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -14,12 +13,15 @@ from django.views.decorators.http import require_GET, require_POST
 from .collection import alert_selection_filter, collect_for_user
 from .courses import CourseSyncError, group_forms_by_term, sync_courses
 from .forms import (
+    AlarmFormSet,
     CanvasTokenForm,
     CourseSelectionFormSet,
     DestinationForm,
     NotificationRuleForm,
 )
 from .models import (
+    WEEKDAY_LABELS,
+    AlarmTime,
     CanvasConnection,
     CourseRunResult,
     CourseSelection,
@@ -48,27 +50,7 @@ from .services import (
     decrypt_secret,
     verify_and_store_connection,
 )
-from .scheduling import SEOUL
-
-
-def _next_scheduled_at(rule, now, *, current_slot_claimed=False):
-    local_now = now.astimezone(SEOUL)
-    local_minute = local_now.replace(second=0, microsecond=0)
-    candidates = []
-    for configured in (rule.first_time, rule.second_time):
-        if configured is None:
-            continue
-        candidate = datetime.combine(
-            local_now.date(),
-            configured.replace(second=0, microsecond=0),
-            tzinfo=SEOUL,
-        )
-        if candidate < local_now or (
-            current_slot_claimed and candidate == local_minute
-        ):
-            candidate += timedelta(days=1)
-        candidates.append(candidate)
-    return min(candidates) if candidates else None
+from .scheduling import SEOUL, active_alarms, next_alarm_at
 
 
 @login_required
@@ -100,7 +82,7 @@ def dashboard(request):
             user=request.user,
             scheduled_for=now.replace(second=0, microsecond=0),
         ).exists()
-        next_run = _next_scheduled_at(
+        next_run = next_alarm_at(
             rule,
             now,
             current_slot_claimed=current_slot_claimed,
@@ -154,6 +136,7 @@ def dashboard(request):
             "next_run": next_run,
             "recent_runs": recent_runs,
             "rule": rule,
+            "active_alarms": active_alarms(rule) if rule else [],
             "selected_course_count": selected_course_count,
         },
     )
@@ -330,11 +313,36 @@ DUPLICATE_ERROR = "이미 등록된 웹훅입니다."
 LIMIT_ERROR = f"알림 대상은 최대 {Destination.MAX_PER_USER}개까지 등록할 수 있습니다."
 
 
-def _notification_settings_context(request, *, rule_form=None, destination_form=None):
+def _alarm_formset(rule, data=None):
+    """Alarm rows for a rule; a user with none starts with one 09:00 daily row."""
+    formset = AlarmFormSet(data, instance=rule or NotificationRule(), prefix="alarms")
+    if data is None and not (rule and rule.pk and rule.alarms.exists()):
+        formset.extra = 1
+    return formset
+
+
+def _save_schedule(request, rule_form, alarm_formset):
+    saved_rule = rule_form.save(commit=False)
+    saved_rule.user = request.user
+    saved_rule.save()
+    alarm_formset.instance = saved_rule
+    alarm_formset.save()
+    return saved_rule
+
+
+def _notification_settings_context(
+    request,
+    *,
+    rule_form=None,
+    alarm_formset=None,
+    destination_form=None,
+):
     destinations = list(Destination.objects.filter(user=request.user))
+    rule = NotificationRule.objects.filter(user=request.user).first()
     if rule_form is None:
-        rule = NotificationRule.objects.filter(user=request.user).first()
         rule_form = NotificationRuleForm(instance=rule or NotificationRule())
+    if alarm_formset is None:
+        alarm_formset = _alarm_formset(rule)
     if destination_form is None:
         destination_form = DestinationForm()
     push_enabled = webpush.web_push_enabled()
@@ -343,6 +351,9 @@ def _notification_settings_context(request, *, rule_form=None, destination_form=
         "destination_form": destination_form,
         "destination_limit": Destination.MAX_PER_USER,
         "rule_form": rule_form,
+        "alarm_formset": alarm_formset,
+        "alarm_limit": AlarmTime.MAX_PER_RULE,
+        "weekday_labels": WEEKDAY_LABELS,
         "push_enabled": push_enabled,
         "vapid_public_key": webpush.vapid_public_key() if push_enabled else "",
     }
@@ -390,6 +401,7 @@ def notification_settings_save(request):
     """
     rule = NotificationRule.objects.filter(user=request.user).first()
     rule_form = NotificationRuleForm(request.POST, instance=rule)
+    alarm_formset = _alarm_formset(rule, request.POST)
     destination_form = DestinationForm(request.POST)
     adding = bool(request.POST.get("webhook_url", "").strip())
 
@@ -400,22 +412,22 @@ def notification_settings_save(request):
             _notification_settings_context(
                 request,
                 rule_form=rule_form,
+                alarm_formset=alarm_formset,
                 destination_form=destination_form if adding else None,
             ),
             status=400,
         )
 
     rule_valid = rule_form.is_valid()
+    alarms_valid = alarm_formset.is_valid()
     destination_valid = not adding or destination_form.is_valid()
-    if not (rule_valid and destination_valid):
+    if not (rule_valid and alarms_valid and destination_valid):
         return rerender()
 
     with transaction.atomic():
         if adding and not _add_webhook(request, destination_form):
             return rerender()
-        saved_rule = rule_form.save(commit=False)
-        saved_rule.user = request.user
-        saved_rule.save()
+        _save_schedule(request, rule_form, alarm_formset)
 
     if Destination.objects.filter(user=request.user).exists():
         messages.success(
@@ -435,16 +447,20 @@ def notification_settings_save(request):
 def notification_rule_save(request):
     rule = NotificationRule.objects.filter(user=request.user).first()
     form = NotificationRuleForm(request.POST, instance=rule)
-    if not form.is_valid():
+    alarm_formset = _alarm_formset(rule, request.POST)
+    rule_valid = form.is_valid()
+    alarms_valid = alarm_formset.is_valid()
+    if not (rule_valid and alarms_valid):
         return render(
             request,
             "accounts/notification_settings.html",
-            _notification_settings_context(request, rule_form=form),
+            _notification_settings_context(
+                request, rule_form=form, alarm_formset=alarm_formset
+            ),
             status=400,
         )
-    saved_rule = form.save(commit=False)
-    saved_rule.user = request.user
-    saved_rule.save()
+    with transaction.atomic():
+        _save_schedule(request, form, alarm_formset)
     messages.success(request, "알림 규칙을 저장했습니다.")
     return redirect("notification_settings")
 

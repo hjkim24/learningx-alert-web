@@ -189,3 +189,86 @@
     })
     .catch(() => setStatus("서비스 워커를 등록하지 못했습니다. HTTPS 주소로 접속했는지 확인해 주세요."));
 })();
+
+// Alarm editor: add / delete alarm rows (Django inline formset, max 5) and
+// dim a row whose on/off switch is off.
+(() => {
+  const editor = document.querySelector("[data-alarm-editor]");
+  if (!editor) {
+    return;
+  }
+  const list = editor.querySelector("[data-alarm-list]");
+  const template = editor.querySelector("[data-alarm-template]");
+  const addButton = editor.querySelector("[data-alarm-add]");
+  const count = editor.querySelector("[data-alarm-count]");
+  const total = editor.querySelector('input[name$="-TOTAL_FORMS"]');
+  const limit = Number(editor.dataset.alarmLimit || 5);
+
+  const visibleRows = () => [...list.querySelectorAll("[data-alarm-row]")].filter((row) => !row.hidden);
+
+  function refresh() {
+    const rows = visibleRows();
+    addButton.disabled = rows.length >= limit;
+    count.textContent = `${rows.length}/${limit}`;
+    rows.forEach((row) => {
+      row.querySelector("[data-alarm-delete]").disabled = rows.length <= 1;
+      const enabled = row.querySelector('input[name$="-enabled"]');
+      row.classList.toggle("is-off", Boolean(enabled && !enabled.checked));
+    });
+  }
+
+  addButton.addEventListener("click", () => {
+    if (visibleRows().length >= limit) {
+      return;
+    }
+    const index = Number(total.value);
+    const html = template.innerHTML.replace(/__prefix__/g, String(index));
+    list.insertAdjacentHTML("beforeend", html.trim());
+    total.value = String(index + 1);
+    const row = list.lastElementChild;
+    const time = row.querySelector('input[type="time"]');
+    if (time) {
+      // Start the new alarm on the first free whole hour after the latest one,
+      // so an untouched new row never collides with an existing time.
+      const taken = new Set(
+        visibleRows()
+          .filter((other) => other !== row)
+          .map((other) => other.querySelector('input[type="time"]').value)
+      );
+      const latest = [...taken].sort().pop() || "08:00";
+      let hour = Number(latest.slice(0, 2));
+      for (let step = 0; step < 24; step += 1) {
+        hour = (hour + 1) % 24;
+        const candidate = `${String(hour).padStart(2, "0")}:00`;
+        if (!taken.has(candidate)) {
+          time.value = candidate;
+          break;
+        }
+      }
+      time.focus();
+    }
+    refresh();
+  });
+
+  list.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-alarm-delete]");
+    if (!button || visibleRows().length <= 1) {
+      return;
+    }
+    const row = button.closest("[data-alarm-row]");
+    const remove = row.querySelector('input[name$="-DELETE"]');
+    if (remove) {
+      remove.checked = true;
+    }
+    row.hidden = true;
+    refresh();
+  });
+
+  list.addEventListener("change", (event) => {
+    if (event.target.matches('input[name$="-enabled"]')) {
+      refresh();
+    }
+  });
+
+  refresh();
+})();

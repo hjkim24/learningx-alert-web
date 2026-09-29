@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.collection import collect_for_user
+from accounts.tests.helpers import make_rule
 from accounts.courses import CourseSyncError
 from accounts.models import CanvasConnection, CourseSelection, Destination, NotificationRule
 from accounts.notifications import render_notification
@@ -40,7 +41,7 @@ class ReconnectRequiredTests(TestCase):
                 encrypted_token=encrypt_secret("token"),
                 verified_at=timezone.now(),
             )
-            NotificationRule.objects.create(user=user, first_time=time(9, 0))
+            make_rule(user, time(9, 0))
             CourseSelection.objects.create(
                 user=user,
                 canvas_course_id=100 + user.pk,
