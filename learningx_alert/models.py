@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 
@@ -12,6 +13,8 @@ class CanvasProfile:
 class Course:
     id: int
     name: str
+    term_name: str = ""
+    term_start_at: datetime | None = None
 
 
 class CapabilityStatus(StrEnum):

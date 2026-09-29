@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from http.cookiejar import CookieJar
 from typing import Any
 from urllib.error import HTTPError
@@ -18,6 +19,23 @@ MAX_RESPONSE_BYTES = 5 * 1024 * 1024
 
 class PaginationError(RuntimeError):
     pass
+
+
+def _term_name(term: Any) -> str:
+    if not isinstance(term, dict):
+        return ""
+    return " ".join(str(term.get("name") or "").split())[:128]
+
+
+def _term_start(term: Any) -> datetime | None:
+    """Term start as an aware UTC datetime; missing or malformed values become None."""
+    if not isinstance(term, dict) or not term.get("start_at"):
+        return None
+    try:
+        value = datetime.fromisoformat(str(term["start_at"]).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return value.astimezone(UTC) if value.tzinfo else None
 
 
 class NoRedirectHandler(HTTPRedirectHandler):
@@ -78,8 +96,19 @@ class CanvasClient:
         return CanvasProfile(id=int(payload["id"]), name=str(payload.get("name") or ""))
 
     def courses(self) -> list[Course]:
-        payload = self.get_all("/api/v1/courses", (("enrollment_state", "active"),))
-        return [Course(id=int(entry["id"]), name=str(entry.get("name") or "")) for entry in payload]
+        payload = self.get_all(
+            "/api/v1/courses",
+            (("enrollment_state", "active"), ("include[]", "term")),
+        )
+        return [
+            Course(
+                id=int(entry["id"]),
+                name=str(entry.get("name") or ""),
+                term_name=_term_name(entry.get("term")),
+                term_start_at=_term_start(entry.get("term")),
+            )
+            for entry in payload
+        ]
 
     def assignments(self, course_id: int) -> list[dict[str, Any]]:
         return self.get_all(f"/api/v1/courses/{course_id}/assignments")

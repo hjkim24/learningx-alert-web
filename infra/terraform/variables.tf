@@ -129,6 +129,17 @@ variable "canvas_base_url" {
   default = "https://canvas.skku.edu"
 }
 
+variable "learningx_allowed_hosts" {
+  description = "Comma-separated hosts the LearningX LTI launch may visit. Empty disables lecture alerts."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = can(regex("^[a-z0-9.,-]*$", var.learningx_allowed_hosts))
+    error_message = "learningx_allowed_hosts must be lowercase host names separated by commas."
+  }
+}
+
 variable "app_domain" {
   type    = string
   default = "alert.sobok-app.com"

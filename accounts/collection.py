@@ -3,15 +3,32 @@ from datetime import UTC, datetime, timedelta
 from urllib.error import HTTPError, URLError
 
 from django.conf import settings
+from django.db.models import Q
 from django.views.decorators.debug import sensitive_variables
 
 from learningx_alert.canvas import CanvasClient, PaginationError
+from learningx_alert.learningx import LearningXClient, LearningXSessionError
+from learningx_alert.network import UnsafeUrlError
 
 from .models import CanvasConnection, CourseSelection, NotificationRule
 from .services import decrypt_secret
 
 
 SUBMITTED_STATES = {"submitted", "graded", "pending_review"}
+COMPLETED_VALUES = {"true", "1", "complete", "completed"}
+INCOMPLETE_VALUES = {"false", "0", "incomplete", "not_completed"}
+MAX_EXTERNAL_ID_LENGTH = 128
+
+EXPECTED_ERRORS = (
+    HTTPError,
+    URLError,
+    TimeoutError,
+    PaginationError,
+    UnsafeUrlError,
+    ValueError,
+    TypeError,
+    KeyError,
+)
 
 
 @dataclass(frozen=True)
@@ -41,6 +58,22 @@ class CollectionResult:
     outcomes: tuple[CourseOutcome, ...]
 
 
+@dataclass(frozen=True)
+class _SourceResult:
+    items: tuple[AlertItem, ...] = ()
+    error_code: str = ""
+    safe_summary: str = ""
+    no_deadline_count: int = 0
+
+
+def alert_selection_filter(prefix=""):
+    """Q for an enabled course with at least one alert type turned on."""
+    return Q(**{f"{prefix}enabled": True}) & (
+        Q(**{f"{prefix}include_assignments": True})
+        | Q(**{f"{prefix}include_lectures": True})
+    )
+
+
 def parse_due_at(value):
     if not value:
         return None
@@ -50,116 +83,249 @@ def parse_due_at(value):
     return due_at.astimezone(UTC)
 
 
+def lecture_completion(value):
+    """True/False for an explicit completion value, None when it cannot be trusted."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return {0: False, 1: True}.get(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in COMPLETED_VALUES:
+            return True
+        if normalized in INCOMPLETE_VALUES:
+            return False
+    return None
+
+
+def _collect_assignments(client, selection, now, upper):
+    try:
+        assignments = client.assignments(selection.canvas_course_id)
+    except EXPECTED_ERRORS:
+        return _SourceResult(
+            error_code="assignments_failed",
+            safe_summary="과제 목록을 확인하지 못했습니다.",
+        )
+
+    items = []
+    submission_failed = False
+    due_failed = False
+    no_deadline_count = 0
+    for assignment in assignments:
+        if assignment.get("is_quiz_assignment"):
+            continue
+        if not assignment.get("due_at"):
+            no_deadline_count += 1
+            continue
+        try:
+            due_at = parse_due_at(assignment.get("due_at"))
+        except (TypeError, ValueError):
+            due_failed = True
+            continue
+        if due_at is None or not (now < due_at <= upper):
+            continue
+        try:
+            state = client.submission_state(
+                selection.canvas_course_id,
+                int(assignment["id"]),
+            )
+        except EXPECTED_ERRORS:
+            submission_failed = True
+            continue
+        if state in SUBMITTED_STATES:
+            continue
+        if state != "unsubmitted":
+            submission_failed = True
+            continue
+        items.append(
+            AlertItem(
+                selection.canvas_course_id,
+                selection.course_name,
+                str(assignment["id"]),
+                "assignment",
+                str(assignment.get("name") or "제목 확인 필요"),
+                due_at,
+                state,
+            )
+        )
+
+    if submission_failed:
+        return _SourceResult(
+            tuple(items),
+            "submission_state_failed",
+            "일부 과제의 제출 상태를 확인하지 못했습니다.",
+            no_deadline_count,
+        )
+    if due_failed:
+        return _SourceResult(
+            tuple(items),
+            "assignment_due_invalid",
+            "일부 과제의 마감 시간을 확인하지 못했습니다.",
+            no_deadline_count,
+        )
+    return _SourceResult(tuple(items), no_deadline_count=no_deadline_count)
+
+
+def _module_items(modules):
+    if not isinstance(modules, list):
+        raise TypeError("modules must be a list")
+    for module in modules:
+        if not isinstance(module, dict):
+            raise TypeError("module must be an object")
+        module_items = module.get("module_items") or []
+        if not isinstance(module_items, list):
+            raise TypeError("module_items must be a list")
+        yield from module_items
+
+
+def _collect_lectures(learningx, selection, now, upper):
+    """Unfinished LearningX attendance lectures from the weekly modules.
+
+    A lecture is a module item whose content requires attendance
+    (``content_data.use_attendance is True``); completion comes from the
+    item's ``completed`` flag and the deadline from ``content_data.due_at``.
+    """
+    if learningx is None:
+        return _SourceResult(
+            error_code="learningx_not_configured",
+            safe_summary="강의 알림이 아직 설정되지 않았습니다.",
+        )
+    try:
+        module_items = list(_module_items(learningx.modules(selection.canvas_course_id)))
+    except LearningXSessionError as error:
+        if str(error) == "external_tool_missing":
+            return _SourceResult(
+                error_code="lectures_unsupported",
+                safe_summary="이 과목에는 LearningX 주차학습이 없습니다.",
+            )
+        return _SourceResult(
+            error_code="lectures_failed",
+            safe_summary="강의 목록을 확인하지 못했습니다.",
+        )
+    except EXPECTED_ERRORS:
+        return _SourceResult(
+            error_code="lectures_failed",
+            safe_summary="강의 목록을 확인하지 못했습니다.",
+        )
+
+    items = []
+    completion_failed = False
+    due_failed = False
+    no_deadline_count = 0
+    for module_item in module_items:
+        if not isinstance(module_item, dict):
+            completion_failed = True
+            continue
+        content = module_item.get("content_data")
+        if not isinstance(content, dict) or content.get("use_attendance") is not True:
+            continue
+        if module_item.get("published") is False or content.get("published") is False:
+            continue
+        if not content.get("due_at"):
+            no_deadline_count += 1
+            continue
+        try:
+            due_at = parse_due_at(content.get("due_at"))
+        except (TypeError, ValueError):
+            due_failed = True
+            continue
+        if due_at is None or not (now < due_at <= upper):
+            continue
+        completed = lecture_completion(module_item.get("completed"))
+        external_id = str(
+            content.get("item_id") or module_item.get("module_item_id") or ""
+        )
+        if completed is None or not external_id or len(external_id) > MAX_EXTERNAL_ID_LENGTH:
+            # Fail closed: an item we cannot identify or whose completion is
+            # ambiguous is neither alerted nor silently treated as done.
+            completion_failed = True
+            continue
+        if completed:
+            continue
+        items.append(
+            AlertItem(
+                selection.canvas_course_id,
+                selection.course_name,
+                external_id,
+                "lecture",
+                str(module_item.get("title") or content.get("title") or "제목 확인 필요"),
+                due_at,
+                "incomplete",
+            )
+        )
+
+    if completion_failed:
+        return _SourceResult(
+            tuple(items),
+            "lecture_completion_unknown",
+            "일부 강의의 수강 완료 여부를 확인하지 못했습니다.",
+            no_deadline_count,
+        )
+    if due_failed:
+        return _SourceResult(
+            tuple(items),
+            "lecture_due_invalid",
+            "일부 강의의 마감 시간을 확인하지 못했습니다.",
+            no_deadline_count,
+        )
+    return _SourceResult(tuple(items), no_deadline_count=no_deadline_count)
+
+
+def default_learningx_factory(canvas_client):
+    if not settings.LEARNINGX_ALLOWED_HOSTS:
+        return None
+    return LearningXClient(canvas_client, set(settings.LEARNINGX_ALLOWED_HOSTS))
+
+
 @sensitive_variables("token")
-def collect_for_user(user, now, client_class=CanvasClient):
+def collect_for_user(
+    user,
+    now,
+    client_class=CanvasClient,
+    learningx_factory=default_learningx_factory,
+):
     connection = CanvasConnection.objects.get(user=user)
     rule, _ = NotificationRule.objects.get_or_create(user=user)
-    selections = CourseSelection.objects.filter(
-        user=user,
-        enabled=True,
-        include_assignments=True,
+    selections = list(
+        CourseSelection.objects.filter(alert_selection_filter(), user=user)
     )
     token = decrypt_secret(connection.encrypted_token)
     client = client_class(settings.CANVAS_BASE_URL, token)
+    learningx = None
+    if any(selection.include_lectures for selection in selections):
+        learningx = learningx_factory(client)
     upper = now + timedelta(days=rule.lookahead_days)
     items = []
     outcomes = []
-    expected_errors = (
-        HTTPError,
-        URLError,
-        TimeoutError,
-        PaginationError,
-        ValueError,
-        TypeError,
-        KeyError,
-    )
 
     for selection in selections:
-        try:
-            assignments = client.assignments(selection.canvas_course_id)
-        except expected_errors:
-            outcomes.append(
-                CourseOutcome(
-                    selection.canvas_course_id,
-                    selection.course_name,
-                    "failed",
-                    "assignments_failed",
-                    "과제 목록을 확인하지 못했습니다.",
-                )
-            )
-            continue
+        sources = []
+        if selection.include_assignments:
+            sources.append(_collect_assignments(client, selection, now, upper))
+        if selection.include_lectures:
+            sources.append(_collect_lectures(learningx, selection, now, upper))
 
-        submission_failed = False
-        due_failed = False
-        no_deadline_count = 0
-        before = len(items)
-        for assignment in assignments:
-            if assignment.get("is_quiz_assignment"):
-                continue
-            if not assignment.get("due_at"):
-                no_deadline_count += 1
-                continue
-            try:
-                due_at = parse_due_at(assignment.get("due_at"))
-            except (TypeError, ValueError):
-                due_failed = True
-                continue
-            if due_at is None or not (now < due_at <= upper):
-                continue
-            try:
-                state = client.submission_state(
-                    selection.canvas_course_id,
-                    int(assignment["id"]),
-                )
-            except expected_errors:
-                submission_failed = True
-                continue
-            if state in SUBMITTED_STATES:
-                continue
-            if state != "unsubmitted":
-                submission_failed = True
-                continue
-            items.append(
-                AlertItem(
-                    selection.canvas_course_id,
-                    selection.course_name,
-                    str(assignment["id"]),
-                    "assignment",
-                    str(assignment.get("name") or "제목 확인 필요"),
-                    due_at,
-                    state,
-                )
-            )
-
-        if submission_failed:
+        course_items = [item for source in sources for item in source.items]
+        items.extend(course_items)
+        no_deadline_count = sum(source.no_deadline_count for source in sources)
+        failure = next((source for source in sources if source.error_code), None)
+        if failure:
             outcomes.append(
                 CourseOutcome(
                     selection.canvas_course_id,
                     selection.course_name,
                     "failed",
-                    "submission_state_failed",
-                    "일부 과제의 제출 상태를 확인하지 못했습니다.",
-                    no_deadline_count,
-                )
-            )
-        elif due_failed:
-            outcomes.append(
-                CourseOutcome(
-                    selection.canvas_course_id,
-                    selection.course_name,
-                    "failed",
-                    "assignment_due_invalid",
-                    "일부 과제의 마감 시간을 확인하지 못했습니다.",
+                    failure.error_code,
+                    failure.safe_summary,
                     no_deadline_count,
                 )
             )
         else:
-            status = "success" if len(items) > before else "empty"
             outcomes.append(
                 CourseOutcome(
                     selection.canvas_course_id,
                     selection.course_name,
-                    status,
+                    "success" if course_items else "empty",
                     no_deadline_count=no_deadline_count,
                 )
             )

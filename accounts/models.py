@@ -29,6 +29,8 @@ class CourseSelection(models.Model):
     )
     canvas_course_id = models.BigIntegerField()
     course_name = models.CharField(max_length=255)
+    term_name = models.CharField(max_length=128, blank=True)
+    term_start_at = models.DateTimeField(blank=True, null=True)
     enabled = models.BooleanField(default=False)
     include_assignments = models.BooleanField(default=False)
     include_lectures = models.BooleanField(default=False)

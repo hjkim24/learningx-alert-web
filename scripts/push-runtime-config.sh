@@ -35,6 +35,13 @@ runtime_env=$(
               then $value
               else error("missing required Terraform output: " + $name)
               end;
+        def optional_hosts($name):
+            (.[$name].value // "") as $value
+            | if ($value | type) == "string"
+                and ($value | test("^[a-z0-9.,-]*$"))
+              then $value
+              else error("invalid Terraform output: " + $name)
+              end;
 
         . as $root
         | ($root | required("app_domain")) as $domain
@@ -47,6 +54,7 @@ runtime_env=$(
             "GOOGLE_CLIENT_ID=" + ($root | required("google_client_id") | @sh),
             "PILOT_ALLOWED_EMAILS=" + ($root | required("pilot_allowed_emails") | @sh),
             "CANVAS_BASE_URL=" + ($root | required("canvas_base_url") | @sh),
+            "LEARNINGX_ALLOWED_HOSTS=" + ($root | optional_hosts("learningx_allowed_hosts") | @sh),
             "DJANGO_SECRET_KEY_OCID=" + ($root | required("django_secret_key_ocid") | @sh),
             "GOOGLE_CLIENT_SECRET_OCID=" + ($root | required("google_client_secret_ocid") | @sh),
             "CREDENTIAL_ENCRYPTION_KEYS_OCID=" + ($root | required("credential_encryption_keys_ocid") | @sh),

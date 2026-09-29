@@ -1,4 +1,5 @@
 from django import forms
+from django.conf import settings
 from django.forms import modelformset_factory
 
 from .models import CourseSelection, Destination, NotificationRule
@@ -16,20 +17,33 @@ class CanvasTokenForm(forms.Form):
 class CourseSelectionForm(forms.ModelForm):
     class Meta:
         model = CourseSelection
-        fields = ("enabled", "include_assignments")
+        fields = ("enabled", "include_assignments", "include_lectures")
         labels = {
             "enabled": "이 과목 알림 사용",
             "include_assignments": "과제",
+            "include_lectures": "강의 (LearningX 미수강 영상)",
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.lectures_available = bool(settings.LEARNINGX_ALLOWED_HOSTS)
+        if not self.lectures_available:
+            # Disabled fields keep their stored value and ignore posted data.
+            self.fields["include_lectures"].disabled = True
 
     def clean(self):
         cleaned = super().clean()
-        if cleaned.get("enabled") and not cleaned.get("include_assignments"):
+        if not self.lectures_available:
+            cleaned["include_lectures"] = False
+        if cleaned.get("enabled") and not (
+            cleaned.get("include_assignments") or cleaned.get("include_lectures")
+        ):
             raise forms.ValidationError(
                 "알림을 사용할 항목을 하나 이상 선택해 주세요."
             )
         if not cleaned.get("enabled"):
             cleaned["include_assignments"] = False
+            cleaned["include_lectures"] = False
         return cleaned
 
 

@@ -69,3 +69,7 @@ output "pilot_allowed_emails" {
 output "canvas_base_url" {
   value = var.canvas_base_url
 }
+
+output "learningx_allowed_hosts" {
+  value = var.learningx_allowed_hosts
+}
