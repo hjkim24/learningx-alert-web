@@ -1948,3 +1948,136 @@ button[aria-busy="true"] {
   font-size: 1.5rem;
   line-height: 1;
 }
+
+/* ---------- Canvas access-key guide ---------- */
+.guide-facts,
+.guide-next {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 10px;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.guide-step {
+  margin: 0 24px;
+  padding: 28px;
+  border-radius: var(--r-block);
+  background: var(--surface-2);
+  color: var(--ink);
+  display: grid;
+  gap: 20px;
+  scroll-margin-top: 16px;
+}
+
+.guide-step-text {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.guide-step-text h2 {
+  margin: 4px 0 8px;
+  font-size: var(--fs-h2);
+  line-height: 1.35;
+}
+
+.guide-step-text p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.guide-step-text p strong,
+.guide-callout strong {
+  color: var(--ink);
+}
+
+.guide-step-number {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--r-tag);
+  background: var(--brand);
+  color: var(--surface);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-callout {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-control);
+  background: var(--urgent-soft);
+  color: var(--ink);
+}
+
+.guide-callout p {
+  margin: 4px 0 0;
+  color: var(--ink);
+}
+
+.guide-shot {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.guide-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-control);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(29 42 36 / 8%), inset 0 0 0 1px var(--line);
+}
+
+.guide-shot figcaption {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.guide-faq {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.guide-faq dt {
+  margin-top: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.guide-faq dd {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.guide-link {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .guide-step {
+    margin: 0 10px;
+    padding: 20px 16px;
+  }
+
+  .guide-step-text {
+    gap: 12px;
+  }
+}
