@@ -24,11 +24,16 @@ x-app: &app
     LEARNINGX_ALLOWED_HOSTS: ${LEARNINGX_ALLOWED_HOSTS:-}
     CREDENTIAL_ENCRYPTION_KEYS_FILE: /run/secrets/credential-encryption-keys
     DATABASE_PATH: /data/db.sqlite3
+    DATABASE_ENGINE: ${DATABASE_ENGINE:-sqlite}
+    DATABASE_HOST: ${DATABASE_HOST:-}
+    DATABASE_PASSWORD_FILE: ${DATABASE_PASSWORD_FILE:-}
   volumes: &app-volumes
     - /var/lib/learningx-alert:/data
     - /run/learningx-alert/secrets/django-secret-key:/run/secrets/django-secret-key:ro
     - /run/learningx-alert/secrets/google-client-secret:/run/secrets/google-client-secret:ro
     - /run/learningx-alert/secrets/credential-encryption-keys:/run/secrets/credential-encryption-keys:ro
+    # The whole secret set, so database-password is visible once it exists.
+    - /run/learningx-alert/secrets:/run/secrets/all:ro
 
 services:
   caddy:

@@ -78,7 +78,7 @@ run "approved_production_resources" {
 
   assert {
     condition = (
-      contains(oci_identity_policy.app_instance.statements, "Allow dynamic-group learningx-alert-instance to read secret-bundles in compartment id ${oci_identity_compartment.app.id} where any {target.secret.name = 'django-secret-key', target.secret.name = 'google-client-secret', target.secret.name = 'credential-encryption-keys'}") &&
+      contains(oci_identity_policy.app_instance.statements, "Allow dynamic-group learningx-alert-instance to read secret-bundles in compartment id ${oci_identity_compartment.app.id} where any {target.secret.name = 'django-secret-key', target.secret.name = 'google-client-secret', target.secret.name = 'credential-encryption-keys', target.secret.name = 'database-password'}") &&
       contains(oci_identity_policy.app_instance.statements, "Allow dynamic-group learningx-alert-instance to manage objects in compartment id ${oci_identity_compartment.app.id} where target.bucket.name = 'learningx-alert-backups'") &&
       contains(oci_identity_policy.app_instance.statements, "Allow service objectstorage-ap-chuncheon-1 to manage object-family in compartment id ${oci_identity_compartment.app.id} where target.bucket.name = 'learningx-alert-backups'")
     )
@@ -105,6 +105,7 @@ run "approved_production_resources" {
       data.oci_vault_secrets.django_secret_key.name == "django-secret-key" &&
       data.oci_vault_secrets.google_client_secret.name == "google-client-secret" &&
       data.oci_vault_secrets.credential_encryption_keys.name == "credential-encryption-keys" &&
+      data.oci_vault_secrets.database_password.name == "database-password" &&
       data.oci_vault_secrets.django_secret_key.state == "ACTIVE" &&
       data.oci_vault_secrets.google_client_secret.state == "ACTIVE" &&
       data.oci_vault_secrets.credential_encryption_keys.state == "ACTIVE"

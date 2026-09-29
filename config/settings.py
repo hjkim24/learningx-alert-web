@@ -86,12 +86,40 @@ TEMPLATES = [
         },
     }
 ]
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
+DATABASE_ENGINE = os.environ.get("DATABASE_ENGINE", "sqlite").strip().lower()
+if DATABASE_ENGINE == "mysql":
+    # PyMySQL is pure Python (no C build in the image) and stands in for mysqlclient.
+    import pymysql
+
+    pymysql.install_as_MySQLdb()
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "HOST": os.environ.get("DATABASE_HOST", ""),
+            "PORT": os.environ.get("DATABASE_PORT", "3306"),
+            "NAME": os.environ.get("DATABASE_NAME", "learningx_alert"),
+            "USER": os.environ.get("DATABASE_USER", "learningx"),
+            "PASSWORD": _secret_setting("DATABASE_PASSWORD"),
+            "CONN_MAX_AGE": 60,
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+                # MySQL HeatWave only accepts TLS; the traffic stays inside the VCN.
+                "ssl": {"ssl": True},
+            },
+            "TEST": {"NAME": "test_learningx_alert", "CHARSET": "utf8mb4"},
+        }
     }
-}
+elif DATABASE_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.environ.get("DATABASE_PATH", BASE_DIR / "db.sqlite3"),
+        }
+    }
+else:
+    raise RuntimeError("DATABASE_ENGINE must be 'sqlite' or 'mysql'")
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
