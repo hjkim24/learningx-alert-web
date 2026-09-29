@@ -301,7 +301,9 @@ def _group_items_by_day(items, now):
         if not groups or groups[-1]["date"] != day:
             delta = (day - today).days
             label = "오늘" if delta == 0 else f"D-{delta}" if delta > 0 else f"D+{-delta}"
-            groups.append({"date": day, "dday": label, "items": []})
+            groups.append(
+                {"date": day, "dday": label, "urgent": delta <= 3, "items": []}
+            )
         groups[-1]["items"].append(item)
     return groups
 

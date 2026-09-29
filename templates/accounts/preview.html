@@ -9,7 +9,7 @@
       <h1>알림 미리보기</h1>
       <p>저장된 설정으로 지금 조회한 결과입니다. 이 화면에서는 전송하지 않습니다.</p>
     </div>
-    <form method="post" action="{% url 'preview' %}">
+    <form method="post" action="{% url 'preview' %}" data-loading>
       {% csrf_token %}
       <button class="secondary-button" type="submit">다시 조회</button>
     </form>
@@ -31,7 +31,7 @@
       <h2 id="preview-items-title">알림 대상 {{ result.items|length }}건</h2>
       {% for group in day_groups %}
         <div class="day-group">
-          <h3><span class="badge{% if group.dday == '오늘' or group.dday == 'D-1' %} badge-alert{% endif %}">{{ group.dday }}</span> {{ group.date|date:"n월 j일 (D)" }}</h3>
+          <h3><span class="badge badge-dday{% if group.urgent %} is-urgent{% endif %}">{{ group.dday }}</span> {{ group.date|date:"n월 j일 (D)" }}</h3>
           <ul class="preview-list">
             {% for item in group.items %}
               <li class="preview-item">
@@ -52,7 +52,10 @@
     <section class="panel" aria-labelledby="message-title">
       <h2 id="message-title">보낼 메시지</h2>
       <p class="fine-print">Discord·Slack에는 아래 텍스트가 그대로 전송됩니다.</p>
-      <pre class="message-preview">{{ message_text }}</pre>
+      <div class="message-sheet">
+        <span class="message-avatar" aria-hidden="true">LX</span>
+        <pre class="message-preview">{{ message_text }}</pre>
+      </div>
     </section>
   </div>
 
