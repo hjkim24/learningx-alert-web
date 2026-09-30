@@ -175,6 +175,19 @@ ssh ubuntu@168.107.37.170 'cd /opt/learningx-alert/current && sudo ./deploy/rest
 ssh ubuntu@168.107.37.170 'sudo docker logs --since 10m learningx-alert-otel-collector-1 2>&1 | tail -20'
 ```
 
+## 피드백 관리 화면
+
+사용자가 우하단 "의견 보내기"로 보낸 피드백은 DB의 `Feedback`에 저장되고, Grafana 규칙 "새 피드백"이 Discord로 알린다(로그와 알림에는 번호와 종류만 남는다).
+
+- 서버에서 보기: `sudo docker compose -p learningx-alert -f compose.prod.yaml exec web python manage.py list_feedback`(`--all`, `--done ID`)
+- 관리 화면: Tailscale이 켜진 기기에서 `https://lab-hjkim24.taild71a2d.ts.net:8443/ops-7f3c/`
+  - 경로: `tailscale serve --https=8443` → 호스트 `127.0.0.1:8081` → Caddy(관리 화면, `/accounts/*`, `/static/*`만 처리하고 나머지는 공개 도메인으로 넘긴다) → web.
+  - 공개 도메인의 `/ops-7f3c/`는 Caddy가 Tailscale 대역 밖 요청에 404를 준다.
+  - 입장 조건은 `is_staff`, `ADMIN_EMAILS`(tfvars `admin_emails`), Google이 인증한 이메일, 이 세 가지를 모두 만족하는 것이다. 비밀번호 로그인은 없다.
+  - Google OAuth 클라이언트에 `https://lab-hjkim24.taild71a2d.ts.net:8443/accounts/google/login/callback/`이 승인된 리디렉션 URI로 있어야 한다.
+  - 기기 이름은 `tailscale set --hostname=lab-hjkim24`로 바꿨다. 같은 기기의 tossterm은 `https://lab-hjkim24.taild71a2d.ts.net`(443)이다. 예전 `tossterm.taild71a2d.ts.net` 설정은 인증서가 만료되면 동작하지 않는다.
+  - 끄기: `sudo tailscale serve --https=8443 off`
+
 ## 롤백
 
 배포 스크립트는 각 애플리케이션 이미지를 `learningx-alert:<40자리 Git 리비전>`으로 보존한다. 롤백할 릴리스 디렉터리와 이미지가 모두 있는지 먼저 확인한다.
