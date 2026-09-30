@@ -1,0 +1,21 @@
+{{ define "lx.discord.title" -}}
+{{ if .Alerts.Firing }}🚨 LearningX 경보 {{ len .Alerts.Firing }}건{{ else }}✅ LearningX 경보 해결{{ end }}
+{{- end }}
+
+{{ define "lx.discord.time" }}{{ . | tz "Asia/Seoul" | date "01/02 15:04" }}{{ end }}
+
+{{ define "lx.discord.message" -}}
+{{ range .Alerts.Firing -}}
+**{{ .Labels.alertname }}**{{ with .Labels.school }} · {{ . }}{{ end }}
+{{ .Annotations.summary }}
+{{ with .Annotations.description }}> {{ . }}
+{{ end -}}
+🕒 {{ template "lx.discord.time" .StartsAt }} 시작 · [자세히]({{ .GeneratorURL }}) · [알림 끄기]({{ .SilenceURL }})
+
+{{ end -}}
+{{ range .Alerts.Resolved -}}
+✅ **{{ .Labels.alertname }}**{{ with .Labels.school }} · {{ . }}{{ end }} 해결됨
+🕒 {{ template "lx.discord.time" .StartsAt }} → {{ template "lx.discord.time" .EndsAt }}
+
+{{ end -}}
+{{- end }}
