@@ -111,6 +111,7 @@ class DestinationViewTests(TestCase):
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
     def test_destination_limit_is_enforced(self, _dns):
+        self.assertEqual(Destination.MAX_PER_USER, 3)
         for index in range(Destination.MAX_PER_USER):
             self.create_destination(url=f"https://discord.com/api/webhooks/{index}/token")
 
@@ -120,6 +121,7 @@ class DestinationViewTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "알림 대상은 최대 3개까지 등록할 수 있어요.", status_code=400)
         self.assertEqual(
             Destination.objects.filter(user=self.user).count(),
             Destination.MAX_PER_USER,
