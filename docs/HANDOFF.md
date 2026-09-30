@@ -136,6 +136,9 @@
 | #55 | `lx-site-down` 규칙을 "마지막 정상 헬스체크 경과 초" 기준으로 변경 |
 | #56 | 배포 중단 줄이기: `restart` 대신 바뀐 컨테이너만 교체, Caddy `lb_try_duration 30s`, Caddy만 강제 재생성 |
 | #57 | GitHub Actions CI와 자동 배포(Tailscale `tag:ci`, 배포 전용 SSH 키) |
+| #58 | 대시보드: 남은 항목이 없으면 카드 3개를 한 줄에 |
+| #59, #60 | 도메인 `learningx-alert.com`으로 이전, 옛 주소 301 |
+| #61 | 기기별 설치·푸시 배너(`accounts/context_processors.py`, `_install_banner.html`, `app.js`의 `LXPush`) |
 
 Grafana 쪽 변경(코드 밖):
 - Discord 템플릿과 contact point 서식

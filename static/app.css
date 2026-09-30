@@ -2682,3 +2682,81 @@ body:has(.sticky-actions) .feedback-fab {
     grid-column: 1 / -1;
   }
 }
+
+/* Device-aware install/push banner (templates/accounts/_install_banner.html). */
+.install-banner {
+  position: relative;
+  margin: 24px 24px 0;
+  border-radius: var(--r-block);
+  background: var(--brand-soft);
+  padding: 18px 56px 18px 24px;
+}
+
+.install-banner[hidden],
+.install-body[hidden] {
+  display: none;
+}
+
+.install-body {
+  display: grid;
+  gap: 8px;
+}
+
+.install-body p,
+.install-steps {
+  margin: 0;
+}
+
+.install-steps {
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 4px;
+}
+
+.share-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--brand);
+  vertical-align: -0.35em;
+}
+
+.install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.install-actions a.primary-button {
+  text-decoration: none;
+}
+
+.install-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.install-dismiss:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+  .install-banner {
+    margin: 12px 10px 0;
+    padding: 16px 48px 16px 16px;
+  }
+}
