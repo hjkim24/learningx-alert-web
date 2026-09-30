@@ -1,7 +1,9 @@
 <section class="history-panel" aria-labelledby="next-run-title">
   <h2 id="next-run-title">다음 알림</h2>
   {% if next_run %}
-    <p class="schedule-time">{{ next_run|date:"Y.m.d H:i" }} KST</p>
+    <p class="schedule-time">
+      <time datetime="{{ next_run.isoformat }}"><span class="schedule-date">{{ next_run|date:"n월 j일 D" }}</span> <span class="schedule-clock">{{ next_run|date:"H:i" }}</span></time>
+    </p>
     <p class="fine-print">
       마감 {{ rule.lookahead_days }}일 이내 ·
       {% for alarm in active_alarms %}{{ alarm.time|time:"H:i" }} {{ alarm.weekdays_display }}{% if not forloop.last %}, {% endif %}{% endfor %}

@@ -752,6 +752,39 @@ button[aria-busy="true"] {
   gap: 16px;
 }
 
+/* No remaining items: three equal cards in one row, same height. */
+.dashboard-layout.is-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.dashboard-layout.is-compact .dashboard-side {
+  display: contents;
+}
+
+.schedule-date {
+  display: block;
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.schedule-clock {
+  display: block;
+}
+
+.remaining-empty {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.remaining-empty p,
+.remaining-empty form {
+  margin: 0;
+}
+
 .remaining-heading {
   margin-bottom: 16px;
 }
@@ -1660,6 +1693,7 @@ button[aria-busy="true"] {
   .field-pair,
   .preview-layout,
   .dashboard-layout,
+  .dashboard-layout.is-compact,
   .history-grid,
   .status-rail,
   .destination-summary,
@@ -2635,5 +2669,16 @@ body:has(.sticky-actions) .feedback-fab {
     height: 52px;
     padding: 0;
     justify-content: center;
+  }
+}
+
+/* Medium widths: the empty remaining card takes the first row. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .dashboard-layout.is-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-layout.is-compact .remaining-panel {
+    grid-column: 1 / -1;
   }
 }
