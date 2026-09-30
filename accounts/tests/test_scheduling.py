@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
@@ -11,7 +11,7 @@ from accounts.models import (
     Destination,
     ScheduledRun,
 )
-from accounts.scheduling import claim_due_runs, matching_slot
+from accounts.scheduling import CATCH_UP_MINUTES, claim_due_runs, matching_slot, slot_minutes
 from accounts.services import encrypt_secret
 from accounts.tests.helpers import make_rule, unsaved_rule
 
@@ -97,6 +97,56 @@ class SchedulingTests(TestCase):
         self.assertFalse(
             ScheduledRun.objects.filter(user=user_without_destination).exists()
         )
+
+
+@override_settings(CREDENTIAL_ENCRYPTION_KEYS=[KEY])
+class CatchUpTests(TestCase):
+    """A scan longer than a minute (or a restart) must not drop alarm minutes."""
+
+    make_user_with_rule_and_course = SchedulingTests.make_user_with_rule_and_course
+    make_ready_user = SchedulingTests.make_ready_user
+
+    # 09:00 KST == 00:00 UTC
+    SLOT_0900 = datetime(2026, 9, 26, 0, 0, tzinfo=UTC)
+
+    def test_slot_minutes_cover_the_gap_and_are_capped(self):
+        now = self.SLOT_0900 + timedelta(minutes=3, seconds=20)
+
+        self.assertEqual(slot_minutes(now), [self.SLOT_0900 + timedelta(minutes=3)])
+        self.assertEqual(
+            slot_minutes(now, since=self.SLOT_0900),
+            [self.SLOT_0900 + timedelta(minutes=m) for m in (1, 2, 3)],
+        )
+        capped = slot_minutes(now, since=now - timedelta(hours=5))
+        self.assertEqual(len(capped), CATCH_UP_MINUTES + 1)
+
+    def test_alarm_in_a_minute_the_previous_scan_ran_past_is_claimed(self):
+        user = self.make_ready_user(first_time=time(9, 1))
+        # Previous scan started 09:00 and ran until 09:02:30; 09:01 was never scanned.
+        now = self.SLOT_0900 + timedelta(minutes=2, seconds=30)
+
+        self.assertEqual(claim_due_runs(now), ())  # old behaviour: current minute only
+        with self.assertLogs("accounts.scheduling", level="WARNING") as logs:
+            claimed = claim_due_runs(now, since=self.SLOT_0900)
+
+        self.assertEqual([run.user for run in claimed], [user])
+        self.assertEqual(claimed[0].scheduled_for, self.SLOT_0900 + timedelta(minutes=1))
+        self.assertIn("late slot claimed", logs.output[0])
+
+    def test_looking_back_over_already_claimed_minutes_creates_nothing(self):
+        self.make_ready_user(first_time=time(9, 0))
+        self.assertEqual(len(claim_due_runs(self.SLOT_0900)), 1)
+
+        again = claim_due_runs(self.SLOT_0900 + timedelta(minutes=5), since=self.SLOT_0900 - timedelta(minutes=10))
+
+        self.assertEqual(again, ())
+        self.assertEqual(ScheduledRun.objects.count(), 1)
+
+    def test_alarm_older_than_the_catch_up_window_is_not_replayed(self):
+        self.make_ready_user(first_time=time(9, 0))
+        now = self.SLOT_0900 + timedelta(minutes=CATCH_UP_MINUTES + 1)
+
+        self.assertEqual(claim_due_runs(now, since=now - timedelta(hours=2)), ())
 
 
 class WeekdayAlarmTests(TestCase):

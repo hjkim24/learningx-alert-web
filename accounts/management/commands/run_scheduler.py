@@ -5,6 +5,7 @@ import os
 import tempfile
 import time
 from contextlib import contextmanager
+from datetime import timedelta
 from pathlib import Path
 
 from django.conf import settings
@@ -12,7 +13,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from accounts import telemetry
-from accounts.scheduling import reconcile_interrupted_runs, run_due_rules
+from accounts.scheduling import CATCH_UP_MINUTES, reconcile_interrupted_runs, run_due_rules
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +70,24 @@ class Command(BaseCommand):
         self.stdout.write(f"scheduler starting metrics={'on' if exporting else 'off'}")
         try:
             with scheduler_lock():
-                reconcile_interrupted_runs(timezone.now())
+                started = timezone.now()
+                reconcile_interrupted_runs(started)
+                # First scan looks back CATCH_UP_MINUTES so a restart at an
+                # alarm minute (deploy, crash) still sends it; later scans
+                # cover every minute since the previous scan.
+                since = started - timedelta(minutes=CATCH_UP_MINUTES)
                 while True:
                     scan_started_at = time.time()
+                    scan_now = timezone.now()
                     try:
-                        runs = run_due_rules(timezone.now())
+                        runs = run_due_rules(scan_now, since=since)
                     except Exception:
                         # Counted but still raised: the container restarts, and
                         # the flat heartbeat plus this line say why.
                         telemetry.heartbeat.add(1, {"outcome": "error"})
                         logger.exception("scan failed", extra={"event": "scan_failed"})
                         raise
+                    since = scan_now
                     telemetry.heartbeat.add(1, {"outcome": "ok"})
                     self.stdout.write(f"scheduled_runs={len(runs)}")
                     if options["once"]:
