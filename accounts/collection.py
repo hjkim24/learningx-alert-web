@@ -135,6 +135,19 @@ def lecture_completion(value):
     return None
 
 
+def _assignment_item_type(assignment):
+    """'quiz' for Canvas quizzes (classic or New Quizzes), else 'assignment'.
+
+    A quiz is a graded assignment underneath, so its submission state comes
+    from the same endpoint: unsubmitted until the student turns it in (a quiz
+    that was only started stays unsubmitted), then submitted/graded/
+    pending_review.
+    """
+    if assignment.get("is_quiz_assignment") or assignment.get("is_quiz_lti_assignment"):
+        return "quiz"
+    return "assignment"
+
+
 def _collect_assignments(client, selection, now, upper):
     try:
         assignments = client.assignments(selection.canvas_course_id)
@@ -149,8 +162,6 @@ def _collect_assignments(client, selection, now, upper):
     due_failed = False
     no_deadline_count = 0
     for assignment in assignments:
-        if assignment.get("is_quiz_assignment"):
-            continue
         if not assignment.get("due_at"):
             no_deadline_count += 1
             continue
@@ -179,7 +190,7 @@ def _collect_assignments(client, selection, now, upper):
                 selection.canvas_course_id,
                 selection.course_name,
                 str(assignment["id"]),
-                "assignment",
+                _assignment_item_type(assignment),
                 str(assignment.get("name") or "제목 확인 필요"),
                 due_at,
                 state,

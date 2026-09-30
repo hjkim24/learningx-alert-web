@@ -88,7 +88,7 @@ class CollectionTests(TestCase):
 
         self.assertEqual([item.external_id for item in result.items], ["2"])
 
-    def test_collect_excludes_submitted_graded_pending_review_and_quizzes(self):
+    def test_collect_excludes_submitted_graded_and_pending_review(self):
         self.fake.assignments_by_course[101] = [
             self.assignment(1),
             self.assignment(2),
@@ -106,7 +106,35 @@ class CollectionTests(TestCase):
 
         result = collect_for_user(self.user, self.now, client_class=self.fake_class)
 
-        self.assertEqual([item.external_id for item in result.items], ["4"])
+        self.assertEqual([item.external_id for item in result.items], ["4", "5"])
+
+    def test_quizzes_are_alerted_as_quiz_until_submitted(self):
+        new_quiz = self.assignment(7)
+        new_quiz["is_quiz_lti_assignment"] = True
+        self.fake.assignments_by_course[101] = [
+            self.assignment(5, quiz=True),
+            self.assignment(6, quiz=True),
+            new_quiz,
+            self.assignment(8),
+        ]
+        self.fake.submissions = {5: "unsubmitted", 6: "graded", 7: "unsubmitted", 8: "unsubmitted"}
+
+        result = collect_for_user(self.user, self.now, client_class=self.fake_class)
+
+        self.assertEqual(
+            [(item.external_id, item.item_type) for item in result.items],
+            [("5", "quiz"), ("7", "quiz"), ("8", "assignment")],
+        )
+
+    def test_quiz_is_labelled_in_the_message(self):
+        from accounts.notifications import render_notification
+
+        self.fake.assignments_by_course[101] = [self.assignment(5, quiz=True)]
+        self.fake.submissions = {5: "unsubmitted"}
+
+        result = collect_for_user(self.user, self.now, client_class=self.fake_class)
+
+        self.assertIn("[퀴즈] 과제 5", render_notification(result, self.now))
 
     def test_assignment_failure_is_not_reported_as_empty(self):
         self.fake.assignment_errors.add(101)

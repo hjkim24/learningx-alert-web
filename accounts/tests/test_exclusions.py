@@ -189,7 +189,7 @@ class ExclusionViewTests(TestCase):
 
     def test_malformed_input_is_rejected(self):
         for field, value in (
-            ("item_type", "quiz"),
+            ("item_type", "discussion"),
             ("external_id", ""),
             ("external_id", "x" * 129),
             ("due_at", "not-a-date"),
