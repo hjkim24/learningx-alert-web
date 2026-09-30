@@ -85,7 +85,7 @@ def weekdays_summary(mask):
 class AlarmTime(models.Model):
     """One alarm-clock style slot: a KST time on chosen weekdays."""
 
-    MAX_PER_RULE = 5
+    MAX_PER_RULE = 3
 
     rule = models.ForeignKey(
         NotificationRule,
