@@ -1,3 +1,5 @@
+from urllib.parse import urlsplit
+
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import render
@@ -7,6 +9,7 @@ from django.views.generic import RedirectView, TemplateView
 
 from accounts.admin_site import feedback_admin_site
 from accounts.views import dashboard
+from accounts.schools import enabled_schools
 from config import csp, pwa
 
 
@@ -18,7 +21,13 @@ def privacy_policy(request) -> HttpResponse:
     return render(
         request,
         "legal/privacy.html",
-        {"contact_email": settings.PRIVACY_CONTACT_EMAIL},
+        {
+            "contact_email": settings.PRIVACY_CONTACT_EMAIL,
+            "schools": [
+                {"name": school.name, "host": urlsplit(school.canvas_base_url).hostname}
+                for school in enabled_schools()
+            ],
+        },
     )
 
 

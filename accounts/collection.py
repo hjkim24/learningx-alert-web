@@ -12,6 +12,7 @@ from learningx_alert.network import UnsafeUrlError
 from learningx_alert.probe import MATERIAL_TYPES
 
 from .models import CanvasConnection, CourseSelection, ExcludedItem, ensure_default_rule
+from .schools import school_of
 from .services import decrypt_secret
 
 
@@ -335,10 +336,11 @@ def _token_rejected(client):
     return False
 
 
-def default_learningx_factory(canvas_client):
-    if not settings.LEARNINGX_ALLOWED_HOSTS:
+def default_learningx_factory(canvas_client, school=None):
+    hosts = school.learningx_hosts if school is not None else settings.LEARNINGX_ALLOWED_HOSTS
+    if not hosts:
         return None
-    return LearningXClient(canvas_client, set(settings.LEARNINGX_ALLOWED_HOSTS))
+    return LearningXClient(canvas_client, set(hosts))
 
 
 @sensitive_variables("token")
@@ -346,9 +348,13 @@ def collect_for_user(
     user,
     now,
     client_class=CanvasClient,
-    learningx_factory=default_learningx_factory,
+    learningx_factory=None,
 ):
     connection = CanvasConnection.objects.get(user=user)
+    school = school_of(connection)
+    if learningx_factory is None:
+        def learningx_factory(canvas_client):
+            return default_learningx_factory(canvas_client, school)
     if connection.needs_reconnect:
         return CollectionResult((), (RECONNECT_OUTCOME,))
     rule = ensure_default_rule(user)
@@ -356,7 +362,7 @@ def collect_for_user(
         CourseSelection.objects.filter(alert_selection_filter(), user=user)
     )
     token = decrypt_secret(connection.encrypted_token)
-    client = client_class(settings.CANVAS_BASE_URL, token)
+    client = client_class(school.canvas_base_url, token)
     if _token_rejected(client):
         CanvasConnection.objects.filter(pk=connection.pk).update(needs_reconnect=True)
         return CollectionResult((), (RECONNECT_OUTCOME,))

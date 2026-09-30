@@ -85,7 +85,7 @@ class NewUserOnboardingTests(TestCase):
         self.client.force_login(self.user)
 
     def connect(self):
-        def fake_store(*, user, token):
+        def fake_store(*, user, token, school=None):
             return CanvasConnection.objects.create(
                 user=user,
                 canvas_user_id="1",
@@ -97,7 +97,7 @@ class NewUserOnboardingTests(TestCase):
         with patch("accounts.views.verify_and_store_connection", side_effect=fake_store), patch(
             "accounts.views.sync_courses", return_value=CourseSelection.objects.none()
         ):
-            return self.client.post(reverse("canvas_connect"), {"token": "secret"})
+            return self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "secret"})
 
     def test_connecting_canvas_creates_the_default_schedule(self):
         self.connect()
@@ -106,7 +106,7 @@ class NewUserOnboardingTests(TestCase):
 
     def test_failed_connection_creates_nothing(self):
         with patch("accounts.views.verify_and_store_connection", side_effect=CanvasConnectionError):
-            self.client.post(reverse("canvas_connect"), {"token": "bad"})
+            self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "bad"})
 
         self.assertFalse(NotificationRule.objects.filter(user=self.user).exists())
 

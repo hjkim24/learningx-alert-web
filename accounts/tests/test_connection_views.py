@@ -36,7 +36,7 @@ class CanvasConnectionViewTests(TestCase):
         )
 
     def test_connect_requires_login(self):
-        response = self.client.post(reverse("canvas_connect"), {"token": "secret"})
+        response = self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "secret"})
 
         self.assertRedirects(
             response,
@@ -56,7 +56,7 @@ class CanvasConnectionViewTests(TestCase):
 
         response = self.client.post(
             reverse("canvas_connect"),
-            {"token": " secret-value "},
+            {"school": "skku", "token": " secret-value "},
             follow=True,
         )
 
@@ -78,7 +78,7 @@ class CanvasConnectionViewTests(TestCase):
 
         response = self.client.post(
             reverse("canvas_connect"),
-            {"token": "submitted-secret-must-not-appear"},
+            {"school": "skku", "token": "submitted-secret-must-not-appear"},
             follow=True,
         )
 
@@ -98,7 +98,7 @@ class CanvasConnectionViewTests(TestCase):
         self.client.raise_request_exception = False
 
         with self.assertLogs("django.request", level="ERROR"):
-            response = self.client.post(reverse("canvas_connect"), {"token": token})
+            response = self.client.post(reverse("canvas_connect"), {"school": "skku", "token": token})
 
         self.assertEqual(response.status_code, 500)
         self.assertNotContains(response, token, status_code=500)
@@ -114,7 +114,7 @@ class CanvasConnectionViewTests(TestCase):
 
         response = self.client.post(
             reverse("canvas_connect"),
-            {"token": token},
+            {"school": "skku", "token": token},
             follow=True,
         )
 
@@ -130,7 +130,7 @@ class CanvasConnectionViewTests(TestCase):
         client.force_login(self.user)
         client.get(reverse("dashboard"))
 
-        response = client.post(reverse("canvas_connect"), {"token": "secret"})
+        response = client.post(reverse("canvas_connect"), {"school": "skku", "token": "secret"})
 
         self.assertEqual(response.status_code, 403)
         self.assertFalse(CanvasConnection.objects.exists())
