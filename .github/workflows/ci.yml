@@ -1,0 +1,122 @@
+# Tests on every PR; on a push to main, tests then a production deploy.
+#
+# The deploy job reaches the VM only over Tailscale (an ephemeral node tagged
+# tag:ci), with a dedicated SSH key that the VM accepts only from tailnet
+# addresses. Secrets live in the `production` environment, which only main can
+# use. See docs/operations/github-actions-deploy.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push to a PR supersedes the older run; runs on main are never
+  # cancelled, so a deploy in progress always finishes.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        # Dependencies only (no `pip install .`): building the package would
+        # leave build/ in the worktree, which deploy.sh refuses.
+        run: |
+          python - <<'EOF' > "$RUNNER_TEMP/requirements.txt"
+          import tomllib
+          print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]))
+          EOF
+          python -m pip install --disable-pip-version-check -r "$RUNNER_TEMP/requirements.txt"
+      - run: python manage.py test -v 1
+      - run: python -m unittest discover -s tests
+      - run: bash scripts/tests/deploy_contract_test.sh
+      - run: bash deploy/tests/runtime_scripts_test.sh
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Skip docs-only changes
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [[ "$EVENT" != "push" || -z "$BEFORE" || "$BEFORE" =~ ^0+$ ]] \
+              || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" \
+              | grep -Ev '^(docs/|deploy/grafana/|\.github/)|\.md$' | grep -q .; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Only docs changed; not deploying." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        if: steps.changes.outputs.deploy == 'true'
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        if: steps.changes.outputs.deploy == 'true'
+        run: |
+          python - <<'EOF' > "$RUNNER_TEMP/requirements.txt"
+          import tomllib
+          print("\n".join(tomllib.load(open("pyproject.toml", "rb"))["project"]["dependencies"]))
+          EOF
+          python -m pip install --disable-pip-version-check -r "$RUNNER_TEMP/requirements.txt"
+
+      - name: Join the tailnet
+        if: steps.changes.outputs.deploy == 'true'
+        uses: tailscale/github-action@d1b6cd204f8dceda5b3eaad7f1f767be390056cd # v4.2.0
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+          ping: ${{ vars.DEPLOY_HOST }}
+
+      - name: Configure SSH
+        if: steps.changes.outputs.deploy == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 0600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host %s\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n' "$DEPLOY_HOST" > ~/.ssh/config
+          printf 'SSH_TARGET=ubuntu@%s\n' "$DEPLOY_HOST" > .deploy.env
+
+      - name: Deploy
+        if: steps.changes.outputs.deploy == 'true'
+        env:
+          PYTHON_BIN: python
+        run: ./scripts/deploy.sh
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519 .deploy.env
