@@ -13,6 +13,13 @@
     </form>
   </header>
 
+  {% if push_gone %}
+    <div class="reconnect-notice" role="alert">
+      <strong>{{ push_gone.destination_label|default:"브라우저" }} 푸시가 만료돼서 알림을 받지 못했어요.</strong>
+      <p>{{ push_gone.finished_at|date:"n월 j일 H:i" }} 알림부터 이 기기로는 가지 않아요. 그 기기에서 이 사이트(홈 화면 앱)를 열고 <a href="{% url 'destination_settings' %}">알림 대상</a>에서 다시 켜 주세요.</p>
+    </div>
+  {% endif %}
+
   {% if connection.needs_reconnect %}
     <div class="reconnect-notice" role="alert">
       <strong>Canvas를 다시 연결해 주세요.</strong>

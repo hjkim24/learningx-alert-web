@@ -1739,6 +1739,15 @@ button[aria-busy="true"] {
 }
 
 /* ---------- Destinations (multi) + browser push ---------- */
+.delivery-meta {
+  flex-basis: 100%;
+}
+
+.delivery-failed {
+  color: var(--clay);
+  font-weight: 700;
+}
+
 .destination-list {
   list-style: none;
   margin: 12px 0 0;
