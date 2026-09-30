@@ -105,7 +105,9 @@ git status --short
 scripts/deploy.sh
 ```
 
-배포 스크립트는 로컬 테스트, 리비전별 릴리스 업로드, 이미지 빌드와 Git 리비전 태그 보존, Vault 시크릿 가져오기, 배포 전 DB 백업, Django 점검·마이그레이션, `current` 링크 전환, systemd 재시작, 공개 health check 순서로 실행된다.
+배포 스크립트는 로컬 테스트, 리비전별 릴리스 업로드, 이미지 빌드와 Git 리비전 태그 보존, Vault 시크릿 가져오기, 배포 전 DB 백업, Django 점검·마이그레이션, `current` 링크 전환, 컨테이너 교체, 공개 health check 순서로 실행된다.
+
+컨테이너 교체는 서비스를 내리지 않는다. 서비스가 이미 떠 있으면 `docker compose up -d --wait`로 바뀐 컨테이너(web, scheduler)만 새로 만들고, Caddy는 그동안 요청을 붙잡아 두었다가(`lb_try_duration 30s`) 새 web으로 넘긴다. 마지막에 Caddy만 강제로 다시 만들어(약 1초) 새 릴리스의 Caddyfile과 정적 파일을 붙인다. 서비스가 꺼져 있을 때만 `systemctl restart`를 쓴다.
 
 운영 확인:
 

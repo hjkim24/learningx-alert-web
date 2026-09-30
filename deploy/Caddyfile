@@ -19,7 +19,11 @@
 		file_server
 	}
 
-	reverse_proxy web:8000
+	reverse_proxy web:8000 {
+		# Hold requests while web is being replaced during a deploy.
+		lb_try_duration 30s
+		lb_try_interval 250ms
+	}
 }
 
 # Tailnet-only entrance for the feedback admin. Bound to the host's loopback
@@ -36,6 +40,8 @@ http://:8081 {
 		}
 		reverse_proxy web:8000 {
 			header_up X-Forwarded-Proto https
+			lb_try_duration 30s
+			lb_try_interval 250ms
 		}
 	}
 	handle {
