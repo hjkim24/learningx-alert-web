@@ -8,6 +8,7 @@ from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, Request, build_opener
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
 from django.views.decorators.debug import sensitive_variables
 
@@ -249,12 +250,16 @@ def target_fingerprint(kind, secret_target):
 
 @sensitive_variables()
 def _create_destination(user, kind, secret, fingerprint, label=""):
-    if Destination.objects.filter(user=user, target_fingerprint=fingerprint).exists():
-        raise DuplicateDestinationError
-    if Destination.objects.filter(user=user).count() >= Destination.MAX_PER_USER:
-        raise DestinationLimitError
     try:
         with transaction.atomic():
+            # MySQL cannot enforce the conditional unique constraint on
+            # target_fingerprint, so serialise per user: a concurrent second
+            # request waits here and then sees the first one's row.
+            get_user_model().objects.select_for_update().filter(pk=user.pk).exists()
+            if Destination.objects.filter(user=user, target_fingerprint=fingerprint).exists():
+                raise DuplicateDestinationError
+            if Destination.objects.filter(user=user).count() >= Destination.MAX_PER_USER:
+                raise DestinationLimitError
             return Destination.objects.create(
                 user=user,
                 kind=kind,
