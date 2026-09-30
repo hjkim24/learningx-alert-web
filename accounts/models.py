@@ -147,7 +147,7 @@ class Destination(models.Model):
     webhook URL for Discord/Slack, the PushSubscription JSON for web push.
     """
 
-    MAX_PER_USER = 10
+    MAX_PER_USER = 3
 
     class Kind(models.TextChoices):
         DISCORD = "discord", "Discord"
