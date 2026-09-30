@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import time
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -394,7 +395,16 @@ def run_due_rules(
     sender=send_to_destination,
 ):
     runs = claim_due_runs(now) if claimed_runs is None else claimed_runs
+    scan_clock = time.monotonic()
+    if runs:
+        _safe_record(telemetry.scan_batch, len(runs))
     for run in runs:
+        run_clock = time.monotonic()
+        if run.scheduled_for:
+            _safe_record(
+                telemetry.run_actual_delay,
+                max(0.0, (datetime.now(UTC) - run.scheduled_for).total_seconds()),
+            )
         try:
             # One trace per run: Canvas/LearningX/webhook calls and DB queries
             # nest under it. Only the run id and final status are attached.
@@ -411,7 +421,17 @@ def run_due_rules(
                 now,
                 "run_failed",
             )
+        _safe_record(telemetry.run_duration, time.monotonic() - run_clock)
+    if runs:
+        _safe_record(telemetry.scan_duration, time.monotonic() - scan_clock)
     return runs
+
+
+def _safe_record(instrument, value):
+    try:
+        instrument.record(value)
+    except Exception:  # telemetry must never break a run
+        pass
 
 
 def reconcile_interrupted_runs(

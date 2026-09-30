@@ -4,7 +4,10 @@
 
 {% block content %}
   <section class="notice-page" aria-labelledby="denied-title">
-    {% if signup_open %}
+    {% if signup_full %}
+      <h1 id="denied-title">지금은 새로 가입할 수 없어요</h1>
+      <p>가입 인원이 다 찼어요. 자리가 생기면 다시 열어 둘게요.</p>
+    {% elif signup_open %}
       <h1 id="denied-title">이 계정으로는 들어올 수 없어요</h1>
       <p>Google에서 이메일 인증을 마친 계정만 쓸 수 있어요.</p>
     {% else %}

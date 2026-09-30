@@ -99,6 +99,26 @@ class RunTelemetryTests(TestCase):
             self.assertFalse({"user", "user_id", "run_id", "course"} & set(call.args[1]))
         self.assertIn("WARNING:accounts.scheduling:run finished", logs.output[0])
 
+    def test_scan_records_queue_wait_and_durations_without_attributes(self):
+        from datetime import timedelta
+
+        self.run.scheduled_for = timezone.now() - timedelta(seconds=45)
+        with mock.patch.object(telemetry, "run_actual_delay") as actual, \
+                mock.patch.object(telemetry, "run_duration") as duration, \
+                mock.patch.object(telemetry, "scan_duration") as scan, \
+                mock.patch.object(telemetry, "scan_batch") as batch, \
+                mock.patch.object(scheduling, "execute_run"):
+            scheduling.run_due_rules(timezone.now(), claimed_runs=[self.run, self.run])
+
+        batch.record.assert_called_once_with(2)
+        self.assertEqual(actual.record.call_count, 2)
+        self.assertAlmostEqual(actual.record.call_args.args[0], 45, delta=2)
+        self.assertEqual(duration.record.call_count, 2)
+        scan.record.assert_called_once()
+        for instrument in (actual, duration, scan, batch):
+            for call in instrument.record.call_args_list:
+                self.assertEqual(len(call.args), 1)  # value only, no attributes
+
     def test_metrics_are_off_without_endpoint(self):
         with mock.patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):
             self.assertFalse(telemetry.configure_metrics("test"))
