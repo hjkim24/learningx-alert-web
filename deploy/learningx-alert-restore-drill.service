@@ -1,0 +1,14 @@
+[Unit]
+Description=Monthly LearningX Alert restore drill (throwaway MySQL, never the live DB)
+After=network-online.target docker.service learningx-alert.service
+Wants=network-online.target
+Requires=docker.service
+ConditionPathExists=/etc/learningx-alert/runtime.env
+ConditionPathExists=/opt/learningx-alert/current/deploy/restore-drill-report.sh
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/learningx-alert/runtime.env
+ExecStart=/opt/learningx-alert/current/deploy/restore-drill-report.sh
+Nice=10
+TimeoutStartSec=1800

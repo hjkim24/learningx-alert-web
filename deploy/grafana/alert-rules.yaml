@@ -292,3 +292,148 @@ groups:
           isPaused: false
           notification_settings:
             receiver: Discord
+        - uid: lx-restore-drill-ok
+          title: 월간 복원 연습 성공
+          condition: C
+          data:
+            - refId: A
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: sum(count_over_time({service_name="learningx-alert-ops"} |= "restore drill ok" [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: A
+            - refId: B
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: max(max_over_time({service_name="learningx-alert-ops"} |= "restore drill ok" | regexp `rows=(?P<v>[0-9]+)` | unwrap v [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: B
+            - refId: D
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: max(max_over_time({service_name="learningx-alert-ops"} |= "restore drill ok" | regexp `tables=(?P<v>[0-9]+)` | unwrap v [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: D
+            - refId: E
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: max(max_over_time({service_name="learningx-alert-ops"} |= "restore drill ok" | regexp `restore_seconds=(?P<v>[0-9]+)` | unwrap v [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: E
+            - refId: F
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: max(max_over_time({service_name="learningx-alert-ops"} |= "restore drill ok" | regexp `differences=(?P<v>[0-9]+)` | unwrap v [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: F
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: 테이블 {{ with $values.D }}{{ humanize .Value }}{{ end }}개, {{ with $values.B }}{{ humanize .Value }}{{ end }}행, 복원 {{ with $values.E }}{{ humanize .Value }}{{ end }}초, 행 수가 다른 테이블 {{ with $values.F }}{{ humanize .Value }}{{ end }}개 (백업 뒤 쌓인 데이터면 정상)
+            summary: 이번 달 백업 복원 연습이 성공했어요. 최신 백업을 임시 DB에 복원해 운영 DB와 행 수를 비교했어요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
+        - uid: lx-restore-drill-failed
+          title: 월간 복원 연습 실패
+          condition: C
+          data:
+            - refId: A
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: sum(count_over_time({service_name="learningx-alert-ops"} |= "restore drill failed" [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: A
+            - refId: B
+              queryType: instant
+              relativeTimeRange:
+                from: 3600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: max(max_over_time({service_name="learningx-alert-ops"} |= "restore drill failed" | regexp `exit_code=(?P<v>[0-9]+)` | unwrap v [1h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: B
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: 종료 코드 {{ with $values.B }}{{ humanize .Value }}{{ end }}
+            summary: 백업 복원 연습이 실패했어요. VM에서 journalctl -u learningx-alert-restore-drill로 원인을 확인하세요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord

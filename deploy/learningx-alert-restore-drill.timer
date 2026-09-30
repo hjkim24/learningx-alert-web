@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly LearningX Alert restore drill (1st of the month, 04:00 KST)
+
+[Timer]
+OnCalendar=*-*-01 04:00:00 Asia/Seoul
+Persistent=true
+Unit=learningx-alert-restore-drill.service
+
+[Install]
+WantedBy=timers.target

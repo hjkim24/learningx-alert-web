@@ -133,6 +133,8 @@ docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps --inte
 install -m 0644 deploy/learningx-alert.service /etc/systemd/system/learningx-alert.service
 install -m 0644 deploy/learningx-alert-backup.service /etc/systemd/system/learningx-alert-backup.service
 install -m 0644 deploy/learningx-alert-backup.timer /etc/systemd/system/learningx-alert-backup.timer
+install -m 0644 deploy/learningx-alert-restore-drill.service /etc/systemd/system/learningx-alert-restore-drill.service
+install -m 0644 deploy/learningx-alert-restore-drill.timer /etc/systemd/system/learningx-alert-restore-drill.timer
 new_link="/opt/learningx-alert/.current-new"
 rm -f "$new_link"
 ln -s "$release_dir" "$new_link"
@@ -154,6 +156,7 @@ else
     systemctl restart learningx-alert.service
 fi
 systemctl enable --now learningx-alert-backup.timer
+systemctl enable --now learningx-alert-restore-drill.timer
 REMOTE_DEPLOY
 
 for ((attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++)); do

@@ -109,6 +109,9 @@
   | `lx-feedback-received` | 로그 "feedback received" |
   | `lx-school-capacity` | 학교별 연결/정원이 0.8 초과, 5분 지속 |
   | `lx-push-failures` | 최근 24시간 브라우저 푸시 실패가 2건 이상이면서 실패율 30% 초과, 5분 지속 |
+  | `lx-restore-drill-ok` / `lx-restore-drill-failed` | 월간 복원 연습 결과 (로그 `restore drill ok/failed`, 서비스 이름 `learningx-alert-ops`) |
+
+- **의존성:** Dependabot(`.github/dependabot.yml`)이 매주 월요일 pip, GitHub Actions, Docker 업데이트 PR을 연다. 머지하면 배포되므로 일반 변경처럼 검토한다. CI의 `pip-audit`은 경고만 남기고 배포를 막지 않는다(사용자 결정).
 
   - 규칙마다 annotation `summary`(무슨 일인지)와 `description`(값의 뜻)이 있다.
 - **Discord 서식:** 알림 템플릿 `lx-discord`(사본 `deploy/grafana/discord-template.tmpl`). contact point는 title `{{ template "lx.discord.title" . }}`, message `{{ template "lx.discord.message" . }}`, `use_embed_description=true`로 설정했다.

@@ -109,7 +109,7 @@ for excluded in .deploy.env .git/ .env db.sqlite3 terraform.tfstate tfplan /opt/
 done
 
 ssh_calls=$(<"$ssh_log")
-for expected in "for command_name in docker oci sqlite3 systemctl sudo rsync" "install it before deployment" "docker compose version" "docker compose" "fetch-secrets.sh" "backup.sh" "manage.py check --deploy" "manage.py migrate --noinput" "systemctl restart learningx-alert.service" "systemctl is-active --quiet learningx-alert.service" "up -d --wait --remove-orphans" "--force-recreate caddy" "ln -s"; do
+for expected in "for command_name in docker oci sqlite3 systemctl sudo rsync" "install it before deployment" "docker compose version" "docker compose" "fetch-secrets.sh" "backup.sh" "manage.py check --deploy" "manage.py migrate --noinput" "systemctl restart learningx-alert.service" "systemctl is-active --quiet learningx-alert.service" "up -d --wait --remove-orphans" "--force-recreate caddy" "learningx-alert-restore-drill.timer" "ln -s"; do
     assert_contains "$ssh_calls" "$expected"
 done
 assert_contains "$ssh_calls" 'docker image tag "learningx-alert:${IMAGE_TAG:-local}" "learningx-alert:$revision"'
