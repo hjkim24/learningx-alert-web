@@ -842,13 +842,54 @@ button[aria-busy="true"] {
   margin: 0;
 }
 
+/* Button sits on the input's row; the helper text goes underneath both,
+   so the button lines up with the input instead of the helper text. */
 .token-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 8px;
   margin-bottom: 16px;
 }
 
 .token-form .field-row {
-  flex: 1 1 18rem;
-  margin: 0;
+  display: contents;
+}
+
+.token-form .field-row label,
+.token-form .field-row small {
+  grid-column: 1 / -1;
+}
+
+.token-form .field-row label {
+  grid-row: 1;
+}
+
+.token-form .field-row input {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.token-form .primary-button {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.token-form .field-row small {
+  grid-row: 3;
+}
+
+@media (max-width: 760px) {
+  .token-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .token-form .primary-button {
+    grid-column: 1;
+    grid-row: 4;
+    justify-self: start;
+  }
 }
 
 /* ---------- Course selection ---------- */
