@@ -51,6 +51,8 @@ DEFAULT_EXCEPTION_REPORTER_FILTER = "config.filters.AlwaysSafeExceptionReporterF
 TEST_RUNNER = "config.test_runner.AppTestRunner"
 LOGGING = logging_config(os.environ.get("LOG_LEVEL", "INFO").upper())
 RATE_LIMITS_ENABLED = True
+# Scheduled runs processed at once per scan (threads; runs are I/O-bound).
+SCHEDULER_CONCURRENCY = max(1, int(os.environ.get("SCHEDULER_CONCURRENCY", "4")))
 
 INSTALLED_APPS = [
     "django.contrib.auth",
