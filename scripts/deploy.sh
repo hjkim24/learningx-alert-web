@@ -139,7 +139,20 @@ ln -s "$release_dir" "$new_link"
 mv -Tf "$new_link" /opt/learningx-alert/current
 systemctl daemon-reload
 systemctl enable learningx-alert.service learningx-alert-backup.timer
-systemctl restart learningx-alert.service
+if systemctl is-active --quiet learningx-alert.service; then
+    # Replace only what changed instead of `restart` (a full `down` + `up`
+    # took the site offline ~25 s per deploy). web and scheduler are
+    # recreated because their image changed; Caddy keeps serving meanwhile
+    # and retries the web upstream (lb_try_duration in deploy/Caddyfile).
+    compose=(docker compose -p learningx-alert -f /opt/learningx-alert/current/compose.prod.yaml)
+    (cd /opt/learningx-alert/current && "${compose[@]}" up -d --wait --remove-orphans)
+    # Caddy's bind mounts (Caddyfile, staticfiles) resolved the `current`
+    # symlink when it was created, so it still points at the previous
+    # release; recreate it (about a second) to pick up this one.
+    (cd /opt/learningx-alert/current && "${compose[@]}" up -d --wait --no-deps --force-recreate caddy)
+else
+    systemctl restart learningx-alert.service
+fi
 systemctl enable --now learningx-alert-backup.timer
 REMOTE_DEPLOY
 

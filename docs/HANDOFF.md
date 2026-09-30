@@ -162,16 +162,15 @@ Grafana 쪽 변경(코드 밖):
 1. **CSP를 차단 모드로 바꾸기**
    - 전제: 지난 1~2주 동안 `csp violation` 경고 로그가 없어야 한다.
    - 확인: Grafana Loki `{service_name="learningx-alert-web"} |= "csp violation"` 또는 `docker logs learningx-alert-web-1 | grep "csp violation"`
-   - 바꾸는 법:
-     - 방법 1: `config/settings.py`의 `CSP_REPORT_ONLY` 기본값을 `"0"`으로 바꾼다.
-     - 방법 2: `compose.prod.yaml`의 web environment에 `CSP_REPORT_ONLY: ${CSP_REPORT_ONLY:-0}`을 추가한다.
-     - 지금 compose에는 이 값이 없어서, 설정의 기본값 `"1"`(report-only)이 쓰인다.
+   - 바꾸는 법: 지금 코드에는 차단 모드가 없다. `CSP_REPORT_ONLY=0`은 차단이 아니라 CSP 헤더를 아예 끈다. `config/csp.py`의 미들웨어에 차단 모드를 추가해야 한다.
+     - 예: 설정 `CSP_ENFORCE=1`이면 같은 `POLICY`를 `Content-Security-Policy` 헤더로 보낸다. 보고 받기를 유지하려면 `report-uri /csp-report/`를 정책에 둔다.
+     - 설정을 새로 만들면 compose(web environment)에도 넣는다.
    - 테스트: `config/csp.py` 관련 테스트를 확인하고 필요하면 고친다.
    - 배포 뒤 확인할 페이지: 로그인(Google 버튼), 대시보드, 알림 설정(시간 선택기), PWA 푸시 등록, 토큰 가이드 이미지, 피드백 대화상자. 실제로 열어서 콘솔 오류가 없는지 본다.
    - 위반이 있었다면 원인을 먼저 고친다. 인라인 스크립트나 외부 도메인이 원인일 수 있다.
 2. **HSTS를 1년으로 올리기**
    - 전제: 몇 주 동안 HTTPS 문제가 없어야 한다.
-   - 바꾸는 법: `deploy/Caddyfile`의 `Strict-Transport-Security "max-age=3600"`을 `"max-age=31536000"`으로 바꾼다.
+   - 바꾸는 법: `deploy/Caddyfile`의 `Strict-Transport-Security "max-age=3600"`과 `config/settings.py`의 `SECURE_HSTS_SECONDS`를 함께 `31536000`으로 바꾼다.
    - `includeSubDomains`와 `preload`는 `sobok-app.com`의 다른 서브도메인에 영향이 있으므로 넣지 않는다. 필요하면 사용자에게 묻는다.
    - 되돌리기 어려운 변경이다. 브라우저가 1년 동안 기억한다. 적용하기 전에 사용자에게 확인받는다.
 
