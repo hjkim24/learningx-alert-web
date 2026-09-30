@@ -2760,3 +2760,254 @@ body:has(.sticky-actions) .feedback-fab {
     padding: 16px 48px 16px 16px;
   }
 }
+
+/* ---------- Mobile fit (≤760px) ----------
+   Small phones (iPhone SE, 320px) and touch use. Desktop rules above are
+   untouched; everything here only narrows padding, lets content wrap, and
+   brings tap targets to 44px (DESIGN.md button height). */
+@media (max-width: 760px) {
+  /* A `1fr` track grows to its content's min width (a long course code), which
+     pushed cards past the screen edge. minmax(0, 1fr) keeps them inside. */
+  .page-heading,
+  .split,
+  .field-pair,
+  .preview-layout,
+  .dashboard-layout,
+  .dashboard-layout.is-compact,
+  .history-grid,
+  .status-rail,
+  .destination-summary,
+  .run-meta,
+  .outcome {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dashboard-layout > *,
+  .dashboard-side > *,
+  .preview-layout > * {
+    min-width: 0;
+  }
+
+  .panel,
+  .history-panel,
+  .preview-section {
+    padding: 20px 18px;
+  }
+
+  /* Long titles and course codes wrap instead of widening the card. */
+  .preview-item-text strong,
+  .preview-item-text span,
+  .destination-name strong,
+  .history-list a,
+  .outcome,
+  .run-meta dd {
+    overflow-wrap: anywhere;
+  }
+
+  /* Item rows: badge and action on top, the title gets the full width below. */
+  .preview-list .preview-item,
+  .excluded-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "badge action"
+      "text text";
+    align-items: center;
+    gap: 6px 12px;
+  }
+
+  .preview-list .preview-item .type-badge,
+  .excluded-row .type-badge {
+    grid-area: badge;
+    justify-self: start;
+  }
+
+  .preview-list .preview-item .preview-item-text,
+  .excluded-row .preview-item-text {
+    grid-area: text;
+  }
+
+  .preview-list .preview-item .exclude-form,
+  .excluded-row form {
+    grid-area: action;
+    justify-self: end;
+    margin: 0;
+  }
+
+  /* Recent runs: date on its own line when the row is narrow. */
+  .history-list li,
+  .problem-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .history-list li code,
+  .problem-row code {
+    grid-column: 1 / -1;
+  }
+
+  /* Weekday chips share the row evenly instead of overflowing it. */
+  .alarm-main,
+  .alarm-main .weekday-picker {
+    width: 100%;
+  }
+
+  .weekday-picker {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .day-chip {
+    display: block;
+  }
+
+  .day-chip span {
+    width: 100%;
+    height: 2.75rem;
+  }
+
+  .alarm-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* 44px tap targets. */
+  .site-nav a,
+  .text-button,
+  .time-option,
+  .time-footer .time-done,
+  .school-option span {
+    min-height: 44px;
+  }
+
+  .site-nav a {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .text-button,
+  .install-dismiss {
+    min-width: 44px;
+  }
+
+  .install-dismiss {
+    height: 44px;
+    top: 6px;
+    right: 6px;
+  }
+
+  .switch {
+    padding: 9px 0;
+  }
+
+  .wordmark {
+    min-height: 44px;
+  }
+
+  .account-link {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .panel > summary {
+    min-height: 44px;
+  }
+
+  .history-list a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* The whole step card is the link, not just its words. */
+  .status-rail li {
+    position: relative;
+  }
+
+  .status-rail a::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  /* Header on 320px: keep the wordmark and "로그아웃" on one line each. */
+  .site-header {
+    gap: 8px;
+  }
+
+  .wordmark span,
+  .account-menu .text-button {
+    white-space: nowrap;
+  }
+
+  .status-rail a {
+    word-break: keep-all;
+  }
+
+  /* Course toggles: two equal buttons under the course name. */
+  .course-item .toggle-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toggle {
+    min-height: 44px;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  /* Save bar: hint and "저장" on the first row, the preview button below, so
+     no label has to break across lines on a 320px screen. */
+  .sticky-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "hint save";
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 12px 10px 16px;
+  }
+
+  .sticky-actions:has(.secondary-button) {
+    grid-template-areas:
+      "hint save"
+      "preview preview";
+  }
+
+  .sticky-actions > span {
+    grid-area: hint;
+    margin: 0;
+  }
+
+  .sticky-actions .primary-button {
+    grid-area: save;
+  }
+
+  .sticky-actions .secondary-button {
+    grid-area: preview;
+    width: 100%;
+  }
+
+  /* The alarm save bar keeps its original mobile form: one full-width button. */
+  .sticky-actions.save-bar {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "save";
+  }
+
+  .sticky-actions.save-bar .primary-button {
+    width: 100%;
+  }
+
+  body:has(.sticky-actions .secondary-button) .feedback-fab {
+    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Room below the last card so the floating feedback button never covers it. */
+  body {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
