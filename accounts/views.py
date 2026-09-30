@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from datetime import datetime
 
 from django.contrib import messages
@@ -31,6 +32,7 @@ from .models import (
     Destination,
     ExcludedItem,
     NotificationRule,
+    RunItem,
     ScheduledRun,
 )
 from . import throttle, webpush
@@ -141,8 +143,72 @@ def dashboard(request):
             "rule": rule,
             "active_alarms": active_alarms(rule) if rule else [],
             "selected_course_count": selected_course_count,
+            **(_remaining_items(request.user, timezone.now()) if connection else {}),
         },
     )
+
+
+@dataclass(frozen=True)
+class RemainingItem:
+    canvas_course_id: int
+    course_name: str
+    item_type: str
+    external_id: str
+    title: str
+    due_at: datetime
+
+
+def _remaining_items(user, now):
+    """Unfinished items as of the latest scheduled run, with no Canvas call.
+
+    The run stored what it alerted (unsubmitted, not muted, within the rule's
+    lookahead). From that snapshot keep what is still due and not muted since.
+    Items submitted after the run stay listed until the next run refreshes it.
+    """
+    snapshot = (
+        ScheduledRun.objects.filter(
+            user=user, finished_at__isnull=False, course_results__isnull=False
+        )
+        .distinct()
+        .only("id", "scheduled_for")
+        .first()
+    )
+    if snapshot is None:
+        return {"remaining_snapshot": None}
+    results = list(
+        CourseRunResult.objects.filter(run=snapshot).only(
+            "canvas_course_id", "course_name", "status"
+        )
+    )
+    course_names = {result.canvas_course_id: result.course_name for result in results}
+    muted = {
+        (entry.canvas_course_id, entry.item_type, entry.external_id, entry.due_at)
+        for entry in ExcludedItem.objects.filter(user=user).only(
+            "canvas_course_id", "item_type", "external_id", "due_at"
+        )
+    }
+    items = [
+        RemainingItem(
+            canvas_course_id=row.canvas_course_id,
+            course_name=course_names.get(row.canvas_course_id, ""),
+            item_type=row.item_type,
+            external_id=row.external_id,
+            title=row.title,
+            due_at=row.due_at,
+        )
+        for row in RunItem.objects.filter(run=snapshot, due_at__gte=now)
+        if (row.canvas_course_id, row.item_type, row.external_id, row.due_at) not in muted
+    ]
+    return {
+        "remaining_snapshot": snapshot,
+        "remaining_count": len(items),
+        "remaining_groups": _group_items_by_day(items, now),
+        "remaining_failed_courses": sorted(
+            result.course_name
+            for result in results
+            if result.status == CourseRunResult.Status.FAILED
+        ),
+    }
 
 
 @login_required

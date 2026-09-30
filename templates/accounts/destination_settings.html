@@ -29,7 +29,8 @@
         <button class="primary-button" type="button" data-push-subscribe hidden>이 브라우저에서 알림 받기</button>
         <button class="secondary-button" type="button" data-push-unsubscribe hidden>이 브라우저 알림 해제</button>
       </div>
-      <p class="fine-print" data-push-ios hidden>iPhone·iPad는 Safari 공유 버튼에서 "홈 화면에 추가"를 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어요(iOS 16.4 이상). <a class="guide-link" href="{% url 'pwa_install_guide' %}">추가하는 방법 보기</a></p>
+      <p class="fine-print">휴대폰에서 받으려면 <a class="guide-link" href="{% url 'pwa_install_guide' %}">홈 화면에 추가하고 알림 켜는 방법</a>을 보세요.</p>
+      <p class="fine-print" data-push-ios hidden>iPhone·iPad는 Safari 공유 버튼에서 "홈 화면에 추가"를 한 다음, 홈 화면 아이콘으로 열어야 알림을 켤 수 있어요(iOS 16.4 이상).</p>
       <p class="fine-print">기기가 꺼져 있거나 알림을 꺼 두면 늦게 오거나 안 보일 수 있어요. 놓치면 안 되는 알림이라면 웹훅도 같이 등록해 두세요.</p>
     </section>
   {% endif %}

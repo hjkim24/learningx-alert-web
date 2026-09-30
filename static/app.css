@@ -733,6 +733,38 @@ button[aria-busy="true"] {
   margin: 0;
 }
 
+/* Dashboard: remaining items on the left, next/recent runs stacked on the right. */
+.dashboard-layout {
+  margin: 0 24px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.dashboard-layout .panel,
+.dashboard-side .history-panel {
+  margin: 0;
+}
+
+.dashboard-side {
+  display: grid;
+  gap: 16px;
+}
+
+.remaining-heading {
+  margin-bottom: 16px;
+}
+
+.remaining-heading h2,
+.remaining-heading p {
+  margin: 0 0 4px;
+}
+
+.remaining-partial {
+  margin: 0 0 16px;
+}
+
 .history-panel.full-panel {
   background: var(--clay-soft);
 }
@@ -1553,6 +1585,7 @@ button[aria-busy="true"] {
   .split,
   .field-pair,
   .preview-layout,
+  .dashboard-layout,
   .history-grid,
   .status-rail,
   .destination-summary,
@@ -1573,6 +1606,7 @@ button[aria-busy="true"] {
   .status-rail,
   .history-grid,
   .preview-layout,
+  .dashboard-layout,
   .attention-notice,
   .reconnect-notice,
   .sticky-actions {
