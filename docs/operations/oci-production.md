@@ -150,7 +150,15 @@ OBJECT_NAME='mysql/YYYY/MM/DD/learningx-alert-TIMESTAMP-PID.sql.gz'
 ssh ubuntu@168.107.37.170 "sudo bash -c 'set -a; source /etc/learningx-alert/runtime.env; set +a; cd /opt/learningx-alert/current; ./deploy/restore-check.sh $OBJECT_NAME'"
 ```
 
-`restore_ok`가 나오기 전에는 운영 DB 교체를 시도하지 않는다. 실제 복원(서비스 중지, 현재 DB 별도 덤프, 검증된 덤프를 새 스키마에 적재, 설정 전환, 서비스 시작)은 운영자가 명시적으로 승인한 경우에만 수행한다. 복원 연습은 아직 하지 않았다.
+`restore_ok`가 나오기 전에는 운영 DB 교체를 시도하지 않는다. 실제 복원(서비스 중지, 현재 DB 별도 덤프, 검증된 덤프를 새 스키마에 적재, 설정 전환, 서비스 시작)은 운영자가 명시적으로 승인한 경우에만 수행한다.
+
+복원 연습은 `deploy/restore-drill.sh`로 한다. Object Storage의 가장 최근 `mysql/` 덤프를 내려받아, 네트워크가 없는 임시 `mysql:8.4` 컨테이너에 적재한 뒤 운영 DB와 테이블별 행 수를 비교한다. 운영 DB에는 쓰지 않고, 끝나면 컨테이너와 임시 파일을 지운다. 스크립트를 표준 입력(`bash -s`)으로 넘기면 안 된다. 중간 명령이 스크립트 나머지를 읽어 버린다.
+
+```bash
+ssh ubuntu@168.107.37.170 'cd /opt/learningx-alert/current && sudo ./deploy/restore-drill.sh'
+```
+
+`restore_drill_ok`와 `count_differences=none`이 나오면 정상이다. 덤프 이후 새 데이터가 쌓였다면 `count_differences`에 차이가 보이는 것이 정상이다. 2026-09-30 첫 연습에서는 테이블 24개, 334행이 1초 만에 복원됐고 행 수 차이는 없었다.
 
 ## 모니터링
 
