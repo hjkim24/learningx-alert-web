@@ -81,7 +81,36 @@ def next_alarm_at(rule, now, *, current_slot_claimed=False):
     return min(candidates) if candidates else None
 
 
-def claim_due_runs(now):
+# How far back one scan looks for alarm minutes it has not seen yet: after a
+# scan longer than a minute, or a restart (deploy, crash) at an alarm time.
+CATCH_UP_MINUTES = 15
+
+
+def slot_minutes(now, since=None):
+    """Alarm minutes to check: every minute in (since, now], at most
+    CATCH_UP_MINUTES back. ``since=None`` means just the current minute."""
+    current = now.replace(second=0, microsecond=0)
+    if since is None:
+        return [current]
+    earliest = max(
+        since.replace(second=0, microsecond=0) + timedelta(minutes=1),
+        current - timedelta(minutes=CATCH_UP_MINUTES),
+    )
+    minutes = []
+    minute = earliest
+    while minute <= current:
+        minutes.append(minute)
+        minute += timedelta(minutes=1)
+    return minutes or [current]
+
+
+def claim_due_runs(now, since=None):
+    """Create a ScheduledRun for every alarm due in slot_minutes(now, since).
+
+    The (user, scheduled_for) unique constraint makes this idempotent, so
+    looking back over minutes an earlier scan already claimed is harmless.
+    """
+    minutes = slot_minutes(now, since)
     rules = (
         NotificationRule.objects.filter(
             alert_selection_filter("user__course_selections__"),
@@ -94,20 +123,30 @@ def claim_due_runs(now):
         .distinct()
     )
     claimed = []
+    current = minutes[-1]
     for rule in rules:
-        slot = matching_slot(rule, now)
-        if slot is None:
-            continue
-        try:
-            with transaction.atomic():
-                run, created = ScheduledRun.objects.get_or_create(
-                    user=rule.user,
-                    scheduled_for=slot,
-                )
-        except IntegrityError:
-            continue
-        if created:
+        slots = {slot for slot in (matching_slot(rule, minute) for minute in minutes) if slot}
+        for slot in sorted(slots):
+            try:
+                with transaction.atomic():
+                    run, created = ScheduledRun.objects.get_or_create(
+                        user=rule.user,
+                        scheduled_for=slot,
+                    )
+            except IntegrityError:
+                continue
+            if not created:
+                continue
             claimed.append(run)
+            if slot < current:
+                logger.warning(
+                    "late slot claimed",
+                    extra={
+                        "event": "late_slot_claimed",
+                        "run_id": run.pk,
+                        "delay_seconds": (current - slot).total_seconds(),
+                    },
+                )
     return tuple(claimed)
 
 
@@ -395,8 +434,9 @@ def run_due_rules(
     claimed_runs=None,
     collector=collect_for_user,
     sender=send_to_destination,
+    since=None,
 ):
-    runs = claim_due_runs(now) if claimed_runs is None else claimed_runs
+    runs = claim_due_runs(now, since) if claimed_runs is None else claimed_runs
     scan_clock = time.monotonic()
     if runs:
         _safe_record(telemetry.scan_batch, len(runs))

@@ -214,7 +214,7 @@ class WorkerTests(TestCase):
     def test_once_reconciles_then_scans_once(self, reconcile, scan):
         calls = []
         reconcile.side_effect = lambda now: calls.append("reconcile")
-        scan.side_effect = lambda now: calls.append("scan") or ()
+        scan.side_effect = lambda now, since=None: calls.append("scan") or ()
 
         call_command("run_scheduler", "--once")
 
@@ -260,6 +260,25 @@ class WorkerTests(TestCase):
         self.assertEqual(scan.call_count, 2)
         self.assertEqual(clock.call_count, 3)
         sleep.assert_not_called()
+
+    @patch("accounts.management.commands.run_scheduler.time.sleep")
+    @patch("accounts.management.commands.run_scheduler.time.time", return_value=90.25)
+    @patch("accounts.management.commands.run_scheduler.run_due_rules", side_effect=((), (), KeyboardInterrupt))
+    @patch("accounts.management.commands.run_scheduler.reconcile_interrupted_runs")
+    def test_worker_looks_back_on_start_then_passes_previous_scan_time(self, _reconcile, scan, _clock, _sleep):
+        from datetime import timedelta
+
+        from accounts.scheduling import CATCH_UP_MINUTES
+
+        call_command("run_scheduler")
+
+        first, second = scan.call_args_list[0], scan.call_args_list[1]
+        self.assertAlmostEqual(
+            (first.args[0] - first.kwargs["since"]).total_seconds(),
+            timedelta(minutes=CATCH_UP_MINUTES).total_seconds(),
+            delta=5,
+        )
+        self.assertEqual(second.kwargs["since"], first.args[0])
 
     def test_second_worker_for_same_database_is_rejected(self):
         with run_scheduler.scheduler_lock():
