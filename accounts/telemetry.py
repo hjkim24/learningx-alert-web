@@ -58,6 +58,16 @@ scan_batch = _meter.create_histogram(
     "learningx.scan.batch_size",
     description="Due runs claimed by one scan",
 )
+# Per-school capacity, reported by the scheduler each scan. The ``school``
+# code is the only attribute (a handful of values).
+school_connections = _meter.create_gauge(
+    "learningx.school.connections",
+    description="Canvas connections per school",
+)
+school_capacity = _meter.create_gauge(
+    "learningx.school.capacity",
+    description="SCHOOL_MAX_USERS for each enabled school (0 = no cap)",
+)
 
 _configured = False
 _tracing_configured = False
