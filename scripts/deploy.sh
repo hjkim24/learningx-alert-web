@@ -113,6 +113,16 @@ set +a
 cd "$release_dir"
 docker compose -p learningx-alert -f compose.prod.yaml build web
 docker image tag "learningx-alert:${IMAGE_TAG:-local}" "learningx-alert:$revision"
+# Caddy serves the image's collected (hashed) static files, so the URLs the app
+# renders and the files on disk always come from the same build.
+static_container=$(docker create "learningx-alert:$revision")
+rm -rf staticfiles
+docker cp "$static_container:/app/staticfiles" ./staticfiles
+docker rm "$static_container" >/dev/null
+[[ -f staticfiles/staticfiles.json ]] || {
+    printf 'missing collected static manifest\n' >&2
+    exit 1
+}
 ./deploy/fetch-secrets.sh
 ./deploy/backup.sh
 docker compose -p learningx-alert -f compose.prod.yaml run --rm --no-deps --interactive=false --no-tty web python manage.py check --deploy

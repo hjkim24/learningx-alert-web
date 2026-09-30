@@ -6,7 +6,7 @@ from django.templatetags.static import static
 from django.views.generic import RedirectView, TemplateView
 
 from accounts.views import dashboard
-from config import pwa
+from config import csp, pwa
 
 
 def healthz(_request) -> HttpResponse:
@@ -23,6 +23,7 @@ def privacy_policy(request) -> HttpResponse:
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
+    path("csp-report/", csp.report, name="csp_report"),
     path("sw.js", pwa.service_worker, name="service_worker"),
     path("manifest.webmanifest", pwa.manifest, name="web_manifest"),
     # Browsers probe /favicon.ico regardless of <link rel="icon">.

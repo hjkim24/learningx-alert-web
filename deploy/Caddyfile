@@ -1,6 +1,13 @@
 {$APP_DOMAIN} {
+	# Short on purpose; see SECURE_HSTS_SECONDS in config/settings.py.
+	header Strict-Transport-Security "max-age=3600"
+
 	handle_path /static/* {
 		root * /srv/static
+		# collectstatic names hashed copies like app.3f2a9c1b7d4e.css; their
+		# content never changes under that name, so browsers may keep them.
+		@hashed path_regexp \.[0-9a-f]{12}\.[A-Za-z0-9]+$
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
 		file_server
 	}
 

@@ -16,6 +16,9 @@ COPY templates ./templates
 COPY static ./static
 
 RUN python -m pip install --no-cache-dir .
+# Content-hashed static copies + staticfiles.json manifest (read by the app at
+# runtime; the deploy copies the same directory out for Caddy to serve).
+RUN STATIC_MANIFEST=1 python manage.py collectstatic --noinput
 
 USER 10001:10001
 

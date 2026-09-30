@@ -58,7 +58,7 @@ services:
       - "${APP_PRIVATE_IP:-10.0.1.31}:443:443"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./static:/srv/static:ro
+      - ./staticfiles:/srv/static:ro
       - /var/lib/learningx-alert/caddy/data:/data
       - /var/lib/learningx-alert/caddy/config:/config
     depends_on:
