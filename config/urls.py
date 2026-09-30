@@ -17,18 +17,22 @@ def healthz(_request) -> HttpResponse:
     return HttpResponse("ok\n", content_type="text/plain")
 
 
+def _legal_context():
+    return {
+        "contact_email": settings.PRIVACY_CONTACT_EMAIL,
+        "schools": [
+            {"name": school.name, "host": urlsplit(school.canvas_base_url).hostname}
+            for school in enabled_schools()
+        ],
+    }
+
+
 def privacy_policy(request) -> HttpResponse:
-    return render(
-        request,
-        "legal/privacy.html",
-        {
-            "contact_email": settings.PRIVACY_CONTACT_EMAIL,
-            "schools": [
-                {"name": school.name, "host": urlsplit(school.canvas_base_url).hostname}
-                for school in enabled_schools()
-            ],
-        },
-    )
+    return render(request, "legal/privacy.html", _legal_context())
+
+
+def terms_of_service(request) -> HttpResponse:
+    return render(request, "legal/terms.html", _legal_context())
 
 
 urlpatterns = [
@@ -49,6 +53,7 @@ urlpatterns = [
         name="pwa_install_guide",
     ),
     path("privacy/", privacy_policy, name="privacy_policy"),
+    path("terms/", terms_of_service, name="terms_of_service"),
     path(settings.ADMIN_PATH, feedback_admin_site.urls),
     path("", dashboard, name="dashboard"),
     path("accounts/", include("allauth.urls")),

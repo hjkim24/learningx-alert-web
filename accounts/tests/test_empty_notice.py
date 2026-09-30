@@ -92,6 +92,7 @@ class EmptyNoticeTests(TestCase):
         page = self.client.get(reverse("notification_settings"))
         self.assertContains(page, 'name="notify_when_empty"')
         self.assertContains(page, "알릴 게 없는 날도 알려 주기")
+        self.assertContains(page, "그날 처음 비어 있던 알림 시각")
 
         alarm = self.rule.alarms.get()
         data = {"lookahead_days": "3", "notify_when_empty": "on", **alarm_post_data("09:00", existing=[alarm.pk])}

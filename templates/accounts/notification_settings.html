@@ -35,7 +35,7 @@
         </span>
         <span class="switch-setting-text">
           <strong>{{ rule_form.notify_when_empty.label }}</strong>
-          <small>알림 시각에 보낼 과제·강의가 없으면 하루 한 번 "마감되는 과제·강의가 없어요"를 보내요.</small>
+          <small>알림 시각에 조회 기간 안에 마감되는 과제·강의가 하나도 없으면 "마감되는 과제·강의가 없어요"를 보내요. 하루에 한 번만, 그날 처음 비어 있던 알림 시각에 보내요. 예를 들어 09:00과 18:00에 알림을 두고 둘 다 비어 있으면 09:00에만 와요. 꺼 두면 그런 날엔 알림이 오지 않아요.</small>
         </span>
       </label>
       <div class="alarm-editor" data-alarm-editor data-alarm-limit="{{ alarm_limit }}">

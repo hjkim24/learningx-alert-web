@@ -2799,6 +2799,48 @@ body:has(.sticky-actions) .feedback-fab {
   }
 }
 
+/* ---------- Site footer ---------- */
+.site-footer {
+  width: var(--page);
+  margin: -24px auto 0;
+  padding: 0 4px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 16px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 16px;
+}
+
+.site-footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.site-footer-links a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.site-footer-links .site-footer-strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 /* ---------- Mobile fit (≤760px) ----------
    Small phones (iPhone SE, 320px) and touch use. Desktop rules above are
    untouched; everything here only narrows padding, lets content wrap, and

@@ -62,7 +62,16 @@
     {% block content %}{% endblock %}
   </main>
 
-  {% if user.is_authenticated and request.resolver_match.url_name != "feedback" and request.resolver_match.url_name != "privacy_policy" %}
+  <footer class="site-footer">
+    <nav class="site-footer-links" aria-label="사이트 정보">
+      <a href="{% url 'terms_of_service' %}">이용약관</a>
+      <a class="site-footer-strong" href="{% url 'privacy_policy' %}">개인정보처리방침</a>
+      {% if privacy_contact_email %}<a href="mailto:{{ privacy_contact_email }}">문의 {{ privacy_contact_email }}</a>{% endif %}
+    </nav>
+    <p>© 2026 LearningX Alert</p>
+  </footer>
+
+  {% if user.is_authenticated and request.resolver_match.url_name != "feedback" and request.resolver_match.url_name != "privacy_policy" and request.resolver_match.url_name != "terms_of_service" %}
     {% include "accounts/_feedback_widget.html" %}
   {% endif %}
 
