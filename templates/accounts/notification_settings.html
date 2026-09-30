@@ -28,6 +28,16 @@
         {{ rule_form.lookahead_days.errors }}
         <small>아직 하지 않은 과제·강의 중 이 기간 안에 마감되는 것만 알려요. 1~14일로 정할 수 있어요.</small>
       </div>
+      <label class="switch-setting" for="{{ rule_form.notify_when_empty.id_for_label }}">
+        <span class="switch">
+          {{ rule_form.notify_when_empty }}
+          <span class="switch-track" aria-hidden="true"></span>
+        </span>
+        <span class="switch-setting-text">
+          <strong>{{ rule_form.notify_when_empty.label }}</strong>
+          <small>알림 시각에 보낼 과제·강의가 없으면 하루 한 번 "마감되는 과제·강의가 없어요"를 보내요.</small>
+        </span>
+      </label>
       <div class="alarm-editor" data-alarm-editor data-alarm-limit="{{ alarm_limit }}">
         <div class="alarm-heading">
           <h3>알림 시각</h3>

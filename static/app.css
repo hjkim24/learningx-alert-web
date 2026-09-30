@@ -2079,6 +2079,29 @@ button[aria-busy="true"] {
   outline-offset: 2px;
 }
 
+.switch-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 4px 0 20px;
+  cursor: pointer;
+}
+
+.switch-setting .switch {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.switch-setting-text {
+  display: grid;
+  gap: 2px;
+}
+
+.switch-setting-text small {
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
 .alarm-controls {
   display: flex;
   align-items: center;
