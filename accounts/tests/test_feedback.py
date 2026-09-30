@@ -188,3 +188,37 @@ class FeedbackCommandAndCopyTests(TestCase):
     def test_login_page_links_contact_email_and_policy_mentions_feedback(self):
         self.assertContains(self.client.get(reverse("account_login")), "mailto:help@example.com")
         self.assertContains(self.client.get(reverse("privacy_policy")), "보내 주신 의견")
+
+
+class TailnetAdminEntranceTests(TestCase):
+    def test_tailnet_host_is_allowed_only_when_configured(self):
+        import os
+        import subprocess
+        import sys
+
+        from accounts.tests import test_settings as base
+
+        env = base.ProductionSettingsTests().production_env()
+        env["ADMIN_TAILNET_HOST"] = "lab-hjkim24.taild71a2d.ts.net"
+        result = subprocess.run(
+            [sys.executable, "-c",
+             "import os; os.environ['DJANGO_SETTINGS_MODULE']='config.settings'; "
+             "from django.conf import settings; print(settings.ALLOWED_HOSTS[-1]); print(settings.CSRF_TRUSTED_ORIGINS[-1])"],
+            cwd=base.PROJECT_ROOT, env=env, capture_output=True, text=True, check=True,
+        )
+        self.assertEqual(
+            result.stdout.split(),
+            ["lab-hjkim24.taild71a2d.ts.net", "https://lab-hjkim24.taild71a2d.ts.net:8443"],
+        )
+
+    def test_caddy_tailnet_listener_is_loopback_only_and_scoped(self):
+        from accounts.tests.test_settings import PROJECT_ROOT
+
+        caddyfile = (PROJECT_ROOT / "deploy" / "Caddyfile").read_text()
+        compose = (PROJECT_ROOT / "compose.prod.yaml").read_text()
+
+        self.assertIn('"127.0.0.1:8081:8081"', compose)
+        self.assertNotIn('"8081:8081"\n', compose.replace('"127.0.0.1:8081:8081"', ""))
+        self.assertIn("http://:8081 {", caddyfile)
+        self.assertIn("@tailnet_app path /{$ADMIN_PATH:ops-7f3c}/* /accounts/* /static/*", caddyfile)
+        self.assertIn("redir https://{$APP_DOMAIN}{uri} 302", caddyfile)

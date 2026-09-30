@@ -21,3 +21,24 @@
 
 	reverse_proxy web:8000
 }
+
+# Tailnet-only entrance for the feedback admin. Bound to the host's loopback
+# (compose publishes 127.0.0.1:8081), so the only way in is
+# `tailscale serve --https=8443 http://127.0.0.1:8081`, which terminates TLS
+# for {$ADMIN_TAILNET_HOST}. Only the admin, its Google sign-in and static files
+# are served here; anything else goes to the public site.
+http://:8081 {
+	@tailnet_app path /{$ADMIN_PATH:ops-7f3c}/* /accounts/* /static/*
+	handle @tailnet_app {
+		handle_path /static/* {
+			root * /srv/static
+			file_server
+		}
+		reverse_proxy web:8000 {
+			header_up X-Forwarded-Proto https
+		}
+	}
+	handle {
+		redir https://{$APP_DOMAIN}{uri} 302
+	}
+}

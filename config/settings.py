@@ -185,6 +185,12 @@ ADMIN_EMAILS = frozenset(
 )
 # Hidden path of that admin; Caddy also limits it to the tailnet.
 ADMIN_PATH = os.environ.get("ADMIN_PATH", "ops-7f3c/").strip("/") + "/"
+# The admin is opened at https://<this host>:8443 through `tailscale serve`, so
+# Django must accept that host and its origin (Google sign-in posts back there).
+ADMIN_TAILNET_HOST = os.environ.get("ADMIN_TAILNET_HOST", "").strip().lower()
+if ADMIN_TAILNET_HOST:
+    ALLOWED_HOSTS.append(ADMIN_TAILNET_HOST)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{ADMIN_TAILNET_HOST}:8443")
 # Build revision (deploy writes it to the release .env); attached to feedback.
 APP_REVISION = os.environ.get("APP_REVISION", "").strip()[:40]
 # Public contact shown on /privacy/ (the Google consent screen links there).
