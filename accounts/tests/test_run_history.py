@@ -138,7 +138,7 @@ class RunHistoryTests(TestCase):
 
         self.assertContains(response, "최근 실행")
         self.assertContains(response, "다음 알림")
-        self.assertContains(response, "2026.09.26 20:00 KST")
+        self.assertContains(response, "9월 26일 토요일</span> <span class=\"schedule-clock\">20:00")
         self.assertContains(response, "assignments_failed")
         self.assertContains(response, reverse("run_detail", args=(self.own_run.pk,)))
         self.assertNotContains(response, reverse("run_detail", args=(self.other_run.pk,)))
@@ -153,7 +153,7 @@ class RunHistoryTests(TestCase):
 
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, "2026.09.26 20:00 KST")
+        self.assertContains(response, "9월 26일 토요일</span> <span class=\"schedule-clock\">20:00")
 
     @patch(
         "accounts.views.timezone.now",
@@ -164,7 +164,7 @@ class RunHistoryTests(TestCase):
 
         response = self.client.get(reverse("dashboard"))
 
-        self.assertContains(response, "2026.09.26 20:00 KST")
+        self.assertContains(response, "9월 26일 토요일</span> <span class=\"schedule-clock\">20:00")
 
     @patch(
         "accounts.views.timezone.now",
