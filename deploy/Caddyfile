@@ -26,6 +26,12 @@
 	}
 }
 
+# Previous public addresses: send every request to the same path on APP_DOMAIN.
+# Caddy keeps a certificate for these too, so old https:// links still work.
+{$APP_REDIRECT_DOMAINS} {
+	redir https://{$APP_DOMAIN}{uri} permanent
+}
+
 # Tailnet-only entrance for the feedback admin. Bound to the host's loopback
 # (compose publishes 127.0.0.1:8081), so the only way in is
 # `tailscale serve --https=8443 http://127.0.0.1:8081`, which terminates TLS

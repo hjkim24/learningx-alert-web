@@ -221,7 +221,7 @@ WEB_PUSH_VAPID_PRIVATE_KEY = _secret_setting("WEB_PUSH_VAPID_PRIVATE_KEY")
 WEB_PUSH_SUBJECT = os.environ.get("WEB_PUSH_SUBJECT", "").strip() or (
     f"https://{ALLOWED_HOSTS[0]}"
     if ALLOWED_HOSTS and ALLOWED_HOSTS[0] not in {"127.0.0.1", "localhost"}
-    else "https://alert.sobok-app.com"
+    else "https://learningx-alert.com"
 )
 CREDENTIAL_ENCRYPTION_KEYS = [
     key.strip()
@@ -258,7 +258,7 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # HSTS starts short on purpose: browsers remember it for max-age and it cannot
 # be recalled, so raise it (e.g. 31536000) only after it has run cleanly. No
-# includeSubDomains/preload: other sobok-app.com hosts must not be bound.
+# No includeSubDomains/preload: other hosts on the domain must not be bound.
 SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 SECURE_HSTS_PRELOAD = False

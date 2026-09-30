@@ -117,6 +117,6 @@ assert_contains "$ssh_calls" "run --rm --no-deps --interactive=false --no-tty we
 assert_contains "$ssh_calls" "run --rm --no-deps --interactive=false --no-tty web python manage.py migrate --noinput"
 
 curl_calls=$(<"$curl_log")
-assert_contains "$curl_calls" "https://alert.sobok-app.com/healthz/"
+assert_contains "$curl_calls" "https://learningx-alert.com/healthz/"
 
 printf 'deploy_contract_test: PASS\n'
