@@ -2804,17 +2804,19 @@ body:has(.sticky-actions) .feedback-fab {
   width: var(--page);
   margin: -24px auto 0;
   padding: 0 4px 32px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px 16px;
+  display: grid;
+  gap: 2px;
   color: var(--muted);
   font-size: var(--fs-meta);
 }
 
 .site-footer p {
   margin: 0;
+  line-height: 1.6;
+}
+
+.site-footer-note {
+  margin-top: 4px;
 }
 
 .site-footer-links {

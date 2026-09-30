@@ -66,8 +66,11 @@
     <nav class="site-footer-links" aria-label="사이트 정보">
       <a href="{% url 'terms_of_service' %}">이용약관</a>
       <a class="site-footer-strong" href="{% url 'privacy_policy' %}">개인정보처리방침</a>
+      <a href="{% url 'canvas_token_guide' %}">토큰 받는 방법</a>
+      <a href="{% url 'pwa_install_guide' %}">홈 화면에 추가하기</a>
       {% if privacy_contact_email %}<a href="mailto:{{ privacy_contact_email }}">문의 {{ privacy_contact_email }}</a>{% endif %}
     </nav>
+    <p class="site-footer-note">학교, Canvas(Instructure), LearningX와 관계없는 개인이 운영하는 비공식 서비스예요.</p>
     <p>© 2026 LearningX Alert</p>
   </footer>
 
