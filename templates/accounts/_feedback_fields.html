@@ -1,0 +1,16 @@
+<fieldset class="feedback-kinds">
+  <legend>종류</legend>
+  <label><input type="radio" name="category" value="bug" required checked> 오류 제보</label>
+  <label><input type="radio" name="category" value="idea"> 의견</label>
+  <label><input type="radio" name="category" value="other"> 기타</label>
+</fieldset>
+<div class="field-row">
+  <label for="feedback-message-{{ feedback_field_id|default:'dialog' }}">내용</label>
+  <textarea id="feedback-message-{{ feedback_field_id|default:'dialog' }}" name="message" rows="5" maxlength="2000" required
+    placeholder="무엇이 안 됐는지, 어떻게 하면 좋을지 적어 주세요."></textarea>
+  <small>Canvas 토큰이나 웹훅 주소는 적지 마세요.</small>
+</div>
+<label class="feedback-context">
+  <input type="checkbox" name="include_context" value="1" checked>
+  이 화면 정보 같이 보내기 <span class="fine-print">(페이지 경로, 브라우저 종류, 앱 버전)</span>
+</label>

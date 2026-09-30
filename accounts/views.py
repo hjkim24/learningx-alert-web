@@ -1,6 +1,10 @@
 import json
+import logging
 from dataclasses import dataclass
 from datetime import datetime
+from urllib.parse import urlsplit
+
+from django.conf import settings
 
 from django.contrib import messages
 from django.contrib.auth import logout
@@ -31,6 +35,7 @@ from .models import (
     Delivery,
     Destination,
     ExcludedItem,
+    Feedback,
     NotificationRule,
     RunItem,
     ScheduledRun,
@@ -57,6 +62,8 @@ from .services import (
 )
 from .scheduling import SEOUL, active_alarms, next_alarm_at
 
+
+logger = logging.getLogger(__name__)
 
 @login_required
 @require_GET
@@ -774,3 +781,80 @@ def excluded_items(request):
             "past": [item for item in items if item.due_at < now],
         },
     )
+
+
+def _client_label(user_agent):
+    """Coarse "browser · OS" from the User-Agent; never the raw string."""
+    agent = user_agent or ""
+    os_name = next(
+        (label for pattern, label in (
+            ("iPhone", "iOS"), ("iPad", "iPadOS"), ("Android", "Android"),
+            ("Mac OS X", "macOS"), ("Windows", "Windows"), ("Linux", "Linux"),
+        ) if pattern in agent),
+        "기타",
+    )
+    browser = next(
+        (label for pattern, label in (
+            ("Edg/", "Edge"), ("SamsungBrowser", "Samsung Internet"), ("Whale", "Whale"),
+            ("CriOS", "Chrome"), ("Chrome/", "Chrome"), ("FxiOS", "Firefox"),
+            ("Firefox/", "Firefox"), ("Safari/", "Safari"),
+        ) if pattern in agent),
+        "기타",
+    )
+    return f"{browser} · {os_name}"
+
+
+def _safe_page_path(value):
+    path = urlsplit(str(value or "")).path
+    return path[:200] if path.startswith("/") and not path.startswith("//") else ""
+
+
+@login_required
+def feedback(request):
+    """Floating-button feedback. GET is the no-JS fallback page."""
+    wants_json = "application/json" in request.headers.get("Accept", "")
+    if request.method != "POST":
+        return render(
+            request,
+            "accounts/feedback.html",
+            {"categories": Feedback.Category.choices, "back": _safe_page_path(request.GET.get("from"))},
+        )
+    category = request.POST.get("category", "")
+    message = request.POST.get("message", "").strip()
+    if category not in Feedback.Category.values or not message or len(message) > Feedback.MAX_MESSAGE:
+        if wants_json:
+            return JsonResponse({"ok": False, "error": "invalid"}, status=400)
+        messages.error(request, f"종류를 고르고 내용을 {Feedback.MAX_MESSAGE}자 안으로 적어 주세요.")
+        return redirect("feedback")
+    if not throttle.allow(request.user, "feedback"):
+        if wants_json:
+            return JsonResponse({"ok": False, "error": "rate_limited"}, status=429)
+        messages.error(request, throttle.LIMITED_MESSAGE)
+        return redirect("feedback")
+
+    context = {}
+    if request.POST.get("include_context") == "1":
+        standalone = request.POST.get("standalone")
+        latest_run = (
+            ScheduledRun.objects.filter(user=request.user).values_list("id", flat=True).first()
+        )
+        context = {
+            "page_path": _safe_page_path(request.POST.get("page_path")),
+            "client": _client_label(request.headers.get("User-Agent")),
+            "standalone": {"1": True, "0": False}.get(standalone),
+            "app_revision": settings.APP_REVISION,
+            "latest_run_id": latest_run,
+        }
+    entry = Feedback.objects.create(
+        user=request.user, category=category, message=message, **context
+    )
+    # Id and category only: the text stays in the database.
+    logger.warning(
+        "feedback received",
+        extra={"event": "feedback_received", "feedback_id": entry.pk, "category": category},
+    )
+    if wants_json:
+        return JsonResponse({"ok": True})
+    messages.success(request, "보내 주셔서 고마워요. 확인하고 고칠게요.")
+    back = _safe_page_path(request.POST.get("page_path"))
+    return redirect(back or "dashboard")

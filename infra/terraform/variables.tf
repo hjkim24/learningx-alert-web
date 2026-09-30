@@ -138,6 +138,12 @@ variable "privacy_contact_email" {
   default     = ""
 }
 
+variable "admin_emails" {
+  description = "Comma-separated Google emails that may open the feedback admin (also needs is_staff)."
+  type        = string
+  default     = ""
+}
+
 variable "canvas_base_url" {
   type    = string
   default = "https://canvas.skku.edu"

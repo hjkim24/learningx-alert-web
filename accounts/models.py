@@ -355,3 +355,43 @@ class ExcludedItem(models.Model):
 
     def key(self):
         return (self.canvas_course_id, self.item_type, self.external_id)
+
+
+class Feedback(models.Model):
+    """A bug report or suggestion sent from the floating feedback button."""
+
+    class Category(models.TextChoices):
+        BUG = "bug", "오류 제보"
+        IDEA = "idea", "의견"
+        OTHER = "other", "기타"
+
+    class Status(models.TextChoices):
+        NEW = "new", "새 피드백"
+        DONE = "done", "처리함"
+
+    MAX_MESSAGE = 2000
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="feedback",
+    )
+    category = models.CharField(max_length=16, choices=Category.choices)
+    message = models.TextField(max_length=MAX_MESSAGE)
+    # Only when the user leaves "이 화면 정보 같이 보내기" on. Never tokens or URLs
+    # with queries: page is a path, client is a coarse browser/OS label.
+    page_path = models.CharField(max_length=200, blank=True)
+    client = models.CharField(max_length=80, blank=True)
+    standalone = models.BooleanField(null=True, blank=True)
+    app_revision = models.CharField(max_length=40, blank=True)
+    latest_run_id = models.BigIntegerField(null=True, blank=True)
+    status = models.CharField(max_length=8, choices=Status.choices, default=Status.NEW)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "피드백"
+        verbose_name_plural = "피드백"
+
+    def __str__(self):
+        return f"#{self.pk} {self.get_category_display()}"

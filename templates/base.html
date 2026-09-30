@@ -61,6 +61,10 @@
     {% block content %}{% endblock %}
   </main>
 
+  {% if user.is_authenticated and request.resolver_match.url_name != "feedback" and request.resolver_match.url_name != "privacy_policy" %}
+    {% include "accounts/_feedback_widget.html" %}
+  {% endif %}
+
   <div class="loading-veil" id="loading-veil" role="status" aria-live="polite" hidden>
     <div class="loading-card">
       <span class="spinner" aria-hidden="true"></span>
