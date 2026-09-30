@@ -1,0 +1,49 @@
+{% comment %}
+  Device-aware install/push banner. app.js picks at most one variant (or none)
+  from the browser it runs in; everything stays hidden without JS.
+{% endcomment %}
+<aside class="install-banner" data-install-banner hidden
+  data-vapid-key="{{ install_banner.vapid_key }}"
+  data-subscribe-url="{% url 'push_subscribe' %}"
+  data-has-push="{{ install_banner.has_push|yesno:'1,0' }}"
+  aria-label="앱 설치와 알림">
+  <div class="install-body" data-variant="ios-inapp" hidden>
+    <strong>Safari에서 열어 주세요</strong>
+    <p>이 앱 안의 브라우저에서는 홈 화면에 추가할 수 없어요. Safari로 열면 휴대폰으로 알림을 받을 수 있어요.</p>
+    <div class="install-actions">
+      <a class="primary-button" data-open-external hidden href="#">Safari로 열기</a>
+      <button class="secondary-button" type="button" data-copy-link>주소 복사</button>
+    </div>
+  </div>
+
+  <div class="install-body" data-variant="ios-add" hidden>
+    <strong>iPhone으로 알림 받기</strong>
+    <ol class="install-steps">
+      <li>화면 아래 <span class="share-glyph" aria-label="공유">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 12v8h14v-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span> 공유 버튼을 누르고</li>
+      <li><strong>홈 화면에 추가</strong>를 고른 다음</li>
+      <li>홈 화면의 <strong>LX Alert</strong> 아이콘으로 열면 알림 켜기 버튼이 나와요.</li>
+    </ol>
+    <p class="fine-print">홈 화면 앱은 Safari와 로그인이 따로라서 한 번 더 로그인해요. <a href="{% url 'pwa_install_guide' %}">그림으로 보기</a></p>
+  </div>
+
+  <div class="install-body" data-variant="enable-push" hidden>
+    <strong>이 기기로 마감 알림을 받을까요?</strong>
+    <p data-banner-message>버튼을 누르고 알림을 허용하면 바로 등록돼요.</p>
+    <div class="install-actions">
+      <button class="primary-button" type="button" data-enable-push>알림 켜기</button>
+      <button class="secondary-button" type="button" data-install-app hidden>앱으로 설치</button>
+    </div>
+  </div>
+
+  <div class="install-body" data-variant="android-install" hidden>
+    <strong>앱으로 설치하기</strong>
+    <p>홈 화면에서 바로 열 수 있어요.</p>
+    <div class="install-actions">
+      <button class="primary-button" type="button" data-install-app>앱으로 설치</button>
+    </div>
+  </div>
+
+  <button class="install-dismiss" type="button" data-install-dismiss aria-label="안내 닫기">×</button>
+</aside>

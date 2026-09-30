@@ -58,6 +58,7 @@
   {% endif %}
 
   <main class="page-frame">
+    {% if install_banner %}{% include "accounts/_install_banner.html" %}{% endif %}
     {% block content %}{% endblock %}
   </main>
 

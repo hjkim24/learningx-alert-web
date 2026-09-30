@@ -58,6 +58,76 @@
   });
 })();
 
+// Shared browser-push helpers (the settings panel and the install banner).
+const LXPush = (() => {
+  const agent = navigator.userAgent;
+  const csrfToken = () => {
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return input ? input.value : "";
+  };
+  const keyBytes = (base64url) => {
+    const padded = base64url.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (base64url.length % 4)) % 4);
+    return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
+  };
+  // iPadOS reports itself as a Mac; the touch screen gives it away.
+  const isIos = /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1);
+  const deviceLabel = () => {
+    const os = isIos ? "iOS" : /Android/.test(agent) ? "Android" : /Mac/.test(agent) ? "macOS" : /Windows/.test(agent) ? "Windows" : "기기";
+    const browser = /Edg\//.test(agent) ? "Edge" : /Firefox\//.test(agent) ? "Firefox" : /Chrome\//.test(agent) ? "Chrome" : /Safari\//.test(agent) ? "Safari" : "브라우저";
+    return `${os} ${browser}`;
+  };
+  const post = (url, body) =>
+    fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
+      body: JSON.stringify(body),
+    });
+  const standalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const supported = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  // Web push on iPhone needs iOS/iPadOS 16.4+ and a home-screen app.
+  const iosVersion = () => {
+    const match = agent.match(/OS (\d+)_(\d+)/) || agent.match(/Version\/(\d+)\.(\d+)/);
+    return match ? [Number(match[1]), Number(match[2])] : [0, 0];
+  };
+  const iosPushCapable = () => {
+    const [major, minor] = iosVersion();
+    return major > 16 || (major === 16 && minor >= 4);
+  };
+  // In-app browsers (KakaoTalk, Instagram, Naver, …) cannot add to home screen.
+  const inAppBrowser = () => /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\/|DaumApps|everytime|WhaleApp/i.test(agent);
+  const isKakao = () => /KAKAOTALK/i.test(agent);
+  const register = () => navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  // Subscribe this browser and register it with the server. Call it from a
+  // click handler: iOS only shows the permission prompt for a user gesture.
+  async function subscribe(registration, vapidKey, url, { silent = false } = {}) {
+    if (Notification.permission !== "granted") {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        return { ok: false, error: "permission_denied" };
+      }
+    }
+    const subscription =
+      (await registration.pushManager.getSubscription()) ||
+      (await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(vapidKey) }));
+    const response = await post(url, { subscription: subscription.toJSON(), label: deviceLabel(), silent });
+    const payload = await response.json().catch(() => ({}));
+    if (response.ok) {
+      return { ok: true, created: Boolean(payload.created), subscription };
+    }
+    if (payload.error === "subscription_invalid") {
+      // Drop the rejected browser subscription so a retry starts clean.
+      await subscription.unsubscribe().catch(() => {});
+    }
+    return { ok: false, error: payload.error || "rejected", subscription };
+  }
+  return { csrfToken, keyBytes, deviceLabel, post, isIos, standalone, supported, iosPushCapable, inAppBrowser, isKakao, register, subscribe };
+})();
+
 // Browser push (PWA). Registers /sw.js, asks permission only on a click, and
 // posts the PushSubscription to the server with the CSRF token.
 (() => {
@@ -73,35 +143,11 @@
   const setStatus = (text) => {
     status.textContent = text;
   };
-  const csrfToken = () => {
-    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
-    if (match) {
-      return decodeURIComponent(match[1]);
-    }
-    const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
-    return input ? input.value : "";
-  };
-  const keyBytes = (base64url) => {
-    const padded = base64url.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - (base64url.length % 4)) % 4);
-    return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0));
-  };
-  const deviceLabel = () => {
-    const agent = navigator.userAgent;
-    const os = /iPhone|iPad/.test(agent) ? "iOS" : /Android/.test(agent) ? "Android" : /Mac/.test(agent) ? "macOS" : /Windows/.test(agent) ? "Windows" : "기기";
-    const browser = /Edg\//.test(agent) ? "Edge" : /Firefox\//.test(agent) ? "Firefox" : /Chrome\//.test(agent) ? "Chrome" : /Safari\//.test(agent) ? "Safari" : "브라우저";
-    return `${os} ${browser}`;
-  };
-  const post = (url, body) =>
-    fetch(url, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken() },
-      body: JSON.stringify(body),
-    });
+  const { deviceLabel, post } = LXPush;
 
-  const isIos = /iPhone|iPad/.test(navigator.userAgent);
-  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  const isIos = LXPush.isIos;
+  const standalone = LXPush.standalone();
+  const supported = LXPush.supported();
 
   if (!supported) {
     if (isIos && !standalone) {
@@ -187,7 +233,7 @@
         (await registration.pushManager.getSubscription()) ||
         (await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: keyBytes(panel.dataset.vapidKey),
+          applicationServerKey: LXPush.keyBytes(panel.dataset.vapidKey),
         }));
       const response = await post(panel.dataset.subscribeUrl, {
         subscription: subscription.toJSON(),
@@ -229,8 +275,7 @@
     }
   }
 
-  navigator.serviceWorker
-    .register("/sw.js", { scope: "/" })
+  LXPush.register()
     .then((result) => {
       registration = result;
       subscribeButton.addEventListener("click", subscribe);
@@ -238,6 +283,163 @@
       return refresh();
     })
     .catch(() => setStatus("알림 기능을 준비하지 못했어요. https:// 주소로 접속했는지 확인해 주세요."));
+})();
+
+// Install/push banner on signed-in pages. Picks one prompt for this device:
+//  - iPhone in an in-app browser (KakaoTalk, …): open in Safari first
+//  - iPhone Safari: how to add to the home screen
+//  - phone or installed app without push: one "알림 켜기" tap registers it
+//  - Android with an install prompt available: "앱으로 설치"
+// Desktop browsers get nothing here; the settings page covers them.
+(() => {
+  const banner = document.querySelector("[data-install-banner]");
+  if (!banner) {
+    return;
+  }
+  const DISMISS_KEY = "lx-install-dismissed";
+  const DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
+  const vapidKey = banner.dataset.vapidKey;
+  const subscribeUrl = banner.dataset.subscribeUrl;
+  const standalone = LXPush.standalone();
+  const recentlyDismissed = (() => {
+    try {
+      return Date.now() - Number(localStorage.getItem(DISMISS_KEY) || 0) < DISMISS_MS;
+    } catch (error) {
+      return false;
+    }
+  })();
+  let installEvent = null;
+  let pushDone = false;
+
+  const show = (variant) => {
+    banner.querySelectorAll("[data-variant]").forEach((element) => {
+      element.hidden = element.dataset.variant !== variant;
+    });
+    banner.hidden = false;
+  };
+  const hide = () => {
+    banner.hidden = true;
+  };
+  banner.querySelector("[data-install-dismiss]").addEventListener("click", () => {
+    try {
+      localStorage.setItem(DISMISS_KEY, String(Date.now()));
+    } catch (error) {
+      // Private mode: the banner simply comes back next time.
+    }
+    hide();
+  });
+
+  // Android/desktop Chrome: keep the install prompt for our own button.
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installEvent = event;
+    banner.querySelectorAll("[data-install-app]").forEach((button) => {
+      button.hidden = false;
+    });
+    if (banner.hidden && pushDone && !recentlyDismissed && /Android/.test(navigator.userAgent)) {
+      show("android-install");
+    }
+  });
+  window.addEventListener("appinstalled", () => {
+    installEvent = null;
+    banner.querySelectorAll("[data-install-app]").forEach((button) => {
+      button.hidden = true;
+    });
+  });
+  banner.querySelectorAll("[data-install-app]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      if (!installEvent) {
+        return;
+      }
+      installEvent.prompt();
+      await installEvent.userChoice.catch(() => {});
+      installEvent = null;
+      button.hidden = true;
+      if (banner.querySelector('[data-variant="android-install"]:not([hidden])')) {
+        hide();
+      }
+    });
+  });
+
+  if (LXPush.isIos && !standalone) {
+    if (recentlyDismissed || banner.dataset.hasPush === "1" || !LXPush.iosPushCapable()) {
+      return;
+    }
+    if (LXPush.inAppBrowser()) {
+      const external = banner.querySelector("[data-open-external]");
+      if (LXPush.isKakao()) {
+        external.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(window.location.href)}`;
+        external.hidden = false;
+      }
+      const copyButton = banner.querySelector("[data-copy-link]");
+      copyButton.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(window.location.href);
+          copyButton.textContent = "복사했어요";
+        } catch (error) {
+          copyButton.textContent = window.location.host;
+        }
+      });
+      show("ios-inapp");
+      return;
+    }
+    show("ios-add");
+    return;
+  }
+
+  const mobile = LXPush.isIos || /Android/.test(navigator.userAgent);
+  if (!LXPush.supported() || (!standalone && !mobile)) {
+    return;
+  }
+
+  LXPush.register()
+    .then(async (registration) => {
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        // Make sure the server still has it (it may have been deleted).
+        await LXPush.post(subscribeUrl, { subscription: existing.toJSON(), label: LXPush.deviceLabel(), silent: true }).catch(() => {});
+        pushDone = true;
+        return;
+      }
+      if (Notification.permission === "denied" || recentlyDismissed) {
+        return;
+      }
+      if (Notification.permission === "granted") {
+        // Allowed before (e.g. reinstalled app): register without asking.
+        const result = await LXPush.subscribe(registration, vapidKey, subscribeUrl, { silent: true }).catch(() => null);
+        if (result && result.ok) {
+          pushDone = true;
+          return;
+        }
+      }
+      show("enable-push");
+      const button = banner.querySelector("[data-enable-push]");
+      const message = banner.querySelector("[data-banner-message]");
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        try {
+          const result = await LXPush.subscribe(registration, vapidKey, subscribeUrl);
+          if (result.ok) {
+            pushDone = true;
+            button.hidden = true;
+            message.textContent = "이 기기로 알림을 받아요. 알림 설정에서 시험 알림을 보내 볼 수 있어요.";
+            window.setTimeout(hide, 6000);
+            return;
+          }
+          message.textContent =
+            result.error === "permission_denied"
+              ? "알림을 허용하지 않았어요. 기기 설정에서 이 앱의 알림을 켜면 다시 등록할 수 있어요."
+              : result.error === "destination_limit"
+                ? "알림 대상이 가득 찼어요. 알림 설정에서 쓰지 않는 대상을 지워 주세요."
+                : "등록하지 못했어요. 잠시 후 다시 눌러 주세요.";
+        } catch (error) {
+          message.textContent = "알림을 켜지 못했어요. 잠시 후 다시 눌러 주세요.";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    })
+    .catch(() => {});
 })();
 
 // Time picker: replaces the browser's native <input type="time"> popup with a
