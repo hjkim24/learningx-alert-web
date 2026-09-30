@@ -1,0 +1,126 @@
+# 확장 가능성 검토 (학기 분류 · 다른 학교 · 규모)
+
+## Status
+
+- 2026-09-30 분석. 코드와 설정은 바꾸지 않았다.
+- 근거는 main `0bf51db` 시점의 코드와 운영 데이터(09:00 예약 실행 2건의 trace)다.
+- 다른 학교 실측(한양대, 2026-09-30)은 맨 아래 절에 있다.
+
+## 요약
+
+1. **학기 분류**는 날짜를 하드코딩하지 않고 Canvas `term.start_at`을 따르므로 새 학기 경계는 대체로 맞게 처리한다. 다만 새 학기 과목이 자동으로 들어오지 않고, 지난 학기에 켜 둔 과목은 계속 조회된다.
+2. **다른 학교**는 학교마다 서버를 따로 띄우면 URL 설정 변경만으로 동작할 가능성이 있다. 한 서버에서 여러 학교를 받으려면 학교 개념을 데이터 모델에 넣어야 한다.
+3. **가장 먼저 부딪히는 규모 한계는 스케줄러**다. 스캔 한 번이 1분을 넘으면 그동안 지나간 분의 알림을 건너뛴다.
+
+## 1. 새 학기의 과목 선택·학기 분류
+
+### 구현
+
+- `learningx_alert/canvas.py` `CanvasClient.courses()`: `GET /api/v1/courses?enrollment_state=active&include[]=term&per_page=100`. 학기 이름(`term.name`)과 시작일(`term.start_at`, UTC)을 읽는다.
+- `accounts/courses.py` `sync_courses()`: 받은 과목을 `CourseSelection`에 update_or_create한다. 목록에서 사라진 과목은 지운다.
+- `accounts/courses.py` `group_forms_by_term()`:
+  - (학기 이름, 시작일)로 묶는다.
+  - 이미 시작한 학기 중 시작일이 가장 늦은 것을 "현재 학기"로 연다. 미리 공개된 다음 학기가 진행 중인 학기를 밀어내지 않는다.
+  - 정렬은 `term_sort_key`가 한다. 연도(`20\d{2}`), 학기 종류 순위(1학기 < 하계 < 2학기 < 동계, 한·영 키워드), 시작일, 이름 순이고 최신이 위다. 학기 정보가 없으면 "학기 정보 없음"으로 맨 아래에 둔다.
+
+### 새 학기에 문제가 없는 부분
+
+- 학기 경계를 날짜로 하드코딩하지 않았다. UTC로 비교한다.
+- 다음 학기가 미리 올라와도 시작일 전까지는 지금 학기가 "현재"다.
+
+### 문제가 될 수 있는 부분
+
+| # | 내용 | 영향 |
+|---|---|---|
+| 1 | `sync_courses`는 Canvas를 처음 연결할 때와 "과목 다시 불러오기"를 누를 때만 돈다. 스케줄러는 과목 목록을 갱신하지 않는다 | 새 학기 과목은 사용자가 직접 불러와서 켜야 한다(기본값은 꺼짐). 모르면 알림이 비어 있어도 "마감이 없다"고 오해할 수 있다. 가장 실질적인 위험 |
+| 2 | `enrollment_state=active`는 학기가 끝나도 수강 상태가 active로 남은 과목을 돌려준다 | 지난 학기에 켜 둔 과목을 매번 조회한다(Canvas·LearningX 호출 낭비). `term.end_at`을 저장하지 않아 "끝난 학기"를 판단할 수 없다 |
+| 3 | 학기 종류 키워드와 연도 형식이 코드에 박혀 있다 | 성균관대 규칙에는 맞는다. 다른 규칙(예: 동계를 다음 해로 표기)이면 순서만 어긋난다 |
+| 4 | 이름은 있고 시작일이 없는 학기(예: `2025 비정규`, Default Term)가 있다 | "현재 학기" 판단에서 빠진다. 시작일이 있는 학기가 하나도 없으면 정렬상 맨 위 그룹이 현재 학기가 된다 |
+
+### 개선 방향
+
+- 하루 한 번(또는 주 1회) 백그라운드에서 과목을 다시 불러온다.
+- 새 학기가 시작됐는데 그 학기 과목을 하나도 켜지 않았으면 대시보드에 안내한다.
+- `term.end_at`을 저장해서, 끝난 학기의 과목은 조회에서 빼거나 자동으로 끈다.
+
+## 2. 다른 학교로 확장
+
+### 학교에 따라 달라지는 값이 있는 곳
+
+| 요소 | 현재 구현 | 학교별 차이 |
+|---|---|---|
+| Canvas 주소 | `CANVAS_BASE_URL` 하나(서버 전체 설정, 기본 `https://canvas.skku.edu`) | 학교마다 다름 |
+| 연결 정보 | `CanvasConnection`에 토큰만 저장. 학교를 저장하는 칸이 없음 | 사용자별 학교가 필요 |
+| Canvas API | 표준 REST: `users/self/profile`, `courses`, `courses/{id}/assignments`, `assignments/{id}/submissions/self`, `courses/{id}/tabs` | Canvas라면 대체로 같음. 학교가 토큰 발급을 막았을 수 있음 |
+| LearningX 강의 | Xinics LearningX 전용 구조에 의존. 아래 목록 참고 | 학교마다 다를 가능성이 가장 큼 |
+| 로그인·토큰 | Google 로그인, Canvas 토큰은 사용자가 직접 붙여 넣음. 학교 SSO 미사용 | 로그인은 학교와 무관. 토큰 가이드는 성균관대 화면 기준 |
+| 학기 이름 | 한·영 키워드 규칙 | 학교마다 다름 |
+
+LearningX 강의 수집이 의존하는 것:
+- 과목 탭 이름이 정규식과 맞아야 한다. 주차학습·강의콘텐츠·출결, 그리고 "(구)" 접두어를 본다.
+- `courses/{id}/external_tools/sessionless_launch`로 LTI 폼을 자동 제출하고, `xn_api_token` 쿠키를 받는다.
+- `/learningx/api/v1/courses/{id}/modules`와 `allcomponents_db`를 호출한다.
+- 모듈 항목의 `content_data.use_attendance`, `due_at`, `completed`를 읽는다.
+
+### URL만 추가하면 되는가
+
+- **학교마다 서버를 따로 띄우는 경우:** `CANVAS_BASE_URL`과 `LEARNINGX_ALLOWED_HOSTS`만 바꾸면 과제 알림은 동작할 가능성이 높다. 강의 알림은 그 학교의 LearningX 도입 여부와 탭 이름에 달려 있다.
+- **한 서버에서 여러 학교를 받는 경우:** URL만으로는 안 된다. 설정이 전역이라 주소를 바꾸면 기존 사용자가 끊긴다.
+
+### 여러 학교를 받으려면 필요한 것
+
+1. 학교 목록을 둔다. 학교마다 Canvas 주소, LearningX 허용 호스트, 강의 기능 사용 여부, 탭·학기 이름 규칙, 토큰 가이드를 갖는다.
+2. `CanvasConnection`에 학교를 저장하고, 연결 화면에서 목록 중에 고르게 한다. 주소를 자유 입력으로 받지 않아야 SSRF 방어가 유지된다.
+3. `CanvasClient`와 `LearningXClient`를 만들 때 사용자 학교의 값을 쓴다(`collect_for_user`, `sync_courses`).
+4. 토큰 가이드와 로그인 문구를 학교별로 나누고, 개인정보처리방침의 "정보가 거쳐 가는 곳"에 학교별 Canvas를 반영한다.
+5. 학교(Canvas 호스트)별로 동시 호출 수를 제한한다.
+
+## 3. 그 밖의 확장 제약
+
+| 영역 | 현재 | 한계 | 개선 방향 |
+|---|---|---|---|
+| 스케줄러 시각 판정 | `matching_slot`이 지금 분과 정확히 같은 알림만 잡는다 | 스캔이 1분을 넘으면 그동안 지나간 분의 알림을 건너뛴다. 1인당 8초, 스레드 4개로 보면 한 분에 30명 정도가 몰리면 넘기 시작한다(추정) | 마지막 스캔 이후부터 지금까지의 알림을 모두 잡는다. 알림 잡기와 실행을 분리한다 **(우선순위 1)** |
+| 스케줄러 처리량 | 프로세스 1개, 스레드 4개(`SCHEDULER_CONCURRENCY`), 파일 잠금 | 100명이 09:00에 몰리면 약 3~4분 지연(추정) | 스레드 수 조정. 필요하면 DB 잠금으로 프로세스 여러 개 |
+| 미리보기 | 요청 안에서 Canvas를 직접 조회(4~8초). gunicorn 워커 2개 x 스레드 2개, 타임아웃 60초 | 동시에 4명이면 웹 전체가 멈춘다. 과목이 많으면 타임아웃에 걸릴 수 있다 | 스레드 늘리기, 조회를 백그라운드로 돌리고 결과 저장 |
+| 요청 제한 | 캐시를 프로세스마다 따로 둔다(LocMem) | 실제 한도가 워커 수만큼 커진다 | 서버 2대 이상이면 공유 캐시 |
+| 가입자 상한 | 전체 100명(`SIGNUP_MAX_USERS`) | 휴면 사용자도 자리를 차지한다 | 휴면 정리 정책이나 대기 명단 |
+| 데이터 보관 | 실행, 항목, 전송, 피드백 기록을 지우지 않는다 | 용량은 수년간 문제없음(추정). 과제 제목이 계속 쌓이는 것은 개인정보 측면에서 부담 | 90일 보관 같은 정리 작업과 방침 문구 추가 |
+| DB | MySQL HeatWave 무료(최대 연결 200, 지금 4개 사용), 직접 받는 덤프를 14일 보관 | 무료 등급이라 성능과 가용성 보장이 없음 | 당분간 충분 |
+| 서버 | ARM 2코어 VM 1대에 tossterm(실거래)이 같이 돈다 | 부하와 장애가 서로 번진다 | 사용자가 늘면 별도 VM으로 분리 |
+| 외부 호출 | 알림 한 번에 Canvas 약 16번. FCM 한 번에 4초 걸린 사례 | 학교 Canvas의 요청 제한 정책은 모름(보통 토큰별로 계산) | 과목 목록과 LearningX 토큰 캐시, 끝난 과목 제외 |
+| 멀티테넌시 | 학교, 관리자, 암호화 키가 모두 서버 전체에 하나 | 학교별로 나눌 수 없다 | 2절의 학교 모델이 출발점. 운영 부담이 작은 쪽은 학교별 배포 |
+
+## 가정
+
+- 1인당 소요 시간은 2026-09-30 09:00 예약 실행 2건(6.6초, 9.3초)을 기준으로 추정했다.
+- 성균관대에서 지난 학기 과목이 active로 얼마나 오래 남는지는 세어 보지 않았다.
+- 다른 학교는 한양대 한 곳만 실측했다.
+
+## 한양대 실측 (2026-09-30)
+
+`https://learning.hanyang.ac.kr`에 사용자 본인 토큰(키체인 항목 `learningx-hanyang-canvas-token`)으로 읽기 요청만 보냈다. LearningX는 성균관대와 같은 `sessionless_launch`로 한 번 실행했다. 앱의 실제 수집 함수(`_collect_assignments`, `_collect_lectures`)를 DB에 쓰지 않고 그대로 돌렸고, 필드 이름과 값의 종류만 기록했다. 토큰은 메모리에서만 썼다.
+
+### 결과
+
+| 항목 | 결과 | 성균관대와 비교 |
+|---|---|---|
+| Canvas 여부 | `Bearer realm="canvas-lms"`, `X-Canvas-Meta`, `X-Rate-Limit-Remaining: 600` | 같음 |
+| `users/self/profile` | 정상 | 같음 |
+| `courses?enrollment_state=active&include[]=term` | 5개. `term.name`과 `term.start_at` 있음, `term.end_at` 없음. 학기 이름은 `2026년 2학기`, `2025년 겨울학기` | 같은 구조. 이름 규칙이 비슷해서 기존 정렬 규칙(2학기, 겨울=동계)에 맞음 |
+| `assignments` | 앱이 쓰는 필드(`id`, `name`, `due_at`, `published`, `lock_at`, `unlock_at`, `submission_types`, `html_url`) 모두 있음 | 같음 |
+| `submissions/self` | `workflow_state` 정상(`submitted`) | 같음 |
+| 과목 탭(`tabs?include[]=external`) | `주차학습`, `출결현황`, `강의자료실`, `오프라인출결`, `게시판`, `종합성적부` | `주차학습`, `출결현황`이 기존 탭 이름 정규식과 맞음 |
+| LearningX 실행 | 4과목 모두 `sessionless_launch` → LTI 폼 → `xn_api_token` 성공. 실행 URL과 폼 호스트는 `learning.hanyang.ac.kr` 하나 | 같은 방식. 허용 호스트는 Canvas 호스트 하나로 충분 |
+| `/learningx/api/v1/courses/{id}/modules` | 정상. 모듈 항목 필드 `completed`(bool), `content_data.use_attendance`, `due_at`, `item_id`, `published` 등 | 앱이 읽는 필드가 모두 같은 이름과 종류로 있음. `attendance_status`, `lecture_period_status`, `late_at` 등 추가 필드가 있음 |
+| `allcomponents_db` | 정상 응답, 이번 학기 과목은 비어 있음 | 앱의 강의 알림은 이 API를 쓰지 않음 |
+| 앱 수집 함수 | 과제·강의 모두 오류 없이 끝남. 알림 대상은 0건(마감이 있는 항목이 없음) | — |
+
+### 판단
+
+- **학교마다 서버를 따로 띄우는 경우:** `CANVAS_BASE_URL=https://learning.hanyang.ac.kr`, `LEARNINGX_ALLOWED_HOSTS=learning.hanyang.ac.kr`로 바꾸면 과제 알림과 LearningX 수집은 코드 변경 없이 동작한다(실측).
+- **확인하지 못한 것 — 한양대 강의 알림의 실제 발생:**
+  - 이번 학기 출석 대상 항목은 2개였고, 둘 다 `item_content_type=video_conference`(실시간 수업)이며 `due_at`이 없어서 "마감 없음"으로 빠졌다.
+  - 성균관대에서 알림이 되는 녹화 강의(`screenlecture`, `movie`, `everlec`)는 이 계정의 과목에 없었다.
+  - 한양대 녹화 강의가 `due_at`을 채우는지는 그런 과목이 있는 계정으로 다시 확인해야 한다.
+- **한 서버에서 여러 학교를 받는 경우:** 2절 "여러 학교를 받으려면 필요한 것"이 그대로 필요하다. 한양대 기준으로 달라지는 설정값은 Canvas 주소, LearningX 허용 호스트, 토큰 가이드 셋이다. API 구조와 탭·학기 이름 규칙은 성균관대와 같았다.
+- **실시간 수업(`video_conference`):** 마감이 없어서 지금 규칙으로는 알림 대상이 아니다. 필요하면 `unlock_at`(수업 시작 시각)을 쓰는 "수업 시작 알림"은 별도 기능으로 검토한다.
