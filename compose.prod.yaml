@@ -29,6 +29,7 @@ x-app: &app
     SIGNUP_MAX_USERS: ${SIGNUP_MAX_USERS:-100}
     ADMIN_EMAILS: ${ADMIN_EMAILS:-}
     ADMIN_PATH: ${ADMIN_PATH:-ops-7f3c}
+    ADMIN_TAILNET_HOST: ${ADMIN_TAILNET_HOST:-lab-hjkim24.taild71a2d.ts.net}
     SCHEDULER_CONCURRENCY: ${SCHEDULER_CONCURRENCY:-4}
     APP_REVISION: ${APP_REVISION:-}
     PILOT_ALLOWED_EMAILS: ${PILOT_ALLOWED_EMAILS:-}
@@ -60,9 +61,12 @@ services:
       APP_DOMAIN: ${APP_DOMAIN:-alert.sobok-app.com}
       ADMIN_PATH: ${ADMIN_PATH:-ops-7f3c}
       ADMIN_ALLOWED_CIDRS: ${ADMIN_ALLOWED_CIDRS:-100.64.0.0/10}
+      ADMIN_TAILNET_HOST: ${ADMIN_TAILNET_HOST:-lab-hjkim24.taild71a2d.ts.net}
     ports:
       - "${APP_PRIVATE_IP:-10.0.1.31}:80:80"
       - "${APP_PRIVATE_IP:-10.0.1.31}:443:443"
+      # Tailnet-only admin entrance (see deploy/Caddyfile); loopback only.
+      - "127.0.0.1:8081:8081"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./staticfiles:/srv/static:ro
