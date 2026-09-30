@@ -62,7 +62,7 @@ services:
     logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-learningx-alert.com}
-      # Old addresses that should 308-redirect to APP_DOMAIN.
+      # Old addresses that should 301-redirect to APP_DOMAIN.
       APP_REDIRECT_DOMAINS: ${APP_REDIRECT_DOMAINS:-alert.sobok-app.com}
       ADMIN_PATH: ${ADMIN_PATH:-ops-7f3c}
       ADMIN_ALLOWED_CIDRS: ${ADMIN_ALLOWED_CIDRS:-100.64.0.0/10}

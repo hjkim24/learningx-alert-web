@@ -1,12 +1,12 @@
 # OCI 운영 런북
 
-LearningX Alert 운영 환경은 OCI 춘천 리전의 Ubuntu 22.04 ARM64 인스턴스에서 실행된다. 공개 주소는 `https://learningx-alert.com`(2026-09-30 이전 `alert.sobok-app.com`, 지금은 새 주소로 308 리디렉션), 예약 공인 IP는 `168.107.37.170`이다. Caddy는 인스턴스 사설 주소 `10.0.1.31:80/443`에만 바인딩하며, 기존 `tossterm.service`와 Tailscale은 별도로 유지한다.
+LearningX Alert 운영 환경은 OCI 춘천 리전의 Ubuntu 22.04 ARM64 인스턴스에서 실행된다. 공개 주소는 `https://learningx-alert.com`(2026-09-30 이전 `alert.sobok-app.com`, 지금은 새 주소로 301 리디렉션), 예약 공인 IP는 `168.107.37.170`이다. Caddy는 인스턴스 사설 주소 `10.0.1.31:80/443`에만 바인딩하며, 기존 `tossterm.service`와 Tailscale은 별도로 유지한다.
 
 ## 보안 경계
 
 - 실제 시크릿 값은 OCI Secret Management 콘솔에만 입력한다. Git, Terraform 변수·상태·계획, 채팅, 명령행 인수 또는 로그에 넣지 않는다.
 - Terraform은 시크릿 이름과 OCID만 조회한다. 운영 호스트가 instance principal로 현재 번들을 가져온다.
-- Route 53에서는 `learningx-alert.com` 영역의 apex A 레코드와, 옛 주소 `alert.sobok-app.com` A 레코드(새 주소로 308 리디렉션용)만 이 서비스 범위다. 기존 NS, SOA, TXT, CNAME 및 다른 호스트 레코드는 변경하거나 삭제하지 않는다.
+- Route 53에서는 `learningx-alert.com` 영역의 apex A 레코드와, 옛 주소 `alert.sobok-app.com` A 레코드(새 주소로 301 리디렉션용)만 이 서비스 범위다. 기존 NS, SOA, TXT, CNAME 및 다른 호스트 레코드는 변경하거나 삭제하지 않는다.
 - Canvas 개인 액세스 토큰과 Discord/Slack 웹훅은 로그인한 사용자가 웹 폼으로만 입력한다.
 - 시험 알림 전송은 사용자가 승인한 대상에서만 실행한다.
 
