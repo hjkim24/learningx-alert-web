@@ -101,7 +101,7 @@ groups:
                 datasource:
                     type: prometheus
                     uid: grafanacloud-prom
-                expr: min(httpcheck_status{http_status_class="2xx"})
+                expr: time() - max(timestamp(httpcheck_status{http_status_class="2xx", http_status_code=~"2.."}))
                 instant: true
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -112,8 +112,8 @@ groups:
                 conditions:
                     - evaluator:
                         params:
-                            - 1
-                        type: lt
+                            - 180
+                        type: gt
                 expression: A
                 intervalMs: 1000
                 maxDataPoints: 43200
@@ -121,10 +121,10 @@ groups:
                 type: threshold
           noDataState: Alerting
           execErrState: Error
-          for: 3m
+          for: 1m
           annotations:
-            description: '{{ with $values.A }}헬스체크 결과 {{ humanize .Value }} (1이면 정상){{ else }}헬스체크 결과 없음{{ end }}'
-            summary: 3분 넘게 /healthz/가 2xx로 응답하지 않아요.
+            description: '{{ with $values.A }}마지막 정상 응답 {{ humanize .Value }}초 전{{ else }}헬스체크 기록 없음 (collector 확인){{ end }}'
+            summary: 3분 넘게 /healthz/가 정상 응답하지 않아요. 서버나 caddy 컨테이너를 확인하세요.
           labels:
             service: learningx-alert
           isPaused: false

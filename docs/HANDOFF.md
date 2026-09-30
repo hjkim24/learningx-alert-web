@@ -103,7 +103,7 @@
   |---|---|
   | `lx-scheduler-stalled` | 5분 동안 scan 1회 미만이 2분 지속 |
   | `lx-runs-failed` | 15분 안에 failed/needs_review/interrupted 실행 |
-  | `lx-site-down` | httpcheck 2xx 실패가 3분 지속 |
+  | `lx-site-down` | 마지막 정상 헬스체크가 180초보다 오래됨, 1분 지속 (배포 중 실패 1번에는 안 울림) |
   | `lx-feedback-received` | 로그 "feedback received" |
   | `lx-school-capacity` | 학교별 연결/정원이 0.8 초과, 5분 지속 |
 
