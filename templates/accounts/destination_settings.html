@@ -47,6 +47,10 @@
               <span class="term-meta">
                 {{ destination.get_status_display }}{% if destination.last_tested_at %} · {{ destination.last_tested_at|date:"m.d H:i" }}{% endif %}
               </span>
+              <span class="term-meta delivery-meta">
+                {% if destination.last_failure_at %}<span class="delivery-failed">예약 알림 실패 {{ destination.last_failure_at|date:"m.d H:i" }}</span>{% if destination.last_success_at %} · {% endif %}{% endif %}
+                {% if destination.last_success_at %}마지막 예약 알림 {{ destination.last_success_at|date:"m.d H:i" }}{% elif not destination.last_failure_at %}예약 알림을 아직 받지 않았어요{% endif %}
+              </span>
             </div>
             <div class="destination-actions">
               <form method="post" action="{% url 'destination_test' destination.pk %}">

@@ -231,3 +231,64 @@ groups:
           isPaused: false
           notification_settings:
             receiver: Discord
+        - uid: lx-push-failures
+          title: 브라우저 푸시 실패 증가
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 86400
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: (sum(increase(learningx_deliveries_total{kind="webpush", status=~"definitely_failed|needs_review"}[24h])) >= 2) / clamp_min(sum(increase(learningx_deliveries_total{kind="webpush"}[24h])), 1)
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 86400
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: sum(increase(learningx_deliveries_total{kind="webpush", status=~"definitely_failed|needs_review"}[24h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+            - refId: D
+              relativeTimeRange:
+                from: 86400
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: sum(increase(learningx_deliveries_total{kind="webpush"}[24h]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: D
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0.3
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: 실패 {{ with $values.B }}{{ humanize .Value }}{{ end }}건 / 전체 {{ with $values.D }}{{ humanize .Value }}{{ end }}건
+            summary: 최근 24시간 브라우저 푸시 전송이 30% 넘게 실패했어요. VAPID 키, 푸시 서비스 응답, 만료된 구독(push_subscription_gone)을 확인하세요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord

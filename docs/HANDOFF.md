@@ -108,6 +108,7 @@
   | `lx-site-down` | 마지막 정상 헬스체크가 180초보다 오래됨, 1분 지속 (배포 중 실패 1번에는 안 울림) |
   | `lx-feedback-received` | 로그 "feedback received" |
   | `lx-school-capacity` | 학교별 연결/정원이 0.8 초과, 5분 지속 |
+  | `lx-push-failures` | 최근 24시간 브라우저 푸시 실패가 2건 이상이면서 실패율 30% 초과, 5분 지속 |
 
   - 규칙마다 annotation `summary`(무슨 일인지)와 `description`(값의 뜻)이 있다.
 - **Discord 서식:** 알림 템플릿 `lx-discord`(사본 `deploy/grafana/discord-template.tmpl`). contact point는 title `{{ template "lx.discord.title" . }}`, message `{{ template "lx.discord.message" . }}`, `use_embed_description=true`로 설정했다.

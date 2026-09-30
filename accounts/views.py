@@ -11,6 +11,7 @@ from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db import transaction
+from django.db.models import Max
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_post_parameters, sensitive_variables
@@ -139,6 +140,7 @@ def dashboard(request):
         request,
         "accounts/dashboard.html",
         {
+            "push_gone": _expired_push_since_resubscribe(request.user),
             "connection": connection,
             "destinations": destinations,
             "destination_kinds": sorted(
@@ -455,8 +457,61 @@ def _notification_settings_context(request, *, rule_form=None, alarm_formset=Non
     }
 
 
+def _expired_push_since_resubscribe(user):
+    """The latest scheduled delivery that found a browser push subscription
+    gone (the destination was deleted then), unless the user has registered a
+    browser again since. The dashboard asks them to turn push back on."""
+    gone = (
+        Delivery.objects.filter(
+            run__user=user,
+            destination_kind=Destination.Kind.WEBPUSH,
+            safe_error_code="push_subscription_gone",
+            finished_at__isnull=False,
+        )
+        .only("destination_label", "finished_at")
+        .order_by("-finished_at")
+        .first()
+    )
+    if gone is None:
+        return None
+    latest_push = (
+        Destination.objects.filter(user=user, kind=Destination.Kind.WEBPUSH)
+        .order_by("-created_at")
+        .values_list("created_at", flat=True)
+        .first()
+    )
+    if latest_push and latest_push > gone.finished_at:
+        return None
+    return gone
+
+
+def _attach_last_deliveries(destinations):
+    """Set last_success_at / last_failure_at on each destination from its
+    scheduled-alert deliveries, so the list shows whether alerts really arrive
+    (the test button only covers the moment it was pressed)."""
+    by_status = {
+        name: dict(
+            Delivery.objects.filter(destination__in=destinations, status__in=statuses)
+            .values("destination")
+            .annotate(latest=Max("finished_at"))
+            .values_list("destination", "latest")
+        )
+        for name, statuses in (
+            ("success", (Delivery.Status.SUCCEEDED,)),
+            ("failure", (Delivery.Status.DEFINITELY_FAILED, Delivery.Status.NEEDS_REVIEW)),
+        )
+    }
+    for destination in destinations:
+        destination.last_success_at = by_status["success"].get(destination.pk)
+        failure = by_status["failure"].get(destination.pk)
+        # Only a failure newer than the last success is worth showing.
+        success = destination.last_success_at
+        destination.last_failure_at = failure if failure and (not success or failure > success) else None
+    return destinations
+
+
 def _destination_settings_context(request, *, destination_form=None):
-    destinations = list(Destination.objects.filter(user=request.user))
+    destinations = _attach_last_deliveries(list(Destination.objects.filter(user=request.user)))
     push_enabled = webpush.web_push_enabled()
     return {
         "destinations": destinations,
