@@ -115,7 +115,7 @@
     <ol class="guide-next">
       <li><strong>과목 선택</strong>에서 알림 받을 과목의 과제·강의를 켜세요.</li>
       <li><strong>알림 설정 → 알림 시각</strong>에서 조회 범위와 알림 시각을 정하세요. 기본은 매일 09:00예요.</li>
-      <li><strong>알림 설정 → 알림 대상</strong>에서 이 기기의 푸시를 켜거나 Discord·Slack 웹훅을 추가하세요.</li>
+      <li><strong>알림 설정 → 알림 대상</strong>에서 이 기기의 푸시를 켜거나 Discord·Slack 웹훅을 추가하세요. iPhone은 <a class="guide-link" href="{% url 'pwa_install_guide' %}">홈 화면에 먼저 추가</a>해야 푸시를 켤 수 있어요.</li>
     </ol>
     {% if user.is_authenticated %}
       <p><a class="primary-button" href="{% url 'dashboard' %}">대시보드로 가서 연결하기</a></p>

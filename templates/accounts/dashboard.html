@@ -31,7 +31,7 @@
   {% elif not destinations %}
     <div class="attention-notice" role="status">
       <strong>등록된 알림 대상이 없어서 예약 알림이 가지 않아요.</strong>
-      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 브라우저 푸시나 Discord·Slack 웹훅을 추가해 주세요.</p>
+      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 브라우저 푸시나 Discord·Slack 웹훅을 추가해 주세요. iPhone으로 받으려면 먼저 <a href="{% url 'pwa_install_guide' %}">홈 화면에 추가하는 방법</a>을 보세요.</p>
     </div>
   {% elif not next_run %}
     <div class="attention-notice" role="status">
@@ -62,38 +62,33 @@
     </li>
   </ol>
 
-  <div class="history-grid">
-    <section class="history-panel" aria-labelledby="next-run-title">
-      <h2 id="next-run-title">다음 알림</h2>
-      {% if next_run %}
-        <p class="schedule-time">{{ next_run|date:"Y.m.d H:i" }} KST</p>
-        <p class="fine-print">
-          마감 {{ rule.lookahead_days }}일 이내 ·
-          {% for alarm in active_alarms %}{{ alarm.time|time:"H:i" }} {{ alarm.weekdays_display }}{% if not forloop.last %}, {% endif %}{% endfor %}
-          · <a href="{% url 'notification_settings' %}">변경</a>
-        </p>
-      {% else %}
-        <p class="empty-state compact">위 설정을 마치면 여기에 나와요.</p>
-      {% endif %}
-    </section>
-
-    <section class="history-panel" aria-labelledby="recent-run-title">
-      <h2 id="recent-run-title">최근 실행</h2>
-      {% if recent_runs %}
-        <ol class="history-list">
-          {% for run in recent_runs %}
-            <li>
-              <a href="{% url 'run_detail' run.pk %}">{{ run.scheduled_for|date:"Y.m.d H:i" }} KST</a>
-              <span>{{ run.get_status_display }}</span>
-              {% if run.safe_error_code %}<code>{{ run.safe_error_code }}</code>{% endif %}
-            </li>
-          {% endfor %}
-        </ol>
-      {% else %}
-        <p class="empty-state compact">아직 보낸 예약 알림이 없어요.</p>
-      {% endif %}
-    </section>
-  </div>
+  {% if connection %}
+    <div class="dashboard-layout">
+      <section class="panel remaining-panel" aria-labelledby="remaining-title">
+        <div class="remaining-heading">
+          <h2 id="remaining-title">남은 과제·강의{% if remaining_snapshot %} <span data-item-count>{{ remaining_count }}</span>건{% endif %}</h2>
+          {% if remaining_snapshot %}
+            <p class="fine-print">{{ remaining_snapshot.scheduled_for|date:"n월 j일 H:i" }} 알림 기준 · 지금 다시 확인하려면 알림 미리보기를 눌러 주세요.</p>
+          {% endif %}
+        </div>
+        {% if remaining_failed_courses %}
+          <p class="fine-print remaining-partial">이때 불러오지 못한 과목({{ remaining_failed_courses|join:", " }})의 항목은 빠져 있어요.</p>
+        {% endif %}
+        {% if remaining_snapshot %}
+          {% include "accounts/_item_groups.html" with day_groups=remaining_groups empty_message="마감이 남은 과제·강의가 없어요." %}
+        {% else %}
+          <p class="empty-state compact">첫 예약 알림이 가고 나면 남은 과제·강의가 여기에 모여요. 지금 보려면 알림 미리보기를 눌러 보세요.</p>
+        {% endif %}
+      </section>
+      <div class="dashboard-side">
+        {% include "accounts/_dashboard_history.html" %}
+      </div>
+    </div>
+  {% else %}
+    <div class="history-grid">
+      {% include "accounts/_dashboard_history.html" %}
+    </div>
+  {% endif %}
 
   {% if course_failures or delivery_problems %}
     <section class="history-panel full-panel" aria-labelledby="run-problems-title">
