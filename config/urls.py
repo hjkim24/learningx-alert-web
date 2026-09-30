@@ -5,6 +5,7 @@ from django.urls import include, path
 from django.templatetags.static import static
 from django.views.generic import RedirectView, TemplateView
 
+from accounts.admin_site import feedback_admin_site
 from accounts.views import dashboard
 from config import csp, pwa
 
@@ -39,6 +40,7 @@ urlpatterns = [
         name="pwa_install_guide",
     ),
     path("privacy/", privacy_policy, name="privacy_policy"),
+    path(settings.ADMIN_PATH, feedback_admin_site.urls),
     path("", dashboard, name="dashboard"),
     path("accounts/", include("allauth.urls")),
     path("connection/", include("accounts.urls")),

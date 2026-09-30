@@ -70,6 +70,10 @@ output "privacy_contact_email" {
   value = var.privacy_contact_email
 }
 
+output "admin_emails" {
+  value = var.admin_emails
+}
+
 output "pilot_allowed_emails" {
   value = var.pilot_allowed_emails
 }

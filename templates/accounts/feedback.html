@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}의견 보내기 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <header class="page-heading compact-heading">
+    <div>
+      <h1>의견 보내기</h1>
+      <p>오류를 발견했거나 바라는 점이 있으면 알려 주세요.</p>
+    </div>
+  </header>
+
+  <section class="panel">
+    <form method="post" action="{% url 'feedback' %}">
+      {% csrf_token %}
+      {% include "accounts/_feedback_fields.html" with feedback_field_id="page" %}
+      <input type="hidden" name="page_path" value="{{ back }}">
+      <div class="feedback-actions">
+        <button class="primary-button" type="submit">보내기</button>
+      </div>
+    </form>
+  </section>
+{% endblock %}

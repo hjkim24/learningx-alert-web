@@ -27,7 +27,10 @@ x-app: &app
     GOOGLE_CLIENT_SECRET_FILE: /run/secrets/google-client-secret
     SIGNUP_OPEN: ${SIGNUP_OPEN:-0}
     SIGNUP_MAX_USERS: ${SIGNUP_MAX_USERS:-100}
+    ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+    ADMIN_PATH: ${ADMIN_PATH:-ops-7f3c}
     SCHEDULER_CONCURRENCY: ${SCHEDULER_CONCURRENCY:-4}
+    APP_REVISION: ${APP_REVISION:-}
     PILOT_ALLOWED_EMAILS: ${PILOT_ALLOWED_EMAILS:-}
     PRIVACY_CONTACT_EMAIL: ${PRIVACY_CONTACT_EMAIL:-}
     CANVAS_BASE_URL: ${CANVAS_BASE_URL:-https://canvas.skku.edu}
@@ -55,6 +58,8 @@ services:
     logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN:-alert.sobok-app.com}
+      ADMIN_PATH: ${ADMIN_PATH:-ops-7f3c}
+      ADMIN_ALLOWED_CIDRS: ${ADMIN_ALLOWED_CIDRS:-100.64.0.0/10}
     ports:
       - "${APP_PRIVATE_IP:-10.0.1.31}:80:80"
       - "${APP_PRIVATE_IP:-10.0.1.31}:443:443"

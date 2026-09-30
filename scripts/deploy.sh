@@ -111,6 +111,8 @@ source "$runtime_env"
 set +a
 
 cd "$release_dir"
+# Compose reads this .env for interpolation: the app reports its own revision.
+printf 'APP_REVISION=%s\n' "$revision" >.env
 docker compose -p learningx-alert -f compose.prod.yaml build web
 docker image tag "learningx-alert:${IMAGE_TAG:-local}" "learningx-alert:$revision"
 # Caddy serves the image's collected (hashed) static files, so the URLs the app

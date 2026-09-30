@@ -47,6 +47,8 @@ class RedactingFilter(logging.Filter):
 _EXTRA_FIELDS = (
     "event",
     "run_id",
+    "feedback_id",
+    "category",
     "status",
     "safe_error_code",
     "delay_seconds",

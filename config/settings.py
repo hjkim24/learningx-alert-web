@@ -60,6 +60,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Simple config: no autodiscover, so only accounts/admin_site.py registers
+    # anything, and only on its own site (never the default admin.site).
+    "django.contrib.admin.apps.SimpleAdminConfig",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -174,6 +177,16 @@ SOCIALACCOUNT_PROVIDERS = {
         "OAUTH_PKCE_ENABLED": True,
     }
 }
+# Google accounts allowed into the feedback admin (plus is_staff, verified email).
+ADMIN_EMAILS = frozenset(
+    email.strip().casefold()
+    for email in os.environ.get("ADMIN_EMAILS", "").split(",")
+    if email.strip()
+)
+# Hidden path of that admin; Caddy also limits it to the tailnet.
+ADMIN_PATH = os.environ.get("ADMIN_PATH", "ops-7f3c/").strip("/") + "/"
+# Build revision (deploy writes it to the release .env); attached to feedback.
+APP_REVISION = os.environ.get("APP_REVISION", "").strip()[:40]
 # Public contact shown on /privacy/ (the Google consent screen links there).
 PRIVACY_CONTACT_EMAIL = os.environ.get("PRIVACY_CONTACT_EMAIL", "").strip()
 CANVAS_BASE_URL = os.environ.get("CANVAS_BASE_URL", "https://canvas.skku.edu")

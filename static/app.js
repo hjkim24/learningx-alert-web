@@ -649,3 +649,73 @@
     if (event.key === "Escape") document.querySelectorAll("[data-toast]").forEach(dismiss);
   });
 })();
+
+// Floating feedback button: opens the dialog and posts in place. Without JS
+// (or without <dialog> support) the link opens the feedback page instead.
+(() => {
+  const opener = document.querySelector("[data-feedback-open]");
+  const dialog = document.querySelector("[data-feedback-dialog]");
+  if (!opener || !dialog || typeof dialog.showModal !== "function") {
+    return;
+  }
+  const form = dialog.querySelector("[data-feedback-form]");
+  const fields = dialog.querySelector("[data-feedback-fields]");
+  const done = dialog.querySelector("[data-feedback-done]");
+  const error = dialog.querySelector("[data-feedback-error]");
+  const standalone = dialog.querySelector("[data-feedback-standalone]");
+  const submit = form.querySelector("button[type=submit]");
+
+  function reset() {
+    form.reset();
+    fields.hidden = false;
+    done.hidden = true;
+    error.hidden = true;
+    submit.disabled = false;
+  }
+
+  opener.addEventListener("click", (event) => {
+    event.preventDefault();
+    reset();
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+    standalone.value = isStandalone ? "1" : "0";
+    dialog.showModal();
+    dialog.querySelector("textarea").focus();
+  });
+
+  dialog.querySelectorAll("[data-feedback-close]").forEach((button) => {
+    button.addEventListener("click", () => dialog.close());
+  });
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close(); // backdrop click
+    }
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    error.hidden = true;
+    try {
+      const response = await fetch(form.action, {
+        method: "POST",
+        body: new FormData(form),
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+      });
+      if (response.ok) {
+        fields.hidden = true;
+        done.hidden = false;
+        return;
+      }
+      error.textContent =
+        response.status === 429
+          ? "잠시 뒤에 다시 보내 주세요. 10분에 3번까지 보낼 수 있어요."
+          : "종류를 고르고 내용을 2,000자 안으로 적어 주세요.";
+    } catch (failure) {
+      error.textContent = "보내지 못했어요. 연결을 확인하고 다시 시도해 주세요.";
+    }
+    error.hidden = false;
+    submit.disabled = false;
+  });
+})();

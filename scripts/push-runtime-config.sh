@@ -69,6 +69,7 @@ runtime_env=$(
             "SIGNUP_OPEN=" + ($root | optional_flag("signup_open") | @sh),
             "PILOT_ALLOWED_EMAILS=" + ($root | optional_text("pilot_allowed_emails") | @sh),
             "PRIVACY_CONTACT_EMAIL=" + ($root | optional_text("privacy_contact_email") | @sh),
+            "ADMIN_EMAILS=" + ($root | optional_text("admin_emails") | @sh),
             (($root | optional_text("database_host")) as $db_host
               | if $db_host == "" then
                   "DATABASE_ENGINE=" + ("sqlite" | @sh)

@@ -60,6 +60,7 @@ write_outputs() {
   "pilot_allowed_emails": {"value": "pilot@example.com"},
   "signup_open": {"value": true},
   "privacy_contact_email": {"value": "help@example.com"},
+  "admin_emails": {"value": "admin@example.com"},
   "forbidden_extra": {"value": "content-secret-value-base64"}
 }
 JSON
@@ -95,6 +96,7 @@ for expected in \
     "SIGNUP_OPEN='1'" \
     "COMPOSE_PROFILES=''" \
     "PRIVACY_CONTACT_EMAIL='help@example.com'" \
+    "ADMIN_EMAILS='admin@example.com'" \
     "LEARNINGX_ALLOWED_HOSTS='canvas.skku.edu,lx.example.edu'" \
     "DJANGO_SECRET_KEY_OCID='ocid1.vaultsecret.django'" \
     "GOOGLE_CLIENT_SECRET_OCID='ocid1.vaultsecret.google'" \

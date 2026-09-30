@@ -2,6 +2,14 @@
 	# Short on purpose; see SECURE_HSTS_SECONDS in config/settings.py.
 	header Strict-Transport-Security "max-age=3600"
 
+	# The feedback admin answers only to the tailnet (Tailscale CGNAT range).
+	# Everyone else gets a plain 404, as if the path did not exist.
+	@admin_outside_tailnet {
+		path /{$ADMIN_PATH:ops-7f3c}/*
+		not remote_ip {$ADMIN_ALLOWED_CIDRS:100.64.0.0/10}
+	}
+	respond @admin_outside_tailnet 404
+
 	handle_path /static/* {
 		root * /srv/static
 		# collectstatic names hashed copies like app.3f2a9c1b7d4e.css; their

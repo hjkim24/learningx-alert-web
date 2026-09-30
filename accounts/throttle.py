@@ -17,6 +17,7 @@ LIMITS = {
     "canvas_connect": (5, 600),
     "preview": (20, 600),
     "destination_test": (10, 600),
+    "feedback": (3, 600),
 }
 
 

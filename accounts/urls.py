@@ -10,6 +10,7 @@ urlpatterns = [
     path("courses/sync/", views.course_sync, name="course_sync"),
     path("courses/save/", views.course_settings_save, name="course_settings_save"),
     path("preview/", views.preview, name="preview"),
+    path("feedback/", views.feedback, name="feedback"),
     path("excluded/", views.excluded_items, name="excluded_items"),
     path("excluded/add/", views.item_exclude, name="item_exclude"),
     path("excluded/<int:pk>/remove/", views.item_include, name="item_include"),

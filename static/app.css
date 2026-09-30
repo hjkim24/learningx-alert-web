@@ -2426,3 +2426,140 @@ button[aria-busy="true"] {
     gap: 12px;
   }
 }
+
+/* ---------- Feedback ---------- */
+
+.feedback-fab {
+  position: fixed;
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 20;
+  min-height: 48px;
+  border-radius: var(--r-pill);
+  background: var(--brand);
+  color: #ffffff;
+  box-shadow: var(--shadow-float);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px 0 14px;
+  font-weight: 700;
+  font-size: var(--fs-small);
+  text-decoration: none;
+}
+
+.feedback-fab:hover {
+  background: var(--brand-strong);
+}
+
+.feedback-fab:focus-visible {
+  outline: 3px solid var(--brand-soft);
+  outline-offset: 2px;
+}
+
+.feedback-fab svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Stay clear of the sticky save bar on settings pages. */
+body:has(.sticky-actions) .feedback-fab {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+.feedback-dialog {
+  width: min(100% - 32px, 30rem);
+  border: 0;
+  border-radius: var(--r-block);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sheet);
+  padding: 24px;
+}
+
+.feedback-dialog::backdrop {
+  background: rgb(27 34 51 / 40%);
+}
+
+.feedback-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.feedback-dialog-head h2 {
+  margin: 0;
+  font-size: var(--fs-h2);
+}
+
+.feedback-kinds {
+  margin: 0 0 16px;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.feedback-kinds legend {
+  margin-bottom: 8px;
+  font-size: var(--fs-small);
+  font-weight: 700;
+}
+
+.feedback-kinds label,
+.feedback-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.feedback-context {
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  font-size: var(--fs-small);
+}
+
+.field-row textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--surface);
+  padding: 10px 14px;
+  font: inherit;
+  resize: vertical;
+}
+
+.field-row textarea:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--brand-soft);
+  outline: none;
+}
+
+.feedback-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.feedback-error {
+  color: var(--clay);
+}
+
+@media (max-width: 760px) {
+  .feedback-fab span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .feedback-fab {
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    justify-content: center;
+  }
+}
