@@ -22,7 +22,9 @@
 **변경과 배포 흐름**
 - feature 브랜치를 만들고, 테스트를 통과시킨 뒤 `git push -u origin <브랜치명>`으로 올린다. 브랜치 이름을 반드시 적는다. 이름 없는 `git push`는 정책에 막힌다.
 - 이어서 `gh pr create --head <브랜치> --base main`으로 PR을 만들고, `gh pr merge <번호> --merge --delete-branch`로 머지한다.
-- main에서 `./scripts/deploy.sh`로 배포한다. 이 스크립트는 워크트리가 깨끗해야 돌고, 테스트도 직접 실행한다. 문서만 바꾼 PR은 배포하지 않는다.
+- **배포는 GitHub Actions가 한다.** main에 머지되면 `.github/workflows/ci.yml`이 테스트 후 `./scripts/deploy.sh`를 실행한다. 문서만 바꾼 머지는 건너뛴다. 설정과 주의점은 `docs/operations/github-actions-deploy.md`에 있다.
+  - 머지한 뒤 `gh run watch`나 Actions 탭으로 배포 결과를 확인한다.
+  - Actions 배포가 도는 동안 로컬 `./scripts/deploy.sh`를 동시에 돌리지 않는다. Tailscale OAuth 등록 전이거나 Actions가 막혔을 때만 로컬에서 배포한다.
 - `main`에 직접 push하지 않는다. 위험하거나 되돌리기 어려운 작업은 먼저 사용자에게 묻는다.
 - 명령을 `&&`로 묶을 때, 앞 단계(커밋 등)가 끝나기 전에 push나 PR 생성이 실행되지 않게 하나씩 실행한다.
 
@@ -131,6 +133,9 @@
 | #50 | 여러 학교: `CanvasConnection.school`(migration 0011), 라디오 선택, 학교별 정원, 학교별 LearningX 호스트, 학교별 동시 실행 상한, 방침 갱신 |
 | #51, #52 | 알림 시각과 알림 대상을 사용자당 3개로 |
 | #53 | 학교별 연결 수·정원 gauge(`learningx_school_connections`, `learningx_school_capacity`) |
+| #55 | `lx-site-down` 규칙을 "마지막 정상 헬스체크 경과 초" 기준으로 변경 |
+| #56 | 배포 중단 줄이기: `restart` 대신 바뀐 컨테이너만 교체, Caddy `lb_try_duration 30s`, Caddy만 강제 재생성 |
+| #57 | GitHub Actions CI와 자동 배포(Tailscale `tag:ci`, 배포 전용 SSH 키) |
 
 Grafana 쪽 변경(코드 밖):
 - Discord 템플릿과 contact point 서식
