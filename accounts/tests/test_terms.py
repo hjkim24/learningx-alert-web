@@ -32,6 +32,9 @@ class SiteFooterTests(TestCase):
         footer = footer[: footer.index("</footer>")]
         self.assertIn(reverse("terms_of_service"), footer)
         self.assertIn(reverse("privacy_policy"), footer)
+        self.assertIn(reverse("canvas_token_guide"), footer)
+        self.assertIn(reverse("pwa_install_guide"), footer)
+        self.assertIn("비공식 서비스", footer)
         if email:
             self.assertIn(f"mailto:{email}", footer)
         else:
