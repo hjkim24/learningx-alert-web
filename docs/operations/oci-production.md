@@ -175,6 +175,8 @@ ssh ubuntu@168.107.37.170 'cd /opt/learningx-alert/current && sudo ./deploy/rest
 ssh ubuntu@168.107.37.170 'sudo docker logs --since 10m learningx-alert-otel-collector-1 2>&1 | tail -20'
 ```
 
+Grafana 대시보드·경보 규칙·Discord 템플릿의 사본은 `deploy/grafana/`에 있다. 설명은 `docs/HANDOFF.md` 4절을 본다.
+
 ## 피드백 관리 화면
 
 사용자가 우하단 "의견 보내기"로 보낸 피드백은 DB의 `Feedback`에 저장되고, Grafana 규칙 "새 피드백"이 Discord로 알린다(로그와 알림에는 번호와 종류만 남는다).

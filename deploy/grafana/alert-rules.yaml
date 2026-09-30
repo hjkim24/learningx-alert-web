@@ -1,0 +1,233 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: learningx-alert
+      folder: ""
+      interval: 1m
+      rules:
+        - uid: lx-scheduler-stalled
+          title: 스케줄러 멈춤
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 900
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                datasource:
+                    type: prometheus
+                    uid: grafanacloud-prom
+                expr: sum(increase(learningx_scheduler_scans_total{outcome="ok"}[5m]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: A
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: lt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 2m
+          annotations:
+            description: '{{ with $values.A }}최근 5분 스캔 {{ humanize .Value }}회 (정상이면 5회 안팎){{ else }}최근 5분 스캔 신호 없음{{ end }}'
+            summary: 5분 동안 스케줄러 신호가 없어요. 서버나 scheduler 컨테이너를 확인하세요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
+        - uid: lx-runs-failed
+          title: 예약 알림 실패
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 900
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                datasource:
+                    type: prometheus
+                    uid: grafanacloud-prom
+                expr: sum(increase(learningx_runs_total{status=~"failed|needs_review|interrupted"}[15m]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: A
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: '{{ with $values.A }}최근 15분 동안 {{ humanize .Value }}건{{ end }}'
+            summary: 최근 15분 안에 실패하거나 확인이 필요한 예약 알림이 있어요. 실행 기록을 확인하세요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
+        - uid: lx-site-down
+          title: 사이트 응답 없음
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 900
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                datasource:
+                    type: prometheus
+                    uid: grafanacloud-prom
+                expr: min(httpcheck_status{http_status_class="2xx"})
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: A
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 1
+                        type: lt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: Alerting
+          execErrState: Error
+          for: 3m
+          annotations:
+            description: '{{ with $values.A }}헬스체크 결과 {{ humanize .Value }} (1이면 정상){{ else }}헬스체크 결과 없음{{ end }}'
+            summary: 3분 넘게 /healthz/가 2xx로 응답하지 않아요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
+        - uid: lx-feedback-received
+          title: 새 피드백
+          condition: C
+          data:
+            - refId: A
+              queryType: instant
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: grafanacloud-logs
+              model:
+                expr: sum(count_over_time({service_name="learningx-alert-web"} |= "feedback received" [5m]))
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                queryType: instant
+                refId: A
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          annotations:
+            description: '{{ with $values.A }}최근 5분 동안 {{ humanize .Value }}건{{ end }}'
+            summary: 새 의견·오류 제보가 들어왔어요. 서버에서 manage.py list_feedback으로 확인하세요.
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
+        - uid: lx-school-capacity
+          title: 학교 정원 80% 이상
+          condition: C
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: max by (school) (learningx_school_connections) / (max by (school) (learningx_school_capacity) > 0)
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: A
+            - refId: B
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: max by (school) (learningx_school_connections)
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+            - refId: D
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: grafanacloud-prom
+              model:
+                expr: max by (school) (learningx_school_capacity)
+                instant: true
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: D
+            - refId: C
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0.799
+                        type: gt
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: C
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: 연결 {{ with $values.B }}{{ humanize .Value }}{{ end }}명 / 정원 {{ with $values.D }}{{ humanize .Value }}{{ end }}명
+            summary: '{{ if eq $labels.school "hanyang" }}한양대학교{{ else if eq $labels.school "skku" }}성균관대학교{{ else }}{{ $labels.school }}{{ end }} 연결이 정원의 80%를 넘었어요. 정원(SCHOOL_MAX_USERS)을 늘릴지 정하세요.'
+          labels:
+            service: learningx-alert
+          isPaused: false
+          notification_settings:
+            receiver: Discord
