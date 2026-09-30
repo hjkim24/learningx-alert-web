@@ -162,6 +162,13 @@ ssh ubuntu@168.107.37.170 'cd /opt/learningx-alert/current && sudo ./deploy/rest
 
 `restore_drill_ok`와 `count_differences=none`이 나오면 정상이다. 덤프 이후 새 데이터가 쌓였다면 `count_differences`에 차이가 보이는 것이 정상이다. 2026-09-30 첫 연습에서는 테이블 24개, 334행이 1초 만에 복원됐고 행 수 차이는 없었다.
 
+**자동 실행:** `learningx-alert-restore-drill.timer`가 매월 1일 04:00 KST에 `deploy/restore-drill-report.sh`를 실행한다. 배포 스크립트가 타이머를 설치하고 켠다.
+- 이 스크립트는 복원 연습을 돌린 뒤 `manage.py report_restore_drill`로 결과를 로그로 보낸다. 로그에는 개수만 담긴다.
+- 결과는 Grafana 경보 `lx-restore-drill-ok`(성공, 테이블·행 수 포함)와 `lx-restore-drill-failed`(실패)를 거쳐 Discord로 온다.
+- 수동 실행: `sudo systemctl start learningx-alert-restore-drill.service`
+- 로그: `journalctl -u learningx-alert-restore-drill`
+- 끄기: `sudo systemctl disable --now learningx-alert-restore-drill.timer`
+
 ## 모니터링
 
 `COMPOSE_PROFILES=telemetry`이면 `otel-collector` 컨테이너가 뜨고, 앱의 metric·trace·로그와 호스트 metric을 Grafana Cloud(stack `merryjelly2786`, 도쿄 리전)로 보낸다.
