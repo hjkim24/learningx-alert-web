@@ -48,3 +48,37 @@ class CanvasTokenGuideTests(TestCase):
         self.client.force_login(user)
         dashboard = self.client.get(reverse("dashboard"))
         self.assertContains(dashboard, reverse("canvas_token_guide"))
+
+
+PWA_IMAGES = [f"guide/pwa-install-0{index}.jpg" for index in range(1, 4)]
+
+
+class PwaInstallGuideTests(TestCase):
+    def test_guide_is_public_and_lists_every_step(self):
+        page = Client().get(reverse("pwa_install_guide"))
+
+        self.assertEqual(page.status_code, 200)
+        for step in range(1, 5):
+            self.assertContains(page, f'id="step-{step}"')
+        for phrase in ("홈 화면에 추가", "웹 앱으로 열기", "이 브라우저에서 알림 받기", "로그인하고 시작하기"):
+            self.assertContains(page, phrase)
+
+    def test_every_screenshot_is_referenced_small_and_stripped(self):
+        page = Client().get(reverse("pwa_install_guide")).content.decode()
+
+        for name in PWA_IMAGES:
+            with self.subTest(image=name):
+                self.assertIn(f"/static/{name}", page)
+                path = Path(settings.STATICFILES_DIRS[0]) / name
+                self.assertLess(path.stat().st_size, 400_000)
+                self.assertNotIn(b"Exif", path.read_bytes()[:4096])
+        self.assertEqual(page.count("<img "), page.count('alt="'))
+
+    def test_logged_in_user_gets_destination_cta_and_settings_link_back(self):
+        user = get_user_model().objects.create_user(username="pwa@example.com")
+        self.client.force_login(user)
+
+        page = self.client.get(reverse("pwa_install_guide"))
+        self.assertContains(page, reverse("destination_settings"))
+        settings_page = self.client.get(reverse("destination_settings"))
+        self.assertContains(settings_page, reverse("pwa_install_guide"))
