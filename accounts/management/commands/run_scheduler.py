@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from accounts import telemetry
 from accounts.scheduling import CATCH_UP_MINUTES, reconcile_interrupted_runs, run_due_rules
+from accounts.schools import record_school_gauges
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,10 @@ class Command(BaseCommand):
                         raise
                     since = scan_now
                     telemetry.heartbeat.add(1, {"outcome": "ok"})
+                    try:
+                        record_school_gauges()
+                    except Exception:  # telemetry must never stop the loop
+                        logger.exception("school gauges failed", extra={"event": "telemetry_error"})
                     self.stdout.write(f"scheduled_runs={len(runs)}")
                     if options["once"]:
                         return

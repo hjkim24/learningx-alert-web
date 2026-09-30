@@ -85,3 +85,19 @@ def school_full(code, *, exclude_user=None):
     if exclude_user is not None:
         connections = connections.exclude(user=exclude_user)
     return connections.count() >= limit
+
+
+def record_school_gauges():
+    """Report connections and the cap per enabled school (for the capacity alert)."""
+    from django.db.models import Count
+
+    from . import telemetry
+    from .models import CanvasConnection
+
+    counts = dict(
+        CanvasConnection.objects.values_list("school").annotate(n=Count("id")).values_list("school", "n")
+    )
+    for school in enabled_schools():
+        attrs = {"school": school.code}
+        telemetry.school_connections.set(counts.get(school.code, 0), attrs)
+        telemetry.school_capacity.set(settings.SCHOOL_MAX_USERS, attrs)

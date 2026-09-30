@@ -256,3 +256,24 @@ class SchoolGateTests(TestCase):
                     future.result()
 
         self.assertEqual(peak, 2)
+
+
+@override_settings(CREDENTIAL_ENCRYPTION_KEYS=[KEY], ENABLED_SCHOOLS=("skku", "hanyang"), SCHOOL_MAX_USERS=50)
+class SchoolGaugeTests(TestCase):
+    def test_gauges_report_count_and_cap_per_enabled_school(self):
+        from unittest import mock
+
+        from accounts import telemetry
+        from accounts.schools import record_school_gauges
+
+        connect(make_user("a"), "hanyang")
+        connect(make_user("b"), "hanyang")
+        with mock.patch.object(telemetry, "school_connections") as conns, \
+                mock.patch.object(telemetry, "school_capacity") as cap:
+            record_school_gauges()
+
+        self.assertEqual(
+            sorted(c.args for c in conns.set.call_args_list),
+            [(0, {"school": "skku"}), (2, {"school": "hanyang"})],
+        )
+        self.assertEqual({c.args[0] for c in cap.set.call_args_list}, {50})
