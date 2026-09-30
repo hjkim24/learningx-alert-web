@@ -116,7 +116,13 @@ ssh ubuntu@168.107.37.170 \
   'systemctl is-active learningx-alert.service learningx-alert-backup.timer'
 ```
 
-HTTP는 HTTPS로 리다이렉트되어야 하고 health 응답은 `ok`여야 한다. Caddy가 외부 TLS 종료와 HTTP 리다이렉트를 담당한다. 첫 파일럿에서는 HSTS를 설정하지 않았으며, 도메인과 인증서 운영이 안정된 뒤 별도 변경으로 활성화한다.
+HTTP는 HTTPS로 리다이렉트되어야 하고 health 응답은 `ok`여야 한다. Caddy가 외부 TLS 종료와 HTTP 리다이렉트를 담당한다.
+
+보안 헤더와 정적 파일:
+
+- **HSTS:** `max-age=3600`(1시간)만 보낸다. 하위 도메인(`includeSubDomains`)과 preload는 켜지 않는다. 몇 주 동안 문제가 없으면 Caddyfile과 `SECURE_HSTS_SECONDS`를 함께 `31536000`으로 올린다. 브라우저가 기억하는 값이라 올린 뒤에는 되돌려도 그 기간 동안 남는다.
+- **CSP:** `Content-Security-Policy-Report-Only`로만 보낸다(`config/csp.py`). 위반은 막지 않고, `/csp-report/`가 `csp violation ...` WARNING 로그로 남긴다. Loki에서 `{service_name="learningx-alert-web"} |= "csp violation"`로 확인한다. 1~2주 동안 위반이 없으면 같은 정책을 `Content-Security-Policy`로 바꿔 적용한다. `CSP_REPORT_ONLY=0`이면 헤더를 보내지 않는다.
+- **정적 파일:** 이미지 빌드 때 `collectstatic`이 해시 이름 사본(`app.1506906dbc90.css`)과 `staticfiles.json`을 만든다. 배포 스크립트가 같은 이미지에서 `staticfiles/`를 꺼내 Caddy에 붙인다. 해시 이름 파일만 1년 캐시(`immutable`)이고, 원래 이름 파일은 캐시 헤더가 없다.
 
 시크릿 내용은 보지 않고 파일 상태만 확인한다.
 

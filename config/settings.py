@@ -72,8 +72,11 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "config.csp.ContentSecurityPolicyReportOnlyMiddleware",
     "allauth.account.middleware.AccountMiddleware",
 ]
+# Report-only CSP: nothing is blocked, violations are logged via /csp-report/.
+CSP_REPORT_ONLY = os.environ.get("CSP_REPORT_ONLY", "1") == "1"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -126,6 +129,17 @@ else:
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# Production serves content-hashed copies (app.3f2a….css) that Caddy may cache
+# for a year. The image build runs collectstatic with STATIC_MANIFEST=1; local
+# development and tests keep plain names so they never need collectstatic.
+STATIC_MANIFEST = os.environ.get("STATIC_MANIFEST", "0" if DEBUG else "1") == "1"
+if STATIC_MANIFEST:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
+        },
+    }
 LOGIN_REDIRECT_URL = "dashboard"
 LOGOUT_REDIRECT_URL = "account_login"
 AUTHENTICATION_BACKENDS = ["allauth.account.auth_backends.AuthenticationBackend"]
@@ -207,3 +221,9 @@ CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SAMESITE = "Lax"
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+# HSTS starts short on purpose: browsers remember it for max-age and it cannot
+# be recalled, so raise it (e.g. 31536000) only after it has run cleanly. No
+# includeSubDomains/preload: other sobok-app.com hosts must not be bound.
+SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
