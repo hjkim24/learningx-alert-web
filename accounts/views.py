@@ -22,6 +22,7 @@ from .forms import (
     AlarmFormSet,
     CanvasTokenForm,
     CourseSelectionFormSet,
+    lectures_available_for,
     DestinationForm,
     NotificationRuleForm,
 )
@@ -55,6 +56,7 @@ from .notifications import (
     target_fingerprint,
     test_message_for,
 )
+from .schools import get_school
 from .services import (
     CanvasConnectionError,
     decrypt_secret,
@@ -70,7 +72,7 @@ logger = logging.getLogger(__name__)
 def dashboard(request):
     connection = (
         CanvasConnection.objects.filter(user=request.user)
-        .values("canvas_user_id", "canvas_name", "verified_at", "needs_reconnect")
+        .values("school", "canvas_user_id", "canvas_name", "verified_at", "needs_reconnect")
         .first()
     )
     selected_course_count = CourseSelection.objects.filter(
@@ -144,7 +146,8 @@ def dashboard(request):
             ),
             "course_failures": course_failures,
             "delivery_problems": delivery_problems,
-            "form": CanvasTokenForm(),
+            "form": CanvasTokenForm(connection=connection),
+            "school": get_school(connection["school"]) if connection else None,
             "next_run": next_run,
             "recent_runs": recent_runs,
             "rule": rule,
@@ -242,6 +245,13 @@ def account_delete(request):
     return redirect("account_login")
 
 
+CONNECT_ERROR_MESSAGES = {
+    "school_full": "이 학교는 정원이 다 찼어요. 자리가 나면 다시 열게요.",
+    "school_unavailable": "지금은 이 학교를 연결할 수 없어요.",
+    "": "Canvas에 연결하지 못했어요. 토큰을 다시 확인해 주세요.",
+}
+
+
 @sensitive_post_parameters("token")
 @login_required
 @require_POST
@@ -249,18 +259,24 @@ def canvas_connect(request):
     if not throttle.allow(request.user, "canvas_connect"):
         messages.error(request, throttle.LIMITED_MESSAGE)
         return redirect("dashboard")
-    form = CanvasTokenForm(request.POST)
-    if form.is_valid():
+    form = CanvasTokenForm(
+        request.POST,
+        connection=CanvasConnection.objects.filter(user=request.user).first(),
+    )
+    if not form.is_valid():
+        if "school" in form.errors:
+            messages.error(request, "학교를 골라 주세요.")
+        else:
+            messages.error(request, "토큰을 확인해 주세요.")
+    else:
         try:
             verify_and_store_connection(
                 user=request.user,
                 token=form.cleaned_data["token"],
+                school=form.cleaned_data.get("school"),
             )
-        except CanvasConnectionError:
-            messages.error(
-                request,
-                "Canvas에 연결하지 못했어요. 토큰을 다시 확인해 주세요.",
-            )
+        except CanvasConnectionError as error:
+            messages.error(request, CONNECT_ERROR_MESSAGES.get(str(error), CONNECT_ERROR_MESSAGES[""]))
         else:
             # New users get a working schedule right away (3 days, daily 09:00);
             # without one the scheduler would silently never run for them.
@@ -293,7 +309,8 @@ def canvas_disconnect(request):
 @require_GET
 def course_settings(request):
     formset = CourseSelectionFormSet(
-        queryset=CourseSelection.objects.filter(user=request.user)
+        queryset=CourseSelection.objects.filter(user=request.user),
+        form_kwargs={"lectures_available": lectures_available_for(request.user)},
     )
     return render(
         request,
@@ -330,7 +347,11 @@ def course_sync(request):
 @require_POST
 def course_settings_save(request):
     queryset = CourseSelection.objects.filter(user=request.user)
-    formset = CourseSelectionFormSet(request.POST, queryset=queryset)
+    formset = CourseSelectionFormSet(
+        request.POST,
+        queryset=queryset,
+        form_kwargs={"lectures_available": lectures_available_for(request.user)},
+    )
     formset_is_valid = formset.is_valid()
     allowed_ids = {str(pk) for pk in queryset.values_list("pk", flat=True)}
     submitted_ids = {

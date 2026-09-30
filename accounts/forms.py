@@ -1,17 +1,18 @@
 from datetime import time
 
 from django import forms
-from django.conf import settings
 from django.forms import modelformset_factory
 
 from .models import (
     EVERY_DAY,
     WEEKDAY_LABELS,
     AlarmTime,
+    CanvasConnection,
     CourseSelection,
     Destination,
     NotificationRule,
 )
+from .schools import DEFAULT_SCHOOL, enabled_schools, get_school, school_full
 
 
 class LabelSuffixMixin:
@@ -23,12 +24,32 @@ class LabelSuffixMixin:
 
 
 class CanvasTokenForm(LabelSuffixMixin, forms.Form):
+    """Token plus, for a first connection with several schools on, the school.
+
+    An existing connection keeps its school (the service ignores the field),
+    and with one school enabled there is nothing to choose, so the field is
+    dropped in both cases and the form renders as before.
+    """
+
+    school = forms.ChoiceField(label="학교", widget=forms.RadioSelect)
     token = forms.CharField(
         label="Canvas 액세스 토큰",
         max_length=4096,
         strip=True,
         widget=forms.PasswordInput(attrs={"autocomplete": "off"}),
     )
+
+    def __init__(self, *args, connection=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        schools = enabled_schools()
+        if connection is not None or len(schools) == 1:
+            del self.fields["school"]
+            return
+        self.full_codes = {school.code for school in schools if school_full(school.code)}
+        self.fields["school"].choices = [
+            (school.code, f"{school.name} (정원 마감)" if school.code in self.full_codes else school.name)
+            for school in schools
+        ]
 
 
 class CourseSelectionForm(LabelSuffixMixin, forms.ModelForm):
@@ -42,9 +63,11 @@ class CourseSelectionForm(LabelSuffixMixin, forms.ModelForm):
             "include_lectures": "강의",
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, lectures_available=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.lectures_available = bool(settings.LEARNINGX_ALLOWED_HOSTS)
+        if lectures_available is None:
+            lectures_available = _user_lectures_available(self.instance.user_id)
+        self.lectures_available = lectures_available
         if not self.lectures_available:
             # Disabled fields keep their stored value and ignore posted data.
             self.fields["include_lectures"].disabled = True
@@ -63,6 +86,20 @@ class CourseSelectionForm(LabelSuffixMixin, forms.ModelForm):
         if commit:
             instance.save()
         return instance
+
+
+def _user_lectures_available(user_id):
+    """Lecture alerts follow the user's school (LearningX hosts configured)."""
+    code = (
+        CanvasConnection.objects.filter(user_id=user_id).values_list("school", flat=True).first()
+        if user_id
+        else None
+    )
+    return get_school(code or DEFAULT_SCHOOL).lectures_available
+
+
+def lectures_available_for(user):
+    return _user_lectures_available(user.pk)
 
 
 CourseSelectionFormSet = modelformset_factory(

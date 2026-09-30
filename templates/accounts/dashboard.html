@@ -113,7 +113,7 @@
     <summary>
       <h2 id="canvas-title">Canvas 연결</h2>
       {% if connection %}
-        <span class="term-meta">{% if connection.needs_reconnect %}재연결 필요{% else %}<span class="connection-dot" aria-hidden="true"></span>연결됨{% endif %} · {{ connection.canvas_name }}</span>
+        <span class="term-meta">{% if connection.needs_reconnect %}재연결 필요{% else %}<span class="connection-dot" aria-hidden="true"></span>연결됨{% endif %} · {{ school.name }} · {{ connection.canvas_name }}</span>
       {% else %}
         <span class="term-meta">연결 필요</span>
       {% endif %}
@@ -121,6 +121,10 @@
 
     {% if connection %}
       <dl class="destination-summary">
+        <div>
+          <dt>학교</dt>
+          <dd>{{ school.name }}</dd>
+        </div>
         <div>
           <dt>Canvas 사용자</dt>
           <dd>{{ connection.canvas_name }}</dd>
@@ -138,7 +142,21 @@
       <p class="fine-print">Canvas의 계정 → 설정 → 새 액세스 토큰에서 발급해요. <a class="guide-link" href="{% url 'canvas_token_guide' %}">발급 방법 보기</a></p>
     {% endif %}
 
-    <form class="token-form" method="post" action="{% url 'canvas_connect' %}">
+    {% if form.school %}
+      {# Outside the token grid; the radios join the form via form=. #}
+      <fieldset class="school-choice">
+        <legend>학교</legend>
+        <div class="school-options">
+          {% for choice in form.school %}
+            <label class="school-option">
+              <input type="radio" form="canvas-token-form" name="{{ choice.data.name }}" value="{{ choice.data.value }}" required{% if choice.data.value in form.full_codes %} disabled{% endif %}>
+              <span>{{ choice.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </fieldset>
+    {% endif %}
+    <form class="token-form" id="canvas-token-form" method="post" action="{% url 'canvas_connect' %}">
       {% csrf_token %}
       <div class="field-row">
         {{ form.token.label_tag }}

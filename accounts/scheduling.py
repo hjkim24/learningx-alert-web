@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
@@ -14,6 +15,7 @@ from django.views.decorators.debug import sensitive_variables
 from . import telemetry
 from .collection import alert_selection_filter, collect_for_user
 from .models import (
+    CanvasConnection,
     CourseRunResult,
     Delivery,
     Destination,
@@ -445,16 +447,33 @@ def run_due_rules(
         # SQLite locks the whole database per write; parallel runs would fail
         # with "database is locked". Only the MySQL deployment runs threads.
         workers = 1
+    schools = _run_schools(runs)
     if workers == 1:
         for run in runs:
-            _run_one(run, now, collector, sender)
+            _run_one(run, now, collector, sender, schools.get(run.user_id))
     else:
         # Runs are I/O-bound (Canvas, push services), so threads overlap the
         # waiting. Each run belongs to a different user, so they share no rows;
         # the pool size also caps concurrent Canvas traffic at `workers` users.
+        # A per-school gate keeps one slow Canvas from holding every thread;
+        # interleaving by school keeps the other threads busy meanwhile.
+        gates = {
+            code: threading.BoundedSemaphore(settings.SCHOOL_CONCURRENCY)
+            for code in set(schools.values())
+        }
+        ordered = _interleave_by_school(runs, schools)
         with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="run") as pool:
             for future in [
-                pool.submit(_run_in_thread, run, now, collector, sender) for run in runs
+                pool.submit(
+                    _run_in_thread,
+                    run,
+                    now,
+                    collector,
+                    sender,
+                    schools.get(run.user_id),
+                    gates.get(schools.get(run.user_id)),
+                )
+                for run in ordered
             ]:
                 future.result()
     if runs:
@@ -462,20 +481,49 @@ def run_due_rules(
     return runs
 
 
-def _run_in_thread(run, now, collector, sender):
+def _run_schools(runs):
+    """user_id -> school code for the users behind ``runs``."""
+    if not runs:
+        return {}
+    return dict(
+        CanvasConnection.objects.filter(
+            user_id__in={run.user_id for run in runs}
+        ).values_list("user_id", "school")
+    )
+
+
+def _interleave_by_school(runs, schools):
+    queues = {}
+    for run in runs:
+        queues.setdefault(schools.get(run.user_id), []).append(run)
+    ordered = []
+    while any(queues.values()):
+        for queue in queues.values():
+            if queue:
+                ordered.append(queue.pop(0))
+    return ordered
+
+
+def _run_in_thread(run, now, collector, sender, school=None, gate=None):
     try:
-        _run_one(run, now, collector, sender)
+        if gate is None:
+            _run_one(run, now, collector, sender, school)
+        else:
+            with gate:
+                _run_one(run, now, collector, sender, school)
     finally:
         # Django opens one DB connection per thread; release this worker's.
         connections.close_all()
 
 
-def _run_one(run, now, collector, sender):
+def _run_one(run, now, collector, sender, school=None):
     run_clock = time.monotonic()
+    school_attrs = {"school": school or "none"}
     if run.scheduled_for:
         _safe_record(
             telemetry.run_actual_delay,
             max(0.0, (datetime.now(UTC) - run.scheduled_for).total_seconds()),
+            school_attrs,
         )
     try:
         # One trace per run: Canvas/LearningX/webhook calls and DB queries
@@ -497,12 +545,15 @@ def _run_one(run, now, collector, sender):
         except Exception:
             # Left RUNNING; reconcile_interrupted_runs settles it on restart.
             logger.exception("run finish failed", extra={"event": "run_finish_failed", "run_id": run.pk})
-    _safe_record(telemetry.run_duration, time.monotonic() - run_clock)
+    _safe_record(telemetry.run_duration, time.monotonic() - run_clock, school_attrs)
 
 
-def _safe_record(instrument, value):
+def _safe_record(instrument, value, attributes=None):
     try:
-        instrument.record(value)
+        if attributes:
+            instrument.record(value, attributes)
+        else:
+            instrument.record(value)
     except Exception:  # telemetry must never break a run
         pass
 

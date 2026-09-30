@@ -202,6 +202,18 @@ LEARNINGX_ALLOWED_HOSTS = frozenset(
     for host in os.environ.get("LEARNINGX_ALLOWED_HOSTS", "").split(",")
     if host.strip()
 )
+# Schools the Canvas connect form offers (codes from accounts/schools.py).
+ENABLED_SCHOOLS = tuple(
+    code.strip().lower()
+    for code in os.environ.get("ENABLED_SCHOOLS", "skku,hanyang").split(",")
+    if code.strip()
+)
+# Canvas connections allowed per school (0 = no cap). SIGNUP_MAX_USERS still
+# caps accounts overall.
+SCHOOL_MAX_USERS = int(os.environ.get("SCHOOL_MAX_USERS", "50"))
+# Runs of one school processed at once, so a slow Canvas cannot hold every
+# scheduler thread.
+SCHOOL_CONCURRENCY = max(1, int(os.environ.get("SCHOOL_CONCURRENCY", "3")))
 # Browser (PWA) push. The VAPID key is derived from SECRET_KEY unless an explicit
 # base64url P-256 scalar is provided; the subject is the contact push services see.
 WEB_PUSH_ENABLED = os.environ.get("WEB_PUSH_ENABLED", "1") == "1"

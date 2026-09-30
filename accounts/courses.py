@@ -10,6 +10,7 @@ from django.views.decorators.debug import sensitive_variables
 from learningx_alert.canvas import CanvasClient, PaginationError
 
 from .models import CanvasConnection, CourseSelection
+from .schools import school_of
 from .services import decrypt_secret
 
 
@@ -22,7 +23,7 @@ def sync_courses(user, client_class=CanvasClient):
     connection = CanvasConnection.objects.get(user=user)
     token = decrypt_secret(connection.encrypted_token)
     try:
-        courses = client_class(settings.CANVAS_BASE_URL, token).courses()
+        courses = client_class(school_of(connection).canvas_base_url, token).courses()
     except (
         HTTPError,
         URLError,

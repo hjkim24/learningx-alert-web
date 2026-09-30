@@ -99,7 +99,7 @@ class RunTelemetryTests(TestCase):
             self.assertFalse({"user", "user_id", "run_id", "course"} & set(call.args[1]))
         self.assertIn("WARNING:accounts.scheduling:run finished", logs.output[0])
 
-    def test_scan_records_queue_wait_and_durations_without_attributes(self):
+    def test_scan_records_queue_wait_and_durations_with_school_only(self):
         from datetime import timedelta
 
         self.run.scheduled_for = timezone.now() - timedelta(seconds=45)
@@ -115,9 +115,13 @@ class RunTelemetryTests(TestCase):
         self.assertAlmostEqual(actual.record.call_args.args[0], 45, delta=2)
         self.assertEqual(duration.record.call_count, 2)
         scan.record.assert_called_once()
-        for instrument in (actual, duration, scan, batch):
+        for instrument in (scan, batch):
             for call in instrument.record.call_args_list:
                 self.assertEqual(len(call.args), 1)  # value only, no attributes
+        # Per-run metrics carry only the school code (a handful of values).
+        for instrument in (actual, duration):
+            for call in instrument.record.call_args_list:
+                self.assertEqual(set(call.args[1]), {"school"})
 
     def test_metrics_are_off_without_endpoint(self):
         with mock.patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_ENDPOINT": ""}):

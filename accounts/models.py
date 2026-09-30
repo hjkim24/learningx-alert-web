@@ -6,6 +6,8 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 
+from .schools import CODE_CHOICES, DEFAULT_SCHOOL
+
 
 class CanvasConnection(models.Model):
     user = models.OneToOneField(
@@ -13,6 +15,8 @@ class CanvasConnection(models.Model):
         on_delete=models.CASCADE,
         related_name="canvas_connection",
     )
+    # Code from accounts/schools.py; every pre-existing connection was SKKU.
+    school = models.CharField(max_length=32, choices=CODE_CHOICES, default=DEFAULT_SCHOOL)
     canvas_user_id = models.CharField(max_length=128)
     canvas_name = models.CharField(max_length=255)
     encrypted_token = models.TextField()

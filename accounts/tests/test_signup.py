@@ -153,7 +153,7 @@ class ThrottleTests(TestCase):
         from unittest import mock
 
         with mock.patch("accounts.views.verify_and_store_connection") as verify:
-            response = self.client.post(reverse("canvas_connect"), {"token": "x" * 40}, follow=True)
+            response = self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "x" * 40}, follow=True)
         verify.assert_not_called()
         self.assertContains(response, "요청이 너무 많아요")
 

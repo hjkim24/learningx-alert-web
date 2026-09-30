@@ -17,7 +17,7 @@
       <dt>Google 계정</dt>
       <dd>로그인할 때 Google이 알려 주는 이메일 주소와 기본 프로필(이름, 프로필 사진 주소, 계정 ID)이에요. Google 액세스 토큰은 저장하지 않아요.</dd>
       <dt>Canvas 연결</dt>
-      <dd>직접 붙여 넣은 Canvas 액세스 토큰, Canvas 사용자 ID와 이름이에요. 토큰은 암호화해서 저장하고 화면에 다시 보여 주지 않아요.</dd>
+      <dd>고른 학교, 직접 붙여 넣은 Canvas 액세스 토큰, Canvas 사용자 ID와 이름이에요. 토큰은 암호화해서 저장하고 화면에 다시 보여 주지 않아요.</dd>
       <dt>과목과 마감 정보</dt>
       <dd>수강 과목 이름과 학기, 알림을 보내려고 조회한 과제·강의·학습자료의 제목과 마감 시각, 알림을 끈 항목이에요.</dd>
       <dt>알림 설정</dt>
@@ -43,7 +43,7 @@
     <h2 id="policy-share-title">정보가 거쳐 가는 곳</h2>
     <dl class="policy-list">
       <dt>Canvas와 LearningX</dt>
-      <dd>연결한 토큰으로 학교 Canvas와 LearningX에 과목·과제·강의 목록을 읽기 요청만 보내요.</dd>
+      <dd>연결한 토큰으로 고른 학교의 Canvas와 LearningX에 과목·과제·강의 목록을 읽기 요청만 보내요. 연결할 수 있는 학교는 {% for school in schools %}{{ school.name }}({{ school.host }}){% if not forloop.last %}, {% endif %}{% endfor %}예요.</dd>
       <dt>등록한 알림 대상</dt>
       <dd>알림 내용(과목 이름, 항목 제목, 마감 시각)은 직접 등록한 Discord·Slack 웹훅으로 보내요. 그 뒤로는 각 서비스의 정책을 따라요.</dd>
       <dt>브라우저 푸시 서비스</dt>

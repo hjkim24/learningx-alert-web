@@ -136,7 +136,7 @@ class ConnectAutoSyncTests(TestCase):
         self.user = get_user_model().objects.create_user(username="pilot@example.com")
         self.client.force_login(self.user)
 
-    def fake_verify(self, *, user, token):
+    def fake_verify(self, *, user, token, school=None):
         return CanvasConnection.objects.create(
             user=user,
             canvas_user_id="1",
@@ -153,7 +153,7 @@ class ConnectAutoSyncTests(TestCase):
 
         with patch("accounts.views.verify_and_store_connection", side_effect=self.fake_verify), \
                 patch("accounts.views.sync_courses", side_effect=fake_sync) as sync:
-            response = self.client.post(reverse("canvas_connect"), {"token": "t"}, follow=True)
+            response = self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "t"}, follow=True)
 
         sync.assert_called_once_with(self.user)
         self.assertContains(response, "수강 과목 2개를 불러왔어요.")
@@ -161,7 +161,7 @@ class ConnectAutoSyncTests(TestCase):
     def test_sync_failure_keeps_connection_and_warns(self):
         with patch("accounts.views.verify_and_store_connection", side_effect=self.fake_verify), \
                 patch("accounts.views.sync_courses", side_effect=CourseSyncError("course_sync_failed")):
-            response = self.client.post(reverse("canvas_connect"), {"token": "t"}, follow=True)
+            response = self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "t"}, follow=True)
 
         self.assertTrue(CanvasConnection.objects.filter(user=self.user).exists())
         self.assertContains(response, "Canvas를 연결했어요.")
@@ -172,6 +172,6 @@ class ConnectAutoSyncTests(TestCase):
 
         with patch("accounts.views.verify_and_store_connection", side_effect=CanvasConnectionError("x")), \
                 patch("accounts.views.sync_courses") as sync:
-            self.client.post(reverse("canvas_connect"), {"token": "t"})
+            self.client.post(reverse("canvas_connect"), {"school": "skku", "token": "t"})
 
         sync.assert_not_called()
