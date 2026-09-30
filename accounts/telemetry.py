@@ -36,6 +36,28 @@ course_results = _meter.create_counter(
     "learningx.course_results",
     description="Per-course collection outcomes, by status and error code",
 )
+# Wall-clock view of one scan. ScheduledRun.started_at is the scan's `now` for
+# every run in the batch, so start_delay above cannot show the queueing that
+# serial processing adds; these can.
+run_actual_delay = _meter.create_histogram(
+    "learningx.run.actual_start_delay",
+    unit="s",
+    description="Seconds from an alarm's scheduled time to its run really starting (queue wait included)",
+)
+run_duration = _meter.create_histogram(
+    "learningx.run.duration",
+    unit="s",
+    description="Wall-clock seconds one scheduled run took",
+)
+scan_duration = _meter.create_histogram(
+    "learningx.scan.duration",
+    unit="s",
+    description="Wall-clock seconds one scan spent running its due runs",
+)
+scan_batch = _meter.create_histogram(
+    "learningx.scan.batch_size",
+    description="Due runs claimed by one scan",
+)
 
 _configured = False
 _tracing_configured = False

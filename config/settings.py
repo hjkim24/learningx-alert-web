@@ -150,6 +150,8 @@ SOCIALACCOUNT_LOGIN_ON_GET = False
 # Open sign-up: any Google account with a verified email may join. Off unless
 # explicitly "1", so a missing or mistyped value keeps the allowlist gate.
 SIGNUP_OPEN = os.environ.get("SIGNUP_OPEN", "0") == "1"
+# Open sign-up creates at most this many accounts in total (0 = no cap).
+SIGNUP_MAX_USERS = int(os.environ.get("SIGNUP_MAX_USERS", "100"))
 PILOT_ALLOWED_EMAILS = {
     email.strip().casefold()
     for email in os.environ.get("PILOT_ALLOWED_EMAILS", "").split(",")

@@ -10,8 +10,9 @@ from accounts import throttle
 from accounts.adapters import PilotSocialAccountAdapter
 
 
-def social_login(*addresses):
+def social_login(*addresses, existing=False):
     return SimpleNamespace(
+        is_existing=existing,
         email_addresses=[
             SimpleNamespace(email=email, verified=verified)
             for email, verified in addresses
@@ -19,7 +20,7 @@ def social_login(*addresses):
     )
 
 
-@override_settings(SIGNUP_OPEN=True, PILOT_ALLOWED_EMAILS=set())
+@override_settings(SIGNUP_OPEN=True, PILOT_ALLOWED_EMAILS=set(), SIGNUP_MAX_USERS=0)
 class OpenSignupAdapterTests(SimpleTestCase):
     def setUp(self):
         self.adapter = PilotSocialAccountAdapter()
@@ -69,6 +70,48 @@ class SignupSwitchDefaultTests(SimpleTestCase):
             with mock.patch.dict(os.environ, {"SIGNUP_OPEN": value}):
                 self.assertIs(importlib.reload(settings_module).SIGNUP_OPEN, expected)
         importlib.reload(settings_module)
+
+
+@override_settings(SIGNUP_OPEN=True, PILOT_ALLOWED_EMAILS=set(), SIGNUP_MAX_USERS=2)
+class SignupCapTests(TestCase):
+    def setUp(self):
+        self.adapter = PilotSocialAccountAdapter()
+        self.request = RequestFactory().get("/")
+        get_user_model().objects.create_user(username="first@example.com")
+
+    def test_new_accounts_are_allowed_below_the_cap(self):
+        login = social_login(("second@example.com", True))
+
+        self.assertTrue(self.adapter.is_open_for_signup(self.request, login))
+        self.adapter.pre_social_login(self.request, login)  # does not raise
+
+    def test_new_accounts_are_refused_at_the_cap(self):
+        get_user_model().objects.create_user(username="second@example.com")
+        login = social_login(("third@example.com", True))
+
+        self.assertFalse(self.adapter.is_open_for_signup(self.request, login))
+        with self.assertRaises(ImmediateHttpResponse) as raised:
+            self.adapter.pre_social_login(self.request, login)
+        self.assertEqual(raised.exception.response.status_code, 403)
+        self.assertIn("가입 인원이 다 찼어요", raised.exception.response.content.decode())
+
+    def test_existing_users_still_log_in_at_the_cap(self):
+        get_user_model().objects.create_user(username="second@example.com")
+        login = social_login(("first@example.com", True), existing=True)
+
+        self.adapter.pre_social_login(self.request, login)  # does not raise
+
+    def test_zero_means_no_cap_and_default_is_100(self):
+        get_user_model().objects.create_user(username="second@example.com")
+        with override_settings(SIGNUP_MAX_USERS=0):
+            self.assertTrue(
+                self.adapter.is_open_for_signup(self.request, social_login(("x@example.com", True)))
+            )
+        import importlib
+
+        import config.settings as settings_module
+
+        self.assertEqual(importlib.reload(settings_module).SIGNUP_MAX_USERS, 100)
 
 
 class SignupCopyTests(TestCase):

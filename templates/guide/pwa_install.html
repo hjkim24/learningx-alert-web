@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}홈 화면에 추가하고 알림 받기 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <header class="page-heading compact-heading">
+    <div>
+      <h1>홈 화면에 추가하고 알림 받기</h1>
+      <p>LearningX Alert를 휴대폰 홈 화면에 앱처럼 추가하면, Discord·Slack 없이도 휴대폰으로 마감 알림을 받을 수 있어요. 1분이면 끝나요.</p>
+    </div>
+  </header>
+
+  <section class="panel guide-overview" aria-labelledby="pwa-overview-title">
+    <h2 id="pwa-overview-title">시작하기 전에</h2>
+    <ul class="guide-facts">
+      <li><strong>iPhone은 Safari에서 해야 해요.</strong> iOS 16.4 이상이 필요하고, 홈 화면 아이콘으로 연 앱에서만 알림을 켤 수 있어요.</li>
+      <li><strong>앱 설치가 아니에요.</strong> App Store를 거치지 않고, 이 사이트를 홈 화면에 바로가기처럼 추가하는 방식이에요.</li>
+      <li><strong>언제든 끌 수 있어요.</strong> 알림 설정의 "이 브라우저 알림 해제"를 누르거나 홈 화면 아이콘을 지우면 돼요.</li>
+    </ul>
+  </section>
+
+  <ol class="guide-steps">
+    <li class="guide-step" id="step-1">
+      <div class="guide-step-text">
+        <span class="guide-step-number" aria-hidden="true">1</span>
+        <div>
+          <h2>Safari로 열고 공유 버튼 누르기</h2>
+          <p>iPhone의 Safari에서 <strong>alert.sobok-app.com</strong>을 연 다음, 아래 도구 막대 가운데의 <strong>공유 버튼</strong>(네모 위로 화살표)을 누르세요.</p>
+        </div>
+      </div>
+      <figure class="guide-shot guide-shot-phone">
+        <img src="{% static 'guide/pwa-install-01.jpg' %}" alt="iPhone Safari로 연 LearningX Alert 로그인 화면. 아래 도구 막대 가운데의 공유 버튼이 강조되어 있습니다." loading="lazy" width="720" height="1561">
+      </figure>
+    </li>
+
+    <li class="guide-step" id="step-2">
+      <div class="guide-step-text">
+        <span class="guide-step-number" aria-hidden="true">2</span>
+        <div>
+          <h2>"홈 화면에 추가" 누르기</h2>
+          <p>공유 창을 위로 끌어올려 목록 맨 아래의 <strong>홈 화면에 추가</strong>를 누르세요. 보이지 않으면 목록을 조금 더 내려 보세요.</p>
+        </div>
+      </div>
+      <figure class="guide-shot guide-shot-phone">
+        <img src="{% static 'guide/pwa-install-02.jpg' %}" alt="Safari 공유 창. 목록 맨 아래의 '홈 화면에 추가'가 강조되어 있습니다." loading="lazy" width="720" height="1561">
+        <figcaption>스크린샷의 연락처는 가렸어요.</figcaption>
+      </figure>
+    </li>
+
+    <li class="guide-step" id="step-3">
+      <div class="guide-step-text">
+        <span class="guide-step-number" aria-hidden="true">3</span>
+        <div>
+          <h2>"웹 앱으로 열기"를 켜고 "추가" 누르기</h2>
+          <p>이름은 원하는 대로 바꿔도 돼요. <strong>웹 앱으로 열기</strong>가 켜져 있는지 확인하고 오른쪽 위 <strong>추가</strong>를 누르면 홈 화면에 아이콘이 생겨요.</p>
+          <div class="guide-callout" role="note">
+            <strong>"웹 앱으로 열기"를 끄면</strong>
+            <p>아이콘을 눌러도 Safari 탭으로 열려서 알림을 켤 수 없어요. 꺼진 채로 추가했다면 아이콘을 지우고 다시 추가해 주세요.</p>
+          </div>
+        </div>
+      </div>
+      <figure class="guide-shot guide-shot-phone">
+        <img src="{% static 'guide/pwa-install-03.jpg' %}" alt="'홈 화면에 추가' 창. 오른쪽 위 '추가' 버튼과 켜져 있는 '웹 앱으로 열기' 스위치가 강조되어 있습니다." loading="lazy" width="720" height="1561">
+      </figure>
+    </li>
+
+    <li class="guide-step" id="step-4">
+      <div class="guide-step-text">
+        <span class="guide-step-number" aria-hidden="true">4</span>
+        <div>
+          <h2>홈 화면 아이콘으로 열고 알림 켜기</h2>
+          <p>Safari가 아니라 방금 생긴 <strong>홈 화면 아이콘</strong>으로 여세요. 로그인한 다음 <strong>알림 설정 → 알림 대상</strong>에서 <strong>이 브라우저에서 알림 받기</strong>를 누르고, 알림 권한을 묻는 창에서 <strong>허용</strong>을 누르면 끝이에요.</p>
+          <p>켜고 나면 알림 대상 목록에 이 기기가 추가돼요. 옆의 <strong>시험 알림</strong>을 눌러 휴대폰에 알림이 오는지 확인해 보세요.</p>
+        </div>
+      </div>
+    </li>
+  </ol>
+
+  <section class="panel" aria-labelledby="pwa-android-title">
+    <h2 id="pwa-android-title">Android와 컴퓨터에서는</h2>
+    <p>Android Chrome이나 컴퓨터의 Chrome·Edge는 홈 화면에 추가하지 않아도 알림을 받을 수 있어요. 사이트에서 바로 <strong>알림 설정 → 알림 대상 → 이 브라우저에서 알림 받기</strong>를 누르면 돼요. 앱처럼 쓰고 싶다면 브라우저 메뉴의 "홈 화면에 추가"나 "앱 설치"를 쓰세요.</p>
+    {% if user.is_authenticated %}
+      <p><a class="primary-button" href="{% url 'destination_settings' %}">알림 대상 설정하기</a></p>
+    {% else %}
+      <p><a class="primary-button" href="{% url 'account_login' %}">로그인하고 시작하기</a></p>
+    {% endif %}
+  </section>
+
+  <section class="panel" aria-labelledby="pwa-faq-title">
+    <h2 id="pwa-faq-title">자주 묻는 질문</h2>
+    <dl class="guide-faq">
+      <dt>"홈 화면에 추가한 앱에서만 푸시를 켤 수 있어요"라고 나와요.</dt>
+      <dd>Safari 탭에서 열었기 때문이에요. 홈 화면 아이콘으로 다시 열어 주세요. 아이콘으로 열었는데도 이 문구가 나오면 3단계의 "웹 앱으로 열기"가 꺼져 있었던 거예요.</dd>
+      <dt>알림 권한 창에서 실수로 "허용 안 함"을 눌렀어요.</dt>
+      <dd>iPhone <strong>설정 → 알림</strong>에서 홈 화면에 추가한 앱 이름을 찾아 알림을 켜 주세요. 그다음 앱에서 "이 브라우저에서 알림 받기"를 다시 누르면 돼요.</dd>
+      <dt>여러 기기에서 받을 수 있나요?</dt>
+      <dd>돼요. 기기마다 같은 방법으로 켜면 알림 대상에 기기별로 따로 추가돼요.</dd>
+    </dl>
+  </section>
+{% endblock %}

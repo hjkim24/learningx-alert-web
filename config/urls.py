@@ -33,6 +33,11 @@ urlpatterns = [
         TemplateView.as_view(template_name="guide/canvas_token.html"),
         name="canvas_token_guide",
     ),
+    path(
+        "guide/home-screen/",
+        TemplateView.as_view(template_name="guide/pwa_install.html"),
+        name="pwa_install_guide",
+    ),
     path("privacy/", privacy_policy, name="privacy_policy"),
     path("", dashboard, name="dashboard"),
     path("accounts/", include("allauth.urls")),

@@ -2349,6 +2349,11 @@ button[aria-busy="true"] {
   box-shadow: 0 1px 2px rgb(27 34 51 / 8%), inset 0 0 0 1px var(--line);
 }
 
+/* Phone screenshots are tall; keep them phone-sized instead of full width. */
+.guide-shot-phone {
+  max-width: 320px;
+}
+
 .guide-shot figcaption {
   color: var(--muted);
   font-size: var(--fs-small);
