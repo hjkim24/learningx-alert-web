@@ -10,7 +10,7 @@
     <ul class="preview-list">
       {% for item in group.items %}
         <li class="preview-item" data-preview-item>
-          <span class="type-badge type-{{ item.item_type }}">{% if item.item_type == "lecture" %}강의{% elif item.item_type == "material" %}학습자료{% else %}과제{% endif %}</span>
+          <span class="type-badge type-{{ item.item_type }}">{% if item.item_type == "lecture" %}강의{% elif item.item_type == "material" %}학습자료{% elif item.item_type == "quiz" %}퀴즈{% else %}과제{% endif %}</span>
           <div class="preview-item-text">
             <strong>{{ item.title }}</strong>
             <span>{{ item.course_name|course_title }} · {{ item.due_at|date:"H:i" }} 마감</span>

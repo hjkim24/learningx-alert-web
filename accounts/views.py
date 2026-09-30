@@ -719,7 +719,7 @@ def push_unsubscribe(request):
     return JsonResponse({"ok": True, "deleted": bool(deleted)})
 
 
-EXCLUDABLE_TYPES = {"assignment", "lecture", "material"}
+EXCLUDABLE_TYPES = {"assignment", "quiz", "lecture", "material"}
 
 
 def _wants_json(request):

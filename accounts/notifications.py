@@ -86,7 +86,7 @@ def _safe_external_text(value):
     return " ".join(str(value).split()).replace("@", "＠").replace("<", "‹").replace(">", "›")
 
 
-ITEM_TYPE_LABELS = {"assignment": "과제", "lecture": "강의", "material": "학습자료"}
+ITEM_TYPE_LABELS = {"assignment": "과제", "quiz": "퀴즈", "lecture": "강의", "material": "학습자료"}
 
 
 WEEKDAYS_KO = ("월", "화", "수", "목", "금", "토", "일")
