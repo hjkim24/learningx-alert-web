@@ -162,7 +162,7 @@ variable "learningx_allowed_hosts" {
 
 variable "app_domain" {
   type    = string
-  default = "alert.sobok-app.com"
+  default = "learningx-alert.com"
 }
 
 variable "oci_auth" {

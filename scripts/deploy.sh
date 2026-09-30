@@ -5,7 +5,7 @@ PYTHON_BIN=${PYTHON_BIN:-.venv/bin/python}
 SSH_BIN=${SSH_BIN:-ssh}
 RSYNC_BIN=${RSYNC_BIN:-rsync}
 CURL_BIN=${CURL_BIN:-curl}
-HEALTH_URL=${HEALTH_URL:-https://alert.sobok-app.com/healthz/}
+HEALTH_URL=${HEALTH_URL:-https://learningx-alert.com/healthz/}
 HEALTH_ATTEMPTS=${HEALTH_ATTEMPTS:-30}
 HEALTH_DELAY_SECONDS=${HEALTH_DELAY_SECONDS:-2}
 

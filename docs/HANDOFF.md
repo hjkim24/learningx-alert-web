@@ -5,7 +5,7 @@
 ## 1. 서비스 한 줄 요약
 
 - **무엇:** 학생이 Canvas 액세스 토큰을 연결하면, 마감이 다가오는 과제와 LearningX 강의를 정해진 시각에 Discord·Slack 웹훅이나 브라우저 푸시(PWA)로 알려 주는 Django 웹 서비스다.
-- **주소:** https://alert.sobok-app.com. 로그인은 Google만 쓴다.
+- **주소:** https://learningx-alert.com (2026-09-30에 옮김). 옛 주소 `alert.sobok-app.com`은 Caddy가 새 주소로 308 리디렉션한다(`APP_REDIRECT_DOMAINS`). 로그인은 Google만 쓴다.
 - **학교:** 성균관대(`canvas.skku.edu`), 한양대(`learning.hanyang.ac.kr`). 한 서버에서 같이 운영한다(2026-09-30부터).
 - **운영자:** 사용자(hjkim4842@gmail.com) 한 명이다.
 - **규모:** 가입 3~4명. 전체 가입 상한은 100명, 학교별 연결 상한은 50명이다.

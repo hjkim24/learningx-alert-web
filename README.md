@@ -1,6 +1,6 @@
 # LearningX Alert Web
 
-Canvas 과제와 LearningX 강의 마감을 모아 정해 둔 시각에 Discord·Slack 웹훅이나 브라우저 푸시(PWA)로 보내 주는 서비스입니다. 운영 주소는 [alert.sobok-app.com](https://alert.sobok-app.com)입니다. Google 로그인(공개 가입, Google이 인증한 이메일만), 사용자별 Canvas 연결, 과목별 알림 켜기·끄기, 항목별 알림 끄기, 미리보기, 알림 규칙(조회 범위·알림 시각), 여러 알림 대상, 시험 전송, 예약 전송 이력을 지원합니다.
+Canvas 과제와 LearningX 강의 마감을 모아 정해 둔 시각에 Discord·Slack 웹훅이나 브라우저 푸시(PWA)로 보내 주는 서비스입니다. 운영 주소는 [learningx-alert.com](https://learningx-alert.com)입니다. Google 로그인(공개 가입, Google이 인증한 이메일만), 사용자별 Canvas 연결, 과목별 알림 켜기·끄기, 항목별 알림 끄기, 미리보기, 알림 규칙(조회 범위·알림 시각), 여러 알림 대상, 시험 전송, 예약 전송 이력을 지원합니다.
 
 ## 구성
 
