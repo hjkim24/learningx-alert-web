@@ -1,10 +1,12 @@
 import hashlib
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from django.db import IntegrityError, transaction
+from django.conf import settings
+from django.db import IntegrityError, connections, transaction
 from django.db.models import Count
 from opentelemetry import trace
 from django.views.decorators.debug import sensitive_variables
@@ -398,33 +400,64 @@ def run_due_rules(
     scan_clock = time.monotonic()
     if runs:
         _safe_record(telemetry.scan_batch, len(runs))
-    for run in runs:
-        run_clock = time.monotonic()
-        if run.scheduled_for:
-            _safe_record(
-                telemetry.run_actual_delay,
-                max(0.0, (datetime.now(UTC) - run.scheduled_for).total_seconds()),
-            )
+    workers = max(1, min(settings.SCHEDULER_CONCURRENCY, len(runs)))
+    if connections["default"].vendor == "sqlite":
+        # SQLite locks the whole database per write; parallel runs would fail
+        # with "database is locked". Only the MySQL deployment runs threads.
+        workers = 1
+    if workers == 1:
+        for run in runs:
+            _run_one(run, now, collector, sender)
+    else:
+        # Runs are I/O-bound (Canvas, push services), so threads overlap the
+        # waiting. Each run belongs to a different user, so they share no rows;
+        # the pool size also caps concurrent Canvas traffic at `workers` users.
+        with ThreadPoolExecutor(max_workers=workers, thread_name_prefix="run") as pool:
+            for future in [
+                pool.submit(_run_in_thread, run, now, collector, sender) for run in runs
+            ]:
+                future.result()
+    if runs:
+        _safe_record(telemetry.scan_duration, time.monotonic() - scan_clock)
+    return runs
+
+
+def _run_in_thread(run, now, collector, sender):
+    try:
+        _run_one(run, now, collector, sender)
+    finally:
+        # Django opens one DB connection per thread; release this worker's.
+        connections.close_all()
+
+
+def _run_one(run, now, collector, sender):
+    run_clock = time.monotonic()
+    if run.scheduled_for:
+        _safe_record(
+            telemetry.run_actual_delay,
+            max(0.0, (datetime.now(UTC) - run.scheduled_for).total_seconds()),
+        )
+    try:
+        # One trace per run: Canvas/LearningX/webhook calls and DB queries
+        # nest under it. Only the run id and final status are attached.
+        with _tracer.start_as_current_span(
+            "scheduled_run", attributes={"learningx.run_id": run.pk}
+        ) as span:
+            execute_run(run, now, collector=collector, sender=sender)
+            span.set_attribute("learningx.run_status", str(run.status))
+    except Exception:
+        logger.exception("run crashed", extra={"event": "run_crashed", "run_id": run.pk})
         try:
-            # One trace per run: Canvas/LearningX/webhook calls and DB queries
-            # nest under it. Only the run id and final status are attached.
-            with _tracer.start_as_current_span(
-                "scheduled_run", attributes={"learningx.run_id": run.pk}
-            ) as span:
-                execute_run(run, now, collector=collector, sender=sender)
-                span.set_attribute("learningx.run_status", str(run.status))
-        except Exception:
-            logger.exception("run crashed", extra={"event": "run_crashed", "run_id": run.pk})
             _finish_run(
                 run,
                 ScheduledRun.Status.FAILED,
                 now,
                 "run_failed",
             )
-        _safe_record(telemetry.run_duration, time.monotonic() - run_clock)
-    if runs:
-        _safe_record(telemetry.scan_duration, time.monotonic() - scan_clock)
-    return runs
+        except Exception:
+            # Left RUNNING; reconcile_interrupted_runs settles it on restart.
+            logger.exception("run finish failed", extra={"event": "run_finish_failed", "run_id": run.pk})
+    _safe_record(telemetry.run_duration, time.monotonic() - run_clock)
 
 
 def _safe_record(instrument, value):
