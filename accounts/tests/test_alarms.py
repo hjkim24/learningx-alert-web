@@ -56,17 +56,23 @@ class AlarmSettingsTests(TestCase):
             [(time(7, 30), 0b0011111, True), (time(10, 0), 0b1100000, False)],
         )
 
-    def test_up_to_five_alarms_are_accepted(self):
-        response = self.save("07:00", "09:00", "12:00", "18:00", "22:00")
+    def test_up_to_three_alarms_are_accepted(self):
+        response = self.save("07:00", "12:00", "22:00")
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(len(self.alarms()), 5)
+        self.assertEqual(len(self.alarms()), 3)
 
-    def test_sixth_alarm_is_rejected_and_nothing_saved(self):
-        response = self.save("07:00", "08:00", "09:00", "12:00", "18:00", "22:00")
+    def test_fourth_alarm_is_rejected_and_nothing_saved(self):
+        response = self.save("07:00", "09:00", "12:00", "22:00")
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(NotificationRule.objects.filter(user=self.user).exists())
+
+    def test_limit_is_three_and_page_tells_the_editor(self):
+        self.assertEqual(AlarmTime.MAX_PER_RULE, 3)
+        self.client.force_login(self.user)
+        page = self.client.get(reverse("notification_settings"))
+        self.assertContains(page, 'data-alarm-limit="3"')
 
     def test_alarm_without_weekday_is_rejected(self):
         response = self.save(("09:00", [], True))
