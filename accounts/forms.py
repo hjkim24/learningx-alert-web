@@ -162,7 +162,8 @@ class NotificationRuleForm(LabelSuffixMixin, forms.ModelForm):
     )
     class Meta:
         model = NotificationRule
-        fields = ("lookahead_days",)
+        fields = ("lookahead_days", "notify_when_empty")
+        labels = {"notify_when_empty": "알릴 게 없는 날도 알려 주기"}
 
 
 WEEKDAY_CHOICES = tuple((str(index), label) for index, label in enumerate(WEEKDAY_LABELS))

@@ -254,6 +254,33 @@ def _start_delivery(delivery, now):
     )
 
 
+def _empty_notice_due(run):
+    """Whether this empty run should still send the short "nothing due" note.
+
+    Only when the user turned it on, has somewhere to send it, and no earlier
+    run on the same KST day already sent one (an empty run that delivered).
+    """
+    rule = NotificationRule.objects.filter(user_id=run.user_id).only("notify_when_empty").first()
+    if rule is None or not rule.notify_when_empty:
+        return False
+    if not Destination.objects.filter(user_id=run.user_id).exists():
+        return False
+    day = (run.scheduled_for or datetime.now(UTC)).astimezone(SEOUL).date()
+    start = datetime.combine(day, datetime.min.time(), tzinfo=SEOUL)
+    return not (
+        ScheduledRun.objects.filter(
+            user_id=run.user_id,
+            scheduled_for__gte=start,
+            scheduled_for__lt=start + timedelta(days=1),
+            status=ScheduledRun.Status.SUCCEEDED,
+            items__isnull=True,
+            deliveries__status=Delivery.Status.SUCCEEDED,
+        )
+        .exclude(pk=run.pk)
+        .exists()
+    )
+
+
 @sensitive_variables()
 def execute_run(
     run,
@@ -315,7 +342,7 @@ def execute_run(
         )
 
     has_failures = any(outcome.status == "failed" for outcome in result.outcomes)
-    if not result.items and not has_failures:
+    if not result.items and not has_failures and not _empty_notice_due(run):
         return _finish_run(run, ScheduledRun.Status.EMPTY, now)
 
     destinations = tuple(Destination.objects.filter(user_id=run.user_id))

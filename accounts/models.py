@@ -63,6 +63,9 @@ class NotificationRule(models.Model):
         default=3,
         validators=(MinValueValidator(1), MaxValueValidator(14)),
     )
+    # Send a short "nothing due" message when a run finds nothing, at most
+    # once per KST day, so a quiet day is not mistaken for a broken service.
+    notify_when_empty = models.BooleanField(default=False)
 
 
 WEEKDAY_LABELS = ("월", "화", "수", "목", "금", "토", "일")
