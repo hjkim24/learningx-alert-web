@@ -6,9 +6,9 @@
 {% block content %}
   <div class="login-layout">
     <section class="login-main" aria-labelledby="login-title">
-      <h1 id="login-title">과제·강의 마감,<br>알림으로 받으세요</h1>
-      <p class="login-lead">Canvas 과제와 LearningX 강의 마감을 모아서, 정해 둔 시각에 Discord·Slack·휴대폰으로 보내 드려요.</p>
       <p class="login-schools">{% for school in supported_schools %}{{ school.name }}{% if not forloop.last %} · {% endif %}{% endfor %} 지원</p>
+      <h1 id="login-title">과제·강의 마감,<br>한 번에 챙기세요.</h1>
+      <p class="login-lead">아직 끝내지 않은 과제·퀴즈·강의만 모아,<br class="login-lead-break"> 원하는 시각에 알려 드려요.</p>
 
       <div class="login-card">
         <form method="post" action="{% provider_login_url 'google' process='login' %}">
@@ -30,48 +30,38 @@
         {% endif %}
       </div>
 
-      <p class="login-after">로그인 후 Canvas 액세스 토큰을 연결하고, 과목과 알림 대상을 고르면 돼요. <a class="guide-link" href="#how-to-start">처음 설정하는 순서 보기</a></p>
-      <p class="login-legal"><a href="{% url 'privacy_policy' %}">개인정보처리방침</a>{% if privacy_contact_email %} · 로그인이 안 되면 <a href="mailto:{{ privacy_contact_email }}">{{ privacy_contact_email }}</a>{% endif %}</p>
+      <details class="login-start" id="how-to-start">
+        <summary>처음 이용하시나요?</summary>
+        <div class="login-start-body">
+          <p>로그인하면 연결부터 시험 알림까지 차례로 안내해 드려요. 학교 비밀번호 대신 본인의 Canvas 액세스 토큰으로 연결해요.</p>
+          <a href="{% url 'canvas_token_guide' %}">토큰 받는 방법</a>
+          <a href="{% url 'pwa_install_guide' %}">휴대폰에서 받는 방법</a>
+        </div>
+      </details>
     </section>
 
-    <aside class="login-visual" aria-label="알림 예시">
-      <div class="demo-push" aria-hidden="true">
-        <img class="demo-push-icon" src="{% static 'icons/favicon.svg' %}" width="36" height="36" alt="">
-        <div>
-          <p class="demo-push-head"><strong>LearningX Alert</strong><span>오전 9:00</span></p>
-          <p class="demo-push-title">마감 3건 · 가장 빠른 건 오늘 23:59</p>
-          <p class="demo-push-body">자료구조 과제 4 외 2건</p>
-        </div>
-      </div>
-
+    <aside class="login-visual" aria-labelledby="login-preview-title">
+      <h2 id="login-preview-title">알림은 이렇게 도착해요</h2>
       <div class="demo-message" aria-hidden="true">
-        <p class="demo-message-meta"><strong>LearningX Alert</strong> 오전 9:00</p>
+        <div class="demo-message-meta">
+          <img src="{% static 'icons/favicon.svg' %}" width="32" height="32" alt="">
+          <div><strong>LearningX Alert</strong><span>마감 알림 · 예시</span></div>
+          <span class="demo-time">오전 9:00</span>
+        </div>
+        <p class="demo-message-title">챙길 마감이 3건 있어요</p>
         <div class="demo-day">
-          <p class="demo-day-title"><span class="badge badge-dday is-urgent">오늘</span> 10월 1일 (수)</p>
+          <p class="demo-day-title"><span class="badge badge-dday is-urgent">오늘</span></p>
           <p class="demo-course">자료구조</p>
           <p class="demo-item"><span class="demo-kind">과제</span> 과제 4 <span class="demo-time">23:59</span></p>
         </div>
         <div class="demo-day">
-          <p class="demo-day-title"><span class="badge badge-dday">D-2</span> 10월 3일 (금)</p>
+          <p class="demo-day-title"><span class="badge badge-dday">D-2</span></p>
           <p class="demo-course">회로이론</p>
           <p class="demo-item"><span class="demo-kind demo-kind-lecture">강의</span> 5주차 강의 <span class="demo-time">23:59</span></p>
-          <p class="demo-item"><span class="demo-kind">과제</span> 퀴즈 2 <span class="demo-time">18:00</span></p>
+          <p class="demo-item"><span class="demo-kind">퀴즈</span> 퀴즈 2 <span class="demo-time">18:00</span></p>
         </div>
       </div>
-
-      <p class="login-visual-caption">매일 아침, 이번 주에 챙길 것만 한 번에.</p>
+      <p class="login-visual-caption">휴대폰 푸시 · Discord · Slack</p>
     </aside>
   </div>
-
-  <section class="login-start panel" id="how-to-start" aria-labelledby="login-start-title">
-    <h2 id="login-start-title">첫 알림, 이렇게 시작해요</h2>
-    <p class="fine-print">로그인하면 지금 할 단계부터 안내해 드려요. 학교 비밀번호는 입력하지 않아요.</p>
-    <ol class="login-start-steps">
-      <li><strong>Canvas 연결</strong><p>학교를 선택하고 본인 액세스 토큰을 넣어요.</p><a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법</a></li>
-      <li><strong>과목 선택</strong><p>필요한 과목의 과제·퀴즈·강의 알림을 켜요.</p></li>
-      <li><strong>알림 대상 등록</strong><p>휴대폰 푸시나 Discord·Slack을 등록해요.</p><a class="guide-link" href="{% url 'pwa_install_guide' %}">휴대폰에서 받는 방법</a></li>
-      <li><strong>시험 알림</strong><p>직접 한 번 보내고 기기에 도착하는지 확인해요.</p></li>
-    </ol>
-    <p class="fine-print">예약 시각마다 미완료 항목을 다시 확인해요. 마감이 없거나 이미 끝낸 항목은 보내지 않아요.</p>
-  </section>
 {% endblock %}
