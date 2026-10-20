@@ -84,6 +84,21 @@ def dashboard(request):
         Destination.objects.filter(user=request.user).values("kind", "label", "status")
     )
     rule = NotificationRule.objects.filter(user=request.user).first()
+    alarms = active_alarms(rule) if rule else []
+    setup_test_succeeded = any(
+        destination["status"] == Destination.Status.SUCCEEDED
+        for destination in destinations
+    )
+    setup_ready = (
+        bool(connection and not connection["needs_reconnect"]),
+        bool(selected_course_count),
+        bool(destinations),
+        setup_test_succeeded and bool(alarms),
+    )
+    setup_step = next(
+        (step for step, ready in enumerate(setup_ready, start=1) if not ready),
+        None,
+    )
     next_run = None
     if (
         connection
@@ -153,7 +168,10 @@ def dashboard(request):
             "next_run": next_run,
             "recent_runs": recent_runs,
             "rule": rule,
-            "active_alarms": active_alarms(rule) if rule else [],
+            "active_alarms": alarms,
+            "setup_step": setup_step,
+            "setup_completed_count": sum(setup_ready),
+            "setup_test_succeeded": setup_test_succeeded,
             "selected_course_count": selected_course_count,
             **(_remaining_items(request.user, timezone.now()) if connection else {}),
         },

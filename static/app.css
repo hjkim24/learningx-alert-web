@@ -728,6 +728,66 @@ button[aria-busy="true"] {
   box-shadow: inset 0 0 0 2px var(--urgent);
 }
 
+.setup-progress {
+  color: var(--brand);
+  font-size: var(--fs-small);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.setup-intro {
+  margin: 16px 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.setup-steps {
+  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.setup-steps li {
+  align-items: flex-start;
+  padding: 16px 12px;
+}
+
+.setup-steps .is-current {
+  background: var(--brand-soft);
+}
+
+.setup-steps .is-current .status-number {
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+.setup-description {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+.setup-next {
+  margin-top: 20px;
+}
+
+.setup-next p {
+  max-width: 48em;
+  line-height: 1.6;
+}
+
+.setup-actions,
+.setup-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+}
+
+.setup-help {
+  margin-bottom: 0;
+}
+
 .history-grid {
   margin: 0 24px 16px;
   display: grid;
@@ -1351,6 +1411,39 @@ button[aria-busy="true"] {
   margin: 0 0 32px;
   color: var(--muted);
   font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.login-schools {
+  margin: -16px 0 24px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+
+.login-start {
+  scroll-margin-top: 16px;
+}
+
+.login-start-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  padding-left: 20px;
+  margin: 24px 0;
+}
+
+.login-start-steps li {
+  padding-left: 4px;
+}
+
+.login-start-steps li::marker {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.login-start-steps p {
+  color: var(--muted);
+  font-size: var(--fs-small);
   line-height: 1.6;
 }
 
@@ -2858,10 +2951,22 @@ body:has(.sticky-actions) .feedback-fab {
   .dashboard-layout.is-compact,
   .history-grid,
   .status-rail,
+  .login-start-steps,
   .destination-summary,
   .run-meta,
   .outcome {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .setup-actions .primary-button {
+    width: 100%;
+  }
+
+  .setup-actions .guide-link,
+  .setup-help a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .dashboard-layout > *,

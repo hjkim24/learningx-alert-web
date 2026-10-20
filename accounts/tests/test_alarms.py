@@ -151,7 +151,7 @@ class DashboardChecklistTests(TestCase):
 
         self.assertNotContains(page, "<strong>Google</strong>")
         self.assertContains(page, '<span class="status-number" aria-hidden="true">3</span>')
-        self.assertNotContains(page, '<span class="status-number" aria-hidden="true">4</span>')
+        self.assertContains(page, '<span class="status-number" aria-hidden="true">4</span>')
 
     def test_next_run_summary_lists_active_alarms_only(self):
         CanvasConnection.objects.create(

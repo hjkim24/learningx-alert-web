@@ -1,0 +1,51 @@
+<details class="panel setup-guide" id="start-guide"{% if setup_step %} open{% endif %}>
+  <summary>
+    <h2>처음 시작하기</h2>
+    <span class="setup-progress">{{ setup_completed_count }}/4 완료</span>
+  </summary>
+  <p class="setup-intro">
+    {% if setup_step %}첫 알림까지 아래 순서로 설정해 보세요. 중간에 나가도 돌아와서 이어 할 수 있어요.
+    {% else %}첫 설정과 시험 전송을 마쳤어요. 기기에 알림이 도착했는지도 확인해 주세요.{% endif %}
+  </p>
+  <ol class="status-rail setup-steps" aria-label="설정 진행 상태">
+    <li class="{% if connection and not connection.needs_reconnect %}is-complete{% elif setup_step == 1 %}is-current{% endif %}"{% if setup_step == 1 %} aria-current="step"{% endif %}>
+      <span class="status-number" aria-hidden="true">1</span>
+      <a href="#canvas-title"><strong>Canvas 연결</strong><span class="setup-description">{% if connection.needs_reconnect %}새 토큰으로 다시 연결해 주세요.{% elif connection %}{{ school.name }} 연결됨{% else %}학교를 고르고 본인 토큰을 넣어요.{% endif %}</span></a>
+    </li>
+    <li class="{% if selected_course_count %}is-complete{% elif setup_step == 2 %}is-current{% endif %}"{% if setup_step == 2 %} aria-current="step"{% endif %}>
+      <span class="status-number" aria-hidden="true">2</span>
+      <a href="{% url 'course_settings' %}"><strong>과목 선택</strong><span class="setup-description">{% if selected_course_count %}{{ selected_course_count }}개 과목 선택됨{% else %}알림을 받을 과제·강의를 켜요.{% endif %}</span></a>
+    </li>
+    <li class="{% if destinations %}is-complete{% elif setup_step == 3 %}is-current{% endif %}"{% if setup_step == 3 %} aria-current="step"{% endif %}>
+      <span class="status-number" aria-hidden="true">3</span>
+      <a href="{% url 'destination_settings' %}"><strong>알림 대상 등록</strong><span class="setup-description">{% if destinations %}{{ destination_kinds|join:" · " }} {{ destinations|length }}곳 저장됨{% else %}푸시 또는 Discord·Slack을 골라요.{% endif %}</span></a>
+    </li>
+    <li class="{% if setup_test_succeeded and active_alarms %}is-complete{% elif setup_step == 4 %}is-current{% endif %}"{% if setup_step == 4 %} aria-current="step"{% endif %}>
+      <span class="status-number" aria-hidden="true">4</span>
+      <a href="{% url 'destination_settings' %}#destination-status-title"><strong>시험 알림</strong><span class="setup-description">{% if setup_test_succeeded %}시험 전송 성공{% else %}직접 보내고 도착했는지 확인해요.{% endif %}</span></a>
+    </li>
+  </ol>
+  <div class="setup-next">
+    {% if setup_step == 1 %}
+      <p>학교의 Canvas 액세스 토큰이 필요해요. 발급 방법을 보고 아래 연결 칸에 넣어 주세요.</p>
+      <div class="setup-actions"><a class="primary-button" href="#canvas-title">Canvas 연결하러 가기</a><a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법</a></div>
+    {% elif setup_step == 2 %}
+      <p>과목마다 과제(퀴즈 포함)와 강의 알림을 골라 주세요. 알림 시각도 원하는 때로 바꿀 수 있어요.</p>
+      <div class="setup-actions"><a class="primary-button" href="{% url 'course_settings' %}">알림 과목 고르기</a><a class="guide-link" href="{% url 'notification_settings' %}">알림 시각 확인하기</a></div>
+    {% elif setup_step == 3 %}
+      <p>휴대폰으로 받으려면 그 기기에서 이 사이트를 열어 푸시를 켜 주세요. iPhone은 먼저 홈 화면에 추가해야 해요.</p>
+      <div class="setup-actions"><a class="primary-button" href="{% url 'destination_settings' %}">알림 대상 추가하기</a><a class="guide-link" href="{% url 'pwa_install_guide' %}">휴대폰 설치 방법</a></div>
+    {% elif setup_step == 4 %}
+      {% if not active_alarms %}
+        <p>예약 알림을 받을 시각이 꺼져 있어요. 하나 이상 켠 뒤 알림 대상에서 시험 알림을 보내 보세요.</p>
+        <div class="setup-actions"><a class="primary-button" href="{% url 'notification_settings' %}">알림 시각 켜기</a></div>
+      {% else %}
+        <p>등록한 대상의 ‘시험 알림’을 눌러 주세요. 전송 성공이 표시돼도 실제 기기나 채널에 도착했는지 직접 확인해 주세요.</p>
+        <div class="setup-actions"><a class="primary-button" href="{% url 'destination_settings' %}#destination-status-title">시험 알림 보내러 가기</a></div>
+      {% endif %}
+    {% else %}
+      <p>다음 예약 시각은 {{ next_run|date:"n월 j일 H:i" }}(한국 시간)이에요. 제출·수강을 마친 항목은 빠지고, 보낼 항목이 없는 날은 기본적으로 조용히 지나가요.</p>
+    {% endif %}
+  </div>
+  <p class="fine-print setup-help"><a href="{% url 'canvas_token_guide' %}">토큰 발급 가이드</a><a href="{% url 'pwa_install_guide' %}">홈 화면·푸시 가이드</a></p>
+</details>

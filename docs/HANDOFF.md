@@ -2,13 +2,20 @@
 
 다음 작업자(Claude Code 세션)가 이 문서만 읽고 바로 이어서 일할 수 있게 쓴 문서다. 세부 운영 절차는 `docs/operations/oci-production.md`(런북), Actions 배포는 `docs/operations/github-actions-deploy.md`에 있다. 이 문서는 현재 상태, 규칙, 남은 일을 모은다.
 
-**이번 갱신의 확인 범위**
+**문서 갱신의 확인 범위**
 
 - 애플리케이션 기준은 `main`의 `35419cb`(2026-10-01 KST)다. 2026-10-20 원격 조회에서도 같은 리비전이었다. 기능·상한·설정은 현재 코드와 대조했다.
 - 이 리비전의 [CI 실행 36743633624](https://github.com/hjkim24/learningx-alert-web/actions/runs/36743633624)는 테스트·배포 성공으로 기록돼 있다. 이는 당시 결과이며 현재 운영 정상 여부의 재검증은 아니다.
 - GitHub `main-owner-only` ruleset을 2026-10-20 활성화하고 API로 재확인했다. 예외는 `hjkim24` 한 명이다. 아래 2절과 Actions 문서를 따른다.
 - VM·운영 DB·Grafana·실제 수신 기기는 이번 갱신에서 조회하지 않았다. 운영 수치와 실계정 결과는 적힌 날짜의 과거 기록으로 읽는다.
 - 현재 기능 범위는 [FEATURE_SPEC.md](../FEATURE_SPEC.md), 학교별 실계정 근거·미확인은 [FEASIBILITY.md](../FEASIBILITY.md)를 따른다. `docs/superpowers/`의 날짜별 문서는 당시 설계·계획을 보존한 기록이다.
+
+**첫 사용 가이드 추가 (2026-10-20)**
+
+- `feat/first-use-guide`는 문서·ruleset 정리 완료 후 `78319ee`에서 시작했다. 로그인 화면에 활성 학교와 설정 순서를 보강하고, 대시보드에 Canvas 연결 → 과목 선택 → 알림 대상 → 시험 알림 4단계 가이드를 넣었다.
+- 기존 연결·과목·수신처 시험 결과·켜진 알림 시각으로 진행 상태를 판단한다. 별도 DB 필드는 없다. 완료 뒤 접히며 다시 펼칠 수 있고, 토큰 재연결·시각 비활성화는 다음 조치를 안내한다. 전송 성공을 기기 수신 확인으로 표시하지 않는다.
+- 로컬 Django 463개(2개 건너뜀), 클라이언트 35개, 배포 스크립트 2종 통과. 마이그레이션 변경 없음. Chromium 1280·768·390·320px에서 넘침·버튼 연결·키보드 펼침·접힘·JavaScript 없는 탐색·자동 POST 없음 확인. 실제 토큰·웹훅·푸시 전송은 사용하지 않았다.
+- 이 가이드의 운영 배포는 아직 승인·실행하지 않았다. PR 검증 후 운영 반영은 `CLAUDE.md`의 배포 승인 규칙에 따른다.
 
 ## 1. 서비스 한 줄 요약
 
@@ -110,7 +117,7 @@
 
 **테스트**
 - 의존성을 설치한 가상환경에서 실행한다. `.venv`가 없으면 README의 설치 절차를 먼저 따른다. 운영 비밀값은 필요하지 않다.
-- `.venv/bin/python manage.py test`: 현재 애플리케이션 기준 452개. 로그에 `run crashed ... collector secret` ERROR 한 줄이 보이는 것은 의도된 테스트다.
+- `.venv/bin/python manage.py test`: 첫 사용 가이드 포함 463개(이전 기준 452개). 로그에 `run crashed ... collector secret` ERROR 한 줄이 보이는 것은 의도된 테스트다.
 - `.venv/bin/python -m unittest discover -s tests`: 클라이언트 테스트 35개.
 - `bash scripts/tests/deploy_contract_test.sh`, `bash deploy/tests/runtime_scripts_test.sh`: 배포 스크립트 테스트
 - CI는 이 모두와 `pip-audit`(경고만)을 돌린다.
