@@ -47,27 +47,7 @@
     </div>
   {% endif %}
 
-  <ol class="status-rail" aria-label="설정 진행 상태">
-    <li class="{% if connection and not connection.needs_reconnect %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">1</span>
-      <a href="#canvas-title"><strong>Canvas</strong> {% if connection.needs_reconnect %}재연결 필요{% elif connection %}연결됨{% else %}연결 필요{% endif %}</a>
-    </li>
-    <li class="{% if selected_course_count %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">2</span>
-      <a href="{% url 'course_settings' %}"><strong>과목</strong> {% if selected_course_count %}{{ selected_course_count }}개 선택{% else %}설정 필요{% endif %}</a>
-    </li>
-    <li class="{% if destinations %}is-complete{% else %}is-current{% endif %}">
-      <span class="status-number" aria-hidden="true">3</span>
-      <a href="{% url 'destination_settings' %}">
-        <strong>알림 대상</strong>
-        {% if destinations %}
-          {{ destination_kinds|join:" · " }}{% if destinations|length > 1 %} {{ destinations|length }}곳{% else %} 저장됨{% endif %}
-        {% else %}
-          설정 필요
-        {% endif %}
-      </a>
-    </li>
-  </ol>
+  {% include "accounts/_getting_started.html" %}
 
   {% if connection %}
     {% comment %}With nothing left to show, the three cards share one row instead of leaving a tall empty column beside the stacked side cards.{% endcomment %}

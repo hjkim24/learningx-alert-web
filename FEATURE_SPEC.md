@@ -1,7 +1,7 @@
 # LearningX 맞춤 마감 알림 웹서비스 — 현재 기능 명세
 
 - 갱신일: 2026-10-20
-- 기준: 애플리케이션 `main` 리비전 `35419cb`와 현재 코드. 문서 갱신·GitHub ruleset 설정은 별도 변경이다.
+- 기준: 기존 애플리케이션 리비전 `35419cb`에 2026-10-20 첫 사용 가이드를 추가한 현재 코드. 문서·ruleset 변경 이력과 운영 반영 여부는 인수인계에서 구분한다.
 - 상태: 핵심 알림 기능과 소규모 운영 기반 구현 완료. 운영 환경의 현재 정상 여부와 실계정 검증 범위는 별도로 판단한다.
 - 실제 계정 근거: [FEASIBILITY.md](FEASIBILITY.md). 운영 절차·남은 작업: [인수인계](docs/HANDOFF.md).
 
@@ -26,6 +26,7 @@ Google 로그인은 서비스 계정 인증이고 Canvas 토큰은 학교 데이
 | 수신처 | Discord·Slack 웹훅, 브라우저 푸시(PWA), 여러 대상 독립 발송, 사용자 요청 시 시험 알림 | `accounts/notifications.py`, `accounts/webpush.py` |
 | 예약·이력 | 회차 중복 방지, 누락 분 따라잡기, 실행·항목·과목·수신처별 결과 저장 | `accounts/scheduling.py`, `accounts/management/commands/run_scheduler.py` |
 | 화면 | 연결·다음 실행·남은 항목·최근 결과, 푸시 만료 안내, 모바일 대응, 설치·토큰 가이드 | `accounts/views.py`, `templates/`, `static/` |
+| 첫 사용 안내 | 로그인 화면의 활성 학교·설정 순서, 대시보드의 연결→과목→수신처→시험 알림 4단계 가이드. 기존 설정으로 진행 상태를 판단하며 완료 뒤 접기·재열기 지원 | `accounts/views.py`, `config/context_processors.py`, `templates/accounts/_getting_started.html` |
 | 운영 | 피드백·전용 관리 화면, 정책·비공식 서비스 안내, CI·자동 배포, 백업·복원 연습·관측 | `accounts/admin_site.py`, `.github/workflows/ci.yml`, `deploy/`, `docs/operations/` |
 
 ## 3. 지원 학교와 기본 한도

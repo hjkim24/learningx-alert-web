@@ -5,6 +5,8 @@ from functools import lru_cache
 
 from django.conf import settings
 
+from accounts.schools import enabled_schools
+
 
 @lru_cache(maxsize=1)
 def _asset_version():
@@ -29,4 +31,5 @@ def assets(_request):
         "asset_version": _asset_version(),
         "signup_open": settings.SIGNUP_OPEN,
         "privacy_contact_email": settings.PRIVACY_CONTACT_EMAIL,
+        "supported_schools": enabled_schools(),
     }

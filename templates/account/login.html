@@ -8,6 +8,7 @@
     <section class="login-main" aria-labelledby="login-title">
       <h1 id="login-title">과제·강의 마감,<br>알림으로 받으세요</h1>
       <p class="login-lead">Canvas 과제와 LearningX 강의 마감을 모아서, 정해 둔 시각에 Discord·Slack·휴대폰으로 보내 드려요.</p>
+      <p class="login-schools">{% for school in supported_schools %}{{ school.name }}{% if not forloop.last %} · {% endif %}{% endfor %} 지원</p>
 
       <div class="login-card">
         <form method="post" action="{% provider_login_url 'google' process='login' %}">
@@ -29,7 +30,7 @@
         {% endif %}
       </div>
 
-      <p class="login-after">로그인한 다음 Canvas 액세스 토큰을 한 번 연결하면 끝나요. <a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법 보기</a></p>
+      <p class="login-after">로그인 후 Canvas 액세스 토큰을 연결하고, 과목과 알림 대상을 고르면 돼요. <a class="guide-link" href="#how-to-start">처음 설정하는 순서 보기</a></p>
       <p class="login-legal"><a href="{% url 'privacy_policy' %}">개인정보처리방침</a>{% if privacy_contact_email %} · 로그인이 안 되면 <a href="mailto:{{ privacy_contact_email }}">{{ privacy_contact_email }}</a>{% endif %}</p>
     </section>
 
@@ -61,4 +62,16 @@
       <p class="login-visual-caption">매일 아침, 이번 주에 챙길 것만 한 번에.</p>
     </aside>
   </div>
+
+  <section class="login-start panel" id="how-to-start" aria-labelledby="login-start-title">
+    <h2 id="login-start-title">첫 알림, 이렇게 시작해요</h2>
+    <p class="fine-print">로그인하면 지금 할 단계부터 안내해 드려요. 학교 비밀번호는 입력하지 않아요.</p>
+    <ol class="login-start-steps">
+      <li><strong>Canvas 연결</strong><p>학교를 선택하고 본인 액세스 토큰을 넣어요.</p><a class="guide-link" href="{% url 'canvas_token_guide' %}">토큰 받는 방법</a></li>
+      <li><strong>과목 선택</strong><p>필요한 과목의 과제·퀴즈·강의 알림을 켜요.</p></li>
+      <li><strong>알림 대상 등록</strong><p>휴대폰 푸시나 Discord·Slack을 등록해요.</p><a class="guide-link" href="{% url 'pwa_install_guide' %}">휴대폰에서 받는 방법</a></li>
+      <li><strong>시험 알림</strong><p>직접 한 번 보내고 기기에 도착하는지 확인해요.</p></li>
+    </ol>
+    <p class="fine-print">예약 시각마다 미완료 항목을 다시 확인해요. 마감이 없거나 이미 끝낸 항목은 보내지 않아요.</p>
+  </section>
 {% endblock %}
