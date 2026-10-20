@@ -1,5 +1,7 @@
 # Scheduled Alerts and History Implementation Plan
 
+> **과거 설계·구현 기록 (2026-10-20 분류):** 아래 상태·제약·체크리스트는 작성 당시의 기록이며 현재 실행할 작업 지시가 아니다. 현재 기능·지원 학교·한도는 [FEATURE_SPEC.md](../../../FEATURE_SPEC.md), 실제 계정 검증은 [FEASIBILITY.md](../../../FEASIBILITY.md), 작업 규칙·남은 일은 [HANDOFF](../../HANDOFF.md)를 따른다. 기존 도메인·SQLite·단일 학교·2계정 관문 등은 현재와 다를 수 있다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Run each configured user's assignment alert at one or two Asia/Seoul times, persist source and delivery outcomes, prevent duplicate sends for a scheduled slot, reconcile interrupted work without blind retries, and expose user-scoped run history.

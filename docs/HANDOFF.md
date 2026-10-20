@@ -1,6 +1,14 @@
-# 인수인계 (2026-10-01 00시 기준)
+# 인수인계 (2026-10-20 갱신)
 
 다음 작업자(Claude Code 세션)가 이 문서만 읽고 바로 이어서 일할 수 있게 쓴 문서다. 세부 운영 절차는 `docs/operations/oci-production.md`(런북), Actions 배포는 `docs/operations/github-actions-deploy.md`에 있다. 이 문서는 현재 상태, 규칙, 남은 일을 모은다.
+
+**이번 갱신의 확인 범위**
+
+- 애플리케이션 기준은 `main`의 `35419cb`(2026-10-01 KST)다. 2026-10-20 원격 조회에서도 같은 리비전이었다. 기능·상한·설정은 현재 코드와 대조했다.
+- 이 리비전의 [CI 실행 36743633624](https://github.com/hjkim24/learningx-alert-web/actions/runs/36743633624)는 테스트·배포 성공으로 기록돼 있다. 이는 당시 결과이며 현재 운영 정상 여부의 재검증은 아니다.
+- GitHub `main-owner-only` ruleset을 2026-10-20 활성화하고 API로 재확인했다. 예외는 `hjkim24` 한 명이다. 아래 2절과 Actions 문서를 따른다.
+- VM·운영 DB·Grafana·실제 수신 기기는 이번 갱신에서 조회하지 않았다. 운영 수치와 실계정 결과는 적힌 날짜의 과거 기록으로 읽는다.
+- 현재 기능 범위는 [FEATURE_SPEC.md](../FEATURE_SPEC.md), 학교별 실계정 근거·미확인은 [FEASIBILITY.md](../FEASIBILITY.md)를 따른다. `docs/superpowers/`의 날짜별 문서는 당시 설계·계획을 보존한 기록이다.
 
 ## 1. 서비스 한 줄 요약
 
@@ -8,7 +16,7 @@
 - **주소:** https://learningx-alert.com (2026-09-30에 옮김). 옛 주소 `alert.sobok-app.com`은 Caddy가 새 주소로 301 리디렉션한다(`APP_REDIRECT_DOMAINS`). 로그인은 Google만 쓴다.
 - **학교:** 성균관대(`canvas.skku.edu`), 한양대(`learning.hanyang.ac.kr`). 한 서버에서 같이 운영한다.
 - **운영자:** 사용자(hjkim4842@gmail.com) 한 명이다.
-- **규모(2026-09-30):** 가입 4명(성균관대 3, 한양대 1). 알림 대상은 브라우저 푸시 7, Slack 1. 전체 가입 상한 100명, 학교별 연결 상한 50명.
+- **과거 규모(2026-09-30):** 가입 4명(성균관대 3, 한양대 1), 브라우저 푸시 7개·Slack 1개. 현재 수치는 미확인이다. 코드의 기본 상한은 전체 가입 100명·학교별 연결 50개다.
 
 ## 2. 작업 규칙 (사용자가 정한 것, 반드시 지킬 것)
 
@@ -29,6 +37,7 @@
   - Actions 배포가 도는 동안 로컬 `./scripts/deploy.sh`를 동시에 돌리지 않는다. Actions가 막혔을 때만 로컬에서 배포한다.
   - 배포 방식: 바뀐 컨테이너(web, scheduler)만 교체하고, Caddy는 요청을 붙잡았다가(`lb_try_duration 30s`) 넘긴 뒤 마지막에 1초 정도 다시 만든다. 사용자에게는 끊김이 없다(측정 결과 오류 0건).
 - `main`에 직접 push하지 않는다. 데이터 삭제, 인프라·배포·CI 설정 변경처럼 위험하거나 되돌리기 어려운 작업은 먼저 사용자에게 묻는다.
+- GitHub [main-owner-only ruleset](https://github.com/hjkim24/learningx-alert-web/rules/25458152)은 `refs/heads/main`의 생성·갱신·삭제 예외를 사용자 `hjkim24`(ID `37476664`, `User`, `always`) 한 명으로 제한한다. 다른 브랜치는 제한하지 않는다. 소유자 자격 증명을 쓰는 도구도 같은 사용자로 취급되지만 에이전트의 직접 push 금지 규칙은 유지한다. JSON 원본은 `docs/operations/main-owner-only.ruleset.json`이다.
 - 명령을 `&&`로 묶을 때, 앞 단계(커밋 등)가 끝나기 전에 push나 PR 생성이 실행되지 않게 하나씩 실행한다.
 
 **정책상 막히는 것 (우회하지 말 것)**
@@ -55,7 +64,7 @@
 
 **운영 환경**
 - OCI VM `168.107.37.170`(ARM 2코어, 12GB), Docker Compose(`compose.prod.yaml`). 컨테이너는 web(Django/gunicorn), scheduler, caddy, otel-collector 네 개다.
-- DB는 OCI MySQL HeatWave 무료 인스턴스(`10.0.1.9`, TLS)다. 앱 계정은 `learningx`이고 비밀번호는 Vault의 `database-password`에 있다. 마이그레이션은 `0012`까지 적용됐다.
+- 기존 운영 기록의 DB는 OCI MySQL HeatWave 무료 인스턴스(`10.0.1.9`, TLS)다. 앱 계정은 `learningx`이고 비밀번호는 Vault의 `database-password`에 있다. 저장소의 최신 마이그레이션은 `0012`이며 당시 운영 적용도 기록됐다. 현재 운영 적용 상태는 재조회하지 않았다.
 - **백업:** 매일 mysqldump를 Object Storage `mysql/`에 올리고 14일 보관한다(`learningx-alert-backup.timer`).
 - **복원 연습:** 매월 1일 04:00 KST에 `learningx-alert-restore-drill.timer` → `deploy/restore-drill-report.sh`가 돈다. 네트워크 없는 임시 MySQL에 복원해 운영 DB와 행 수를 비교하고, 결과는 Grafana를 거쳐 Discord로 온다. 운영 DB는 건드리지 않는다.
 - 비밀 값은 OCI Vault에 있고, 배포할 때 `deploy/fetch-secrets.sh`로 가져온다. Vault 항목: `django-secret-key`, `database-password`, `mysql-admin-password`, `credential-encryption-keys`, `google-client-secret`, `grafana-otlp-token`, `grafana-sa-token`.
@@ -100,10 +109,13 @@
 - `NotificationRule.notify_when_empty`(기본 꺼짐): 켜면 보낼 항목이 없는 날에도 하루 한 번(KST) "마감되는 과제·강의가 없어요"를 보낸다.
 
 **테스트**
-- `.venv/bin/python manage.py test`: 447개, 약 3초. 로그에 `run crashed ... collector secret` ERROR 한 줄이 보이는 것은 의도된 테스트다.
-- `.venv/bin/python -m unittest discover -s tests`: 클라이언트 테스트
+- 의존성을 설치한 가상환경에서 실행한다. `.venv`가 없으면 README의 설치 절차를 먼저 따른다. 운영 비밀값은 필요하지 않다.
+- `.venv/bin/python manage.py test`: 현재 애플리케이션 기준 452개. 로그에 `run crashed ... collector secret` ERROR 한 줄이 보이는 것은 의도된 테스트다.
+- `.venv/bin/python -m unittest discover -s tests`: 클라이언트 테스트 35개.
 - `bash scripts/tests/deploy_contract_test.sh`, `bash deploy/tests/runtime_scripts_test.sh`: 배포 스크립트 테스트
 - CI는 이 모두와 `pip-audit`(경고만)을 돌린다.
+- 452개·35개 수와 통과 기록은 위 `35419cb`의 CI 로그에서 2026-10-20 확인했다. 소요 시간은 환경에 따라 달라지므로 고정값으로 안내하지 않는다.
+- 2026-10-20 로컬 재검증도 통과했다: Django 452개(2개 건너뜀), 클라이언트 35개, 위 배포 스크립트 2종. 프로젝트에 `.venv`가 없어 `/private/tmp/learningx-alert-docs-venv` 임시 환경에 현재 의존성 범위를 설치했다(Django 5.2.18, allauth 65.20.0, oauthlib 4.0.0). 운영 비밀값은 사용하지 않았다. 최초 실행의 DNS 제한과 `STATIC_MANIFEST=0` 상속 문제는 실행 환경을 바로잡아 해소했고 제품 코드는 바꾸지 않았다.
 
 ## 4. 관측 (Grafana Cloud)
 
@@ -134,7 +146,7 @@
   - 셸이 macOS bash 3이라 연관 배열(`declare -A`)이 없다. 여러 규칙을 고칠 때는 함수나 Python으로 한다.
 - **의존성:** Dependabot(`.github/dependabot.yml`)이 매주 월요일 09:00 KST에 pip(OpenTelemetry는 한 PR로 묶음), GitHub Actions, Docker 업데이트 PR을 연다. 머지하면 배포되므로 일반 변경처럼 검토한다. CI의 `pip-audit`은 경고만 남기고 배포를 막지 않는다(사용자 결정).
 
-## 5. 2026-09-30에 한 일 (PR 순서)
+## 5. 2026-09-30~10-01 구현 기록 (PR 순서)
 
 | PR | 내용 |
 |---|---|
@@ -162,6 +174,8 @@
 | #64 | 푸시 신뢰성: 대상별 마지막 예약 알림 성공·실패 표시, 만료 푸시 대시보드 안내, `lx-push-failures` 경보 |
 | #65 | "알릴 게 없는 날도 알려 주기"(하루 한 번, 기본 꺼짐, migration 0012) |
 | #66 | Dependabot, `pip-audit`(경고만), 월간 복원 연습 타이머와 Discord 보고 |
+| #73 | 이용약관 `/terms/`, 사이트 하단, 빈 알림 도움말 |
+| #74 | 하단 도움말 링크와 비공식 서비스 안내 |
 
 Grafana 쪽 변경(코드 밖, 사본은 `deploy/grafana/`):
 - Discord 템플릿과 contact point 서식
@@ -174,9 +188,9 @@ Grafana 쪽 변경(코드 밖, 사본은 `deploy/grafana/`):
 
 ## 6. 남은 일
 
-### 6-1. 스케줄러 확인 (2026-10-01 09:00 KST 이후) — 이 세션이 맡을 것
+### 6-1. 스케줄러·정기 복원 연습 — 관측 결과 기록 대기
 
-목표는 병렬 스케줄러(#42)와 따라잡기(#48)가 실제 09:00 실행에서 정상인지 확인하는 것이다.
+2026-10-01 이후 확인하도록 남긴 항목이다. 2026-10-20 갱신 시 저장소에서 후속 결과를 확인하지 못했다. 날짜가 지났다는 이유로 완료 처리하지 않는다. 목표는 병렬 스케줄러(#42)와 따라잡기(#48)의 실제 실행 결과를 확인하는 것이다.
 
 1. **Grafana에서 확인할 것:**
    - "실제 시작 지연 (대기 포함)"의 p95가 몇 초 수준인지 본다. 직렬로 돌던 때는 첫 두 실행이 6.6초와 9.3초였다. 병렬이면 거의 동시에 시작해야 한다.
@@ -184,15 +198,17 @@ Grafana 쪽 변경(코드 밖, 사본은 `deploy/grafana/`):
 2. **로그에서 확인할 것:**
    - 스케줄러: `ssh $SSH_TARGET "sudo docker logs --since 30m learningx-alert-scheduler-1 2>&1 | grep -E 'late slot claimed|run crashed|ERROR'"`
    - `late slot claimed`가 있으면 누락 분을 따라잡았다는 뜻이다. 몇 초 늦었는지(`delay_seconds`)를 적는다.
-3. **DB에서 확인할 것:** 오늘 09:00 실행 상태를 본다. `ScheduledRun`의 `status`, `started_at`, `finished_at`을 `manage.py shell -c`로 조회한다. 읽기만 한다.
+3. **DB에서 확인할 것:** 조사 대상 날짜의 09:00 실행 상태를 본다. `ScheduledRun`의 `status`, `started_at`, `finished_at`을 `manage.py shell -c`로 조회한다. 읽기만 한다.
 4. **판단:**
    - 문제가 없으면 사용자에게 수치와 함께 보고하고 끝낸다.
    - 지연이 크거나 실패가 있으면 원인을 조사하고 수정안을 먼저 제안한다.
-5. **같이 확인할 것:** 첫 정기 복원 연습(10-01 04:00 KST)의 결과를 본다.
+5. **같이 확인할 것:** 정기 복원 연습 결과를 본다. 최초 확인 요청은 2026-10-01 04:00 KST 실행이었다. 현재 확인 시에는 실행 날짜도 함께 기록한다.
    - `journalctl -u learningx-alert-restore-drill`에서 `restore_drill_ok`가 나왔는지
    - Discord에 "월간 복원 연습 성공"이 왔는지
 
-### 6-2. 보안 헤더 강화 (1~2주 뒤, 약 2026-10-07~14) — 이 세션이 맡을 것
+### 6-2. 보안 헤더 강화 — 관측·승인 후 진행
+
+원래 2026-10-07~14 검토 예정이었다. 현재 코드도 CSP 보고 전용·운영 HSTS 기본 1시간이다. 운영 로그를 다시 확인하고 필요한 승인을 받은 뒤 진행하며, 예정일 경과를 적용 완료로 해석하지 않는다.
 
 1. **CSP를 차단 모드로 바꾸기**
    - 전제: 지난 1~2주 동안 `csp violation` 경고 로그가 없어야 한다.
@@ -213,20 +229,22 @@ Grafana 쪽 변경(코드 밖, 사본은 `deploy/grafana/`):
 
 - **사이트 문구 수정:** 사용자가 문구를 직접 고치기로 했다.
   - 2026-09-30에 전체 목록(611개, T001~T611)을 CSV·MD로 보냈다.
-  - 그 뒤 문구가 추가돼, 지금 `tools/extract_texts.py`를 돌리면 651개로 번호가 다시 매겨진다(`.git/copy/`에 최신 목록이 있다).
+  - 2026-10-01 기록에는 651개로 다시 매겨졌다고 돼 있다. 현재 목록은 필요할 때 `tools/extract_texts.py`로 다시 만들고 파일·추출 날짜를 확인한다. ID는 고정되지 않는다.
   - 수정안이 오면 ID가 아니라 "현재 텍스트"를 코드에서 찾아 바꾼다. 테스트가 문구를 확인하는 곳이 많으니 같이 고친다.
 - **마감 직전 알림(보류):** 사용자는 "1·3·6시간 선택, 기본 꺼짐"을 골랐고, 구현은 보류했다. 제안했던 전제는 다음과 같다.
   - 30분마다 켠 사용자만 확인한다.
   - 같은 항목·마감에는 한 번만 보낸다.
   - 정기 알림 후 1시간 안에 알린 항목은 뺀다.
   - 새벽에 보낼지는 정하지 않았다.
-- **Dependabot PR 4개(2026-10-01 열림, 모두 메이저 업그레이드):** 한꺼번에 머지하지 않는다. 머지하면 바로 배포된다.
+- **Dependabot PR 6개(2026-10-20 GitHub 조회에서 열림):** 이번 문서 작업에서는 머지하지 않는다. 머지하면 자동 배포된다.
   - #70 Django 5.2 → 6.1
   - #68 gunicorn 23 → 26
   - #67 Python 3.12 → 3.14 이미지
   - #69 setuptools
+  - #75 django-allauth 허용 범위 갱신(`>=65.19.7,<66`)
+  - #76 cryptography 허용 범위 갱신(`>=50.0.2,<51`)
   - 하나씩 변경 사항(릴리스 노트)을 확인하고, PR 테스트 결과와 함께 사용자에게 머지 여부를 묻는다. allauth, OpenTelemetry, PyMySQL 호환성이 걸린다.
-- **oauthlib 취약점:** `pip-audit`이 `oauthlib 3.3.1`(django-allauth의 간접 의존성)에서 CVE-2026-49265를 찾았다. 4.0.0에서 고쳐졌다. 메이저 업데이트라 allauth 호환성을 확인한 뒤 사용자에게 제안한다.
+- **과거 의존성 감사 기록:** 2026-10-01 메모에는 `oauthlib 3.3.1` 관련 감사 결과와 4.0.0 호환성 확인 요청이 있었다. 현재 의존성 범위는 고정 lock이 아니며 2026-10-20 임시 환경 설치에서는 `oauthlib 4.0.0`이 선택됐다. 운영 설치 버전과 최신 전체 취약점 감사는 이번 문서 작업에서 확인하지 않았으므로 과거 결과를 현재 취약 상태로 단정하지 않는다.
 - **퀴즈 추가 확인(사용자가 나중에 보기로 함):**
   - 응시 중인 퀴즈가 `unsubmitted`로 남는지 실측하지 않았다.
   - LearningX 쪽 퀴즈(`allcomponents_db`의 `quiz` 유형)는 알림에 없다.
@@ -238,6 +256,6 @@ Grafana 쪽 변경(코드 밖, 사본은 `deploy/grafana/`):
 - **한양대 녹화 강의:** 마감(`due_at`)이 채워지는지는 아직 모른다. 확인한 과목의 출석 대상은 실시간 수업(`video_conference`, 마감 없음)뿐이었다.
 - **알림 판단 기준:** 알림 시각마다 Canvas를 새로 조회한다. 제출이나 시청을 마친 항목, 마감이 없거나 지난 항목, 사용자가 "알림 끄기"를 누른 항목은 뺀다. 제출 상태를 알 수 없으면 알리지도 않고 제출로 치지도 않고, 그 과목을 "확인 실패"로 표시한다.
 - **로컬 파일:** 저장소 루트의 `IMG_0899.PNG`~`IMG_0901.PNG`는 사용자의 로컬 스크린샷이다. git이 무시하는 파일이니 건드리지 않는다. `.git/mobile-shots/`에는 모바일 수정 전후 비교 스크린샷이 있다.
-- **grafana-sa-token:** 약 30일 뒤 만료된다. 사용자는 이 토큰으로 경보를 에이전트에 연결할 계획이라 지우지 말라고 했다. 만료되면 사용자에게 재발급을 요청한다.
+- **grafana-sa-token:** 2026-09-30 기록상 유효기간 약 30일이었다. 현재 유효성·만료일은 재확인하지 않았다. 사용자는 이 토큰으로 경보를 에이전트에 연결할 계획이라 지우지 말라고 했다. 만료됐으면 사용자에게 재발급을 요청한다.
 - **사용자가 정리할 것:** 예전 OCI API 키.
 - **OCI 세션 디렉터리:** `~/.oci/sessions/LERNINGX_ALERT`가 남아 있다. 오타 프로필의 흔적이고, 삭제는 정책에 막혔다. 필요하면 사용자가 직접 지운다.
