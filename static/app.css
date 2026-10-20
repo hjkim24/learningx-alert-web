@@ -1381,77 +1381,80 @@ button[aria-busy="true"] {
   display: none;
 }
 
-/* Login: headline + sign-in card on the left, a sample alert on the right. */
+/* Login: one introduction and one real-sized notification example. */
+.page-frame:has(.login-layout) {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
 .login-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  min-height: calc(100vh - 180px);
-  padding: 24px;
+  align-items: center;
+  gap: 48px;
+  padding: 56px 48px;
 }
 
 .login-main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-  text-align: center;
+  min-width: 0;
+  padding: 16px 0;
+  word-break: keep-all;
 }
 
 .login-main h1 {
-  margin: 0 0 16px;
-  font-size: clamp(2rem, 3.6vw, 2.6rem);
+  margin: 0 0 24px;
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
   line-height: 1.25;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.04em;
 }
 
 .login-lead {
-  max-width: 26em;
+  max-width: 25em;
   margin: 0 0 32px;
   color: var(--muted);
-  font-size: 1.05rem;
-  line-height: 1.6;
+  font-size: var(--fs-body);
+  line-height: 1.8;
 }
 
 .login-schools {
-  margin: -16px 0 24px;
+  margin: 0 0 20px;
   color: var(--muted);
   font-size: var(--fs-small);
 }
 
 .login-start {
-  scroll-margin-top: 16px;
-}
-
-.login-start-steps {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px;
-  padding-left: 20px;
-  margin: 24px 0;
-}
-
-.login-start-steps li {
-  padding-left: 4px;
-}
-
-.login-start-steps li::marker {
-  color: var(--brand);
-  font-weight: 700;
-}
-
-.login-start-steps p {
+  max-width: 24rem;
+  margin-top: 24px;
   color: var(--muted);
   font-size: var(--fs-small);
-  line-height: 1.6;
+}
+
+.login-start summary {
+  width: fit-content;
+  padding: 8px 0;
+  color: var(--brand);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.login-start-body {
+  padding: 4px 0 0;
+  line-height: 1.8;
+}
+
+.login-start-body p {
+  margin: 0 0 8px;
+}
+
+.login-start-body a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-right: 16px;
 }
 
 .login-card {
-  width: min(100%, 24rem);
-  border-radius: var(--r-block);
-  background: var(--surface-2);
-  padding: 24px;
+  max-width: 24rem;
 }
 
 .login-card form {
@@ -1460,7 +1463,7 @@ button[aria-busy="true"] {
 
 .google-button {
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   border: 1px solid var(--line);
   border-radius: var(--r-control);
   background: var(--surface);
@@ -1490,28 +1493,6 @@ button[aria-busy="true"] {
   margin: 12px 0 0;
 }
 
-.login-after {
-  max-width: 24rem;
-  margin: 24px 0 0;
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: 1.6;
-  word-break: keep-all;
-}
-
-.login-after .guide-link {
-  white-space: nowrap;
-}
-
-.login-legal {
-  margin: 16px 0 0;
-  font-size: var(--fs-small);
-}
-
-.login-legal a {
-  color: var(--muted);
-}
-
 /* ---------- Privacy policy ---------- */
 .policy-list {
   margin: 0;
@@ -1537,84 +1518,68 @@ button[aria-busy="true"] {
 
 .login-visual {
   border-radius: var(--r-block);
-  background:
-    radial-gradient(circle at 20% 15%, rgb(255 255 255 / 14%), transparent 45%),
-    linear-gradient(160deg, var(--brand) 0%, var(--brand-strong) 100%);
+  background: var(--surface-2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 48px 32px;
-  overflow: hidden;
+  gap: 24px;
+  padding: 32px 24px;
 }
 
-.demo-push,
+.login-visual h2 {
+  margin: 0;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  word-break: keep-all;
+}
+
+.demo-message p {
+  margin: 0;
+}
+
 .demo-message {
   width: min(100%, 22rem);
   border-radius: var(--r-block);
   background: var(--surface);
   box-shadow: var(--shadow-float);
   color: var(--ink);
-}
-
-.demo-push {
-  display: flex;
-  gap: 12px;
-  padding: 14px 16px;
-  background: rgb(255 255 255 / 92%);
-  transform: translateX(-12px);
-}
-
-.demo-push p,
-.demo-message p {
-  margin: 0;
-}
-
-.demo-push-icon {
-  width: 36px;
-  height: 36px;
-  flex: none;
-  display: block;
-}
-
-.demo-push-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: var(--fs-meta);
-}
-
-.demo-push-head span,
-.demo-push-body {
-  color: var(--muted);
-}
-
-.demo-push-title {
-  font-size: var(--fs-small);
-  font-weight: 700;
-}
-
-.demo-push-body {
-  font-size: var(--fs-small);
-}
-
-.demo-message {
   display: grid;
-  gap: 16px;
-  padding: 18px 20px;
-  transform: translateX(12px);
+  gap: 24px;
+  padding: 24px;
   font-variant-numeric: tabular-nums;
 }
 
 .demo-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
   font-size: var(--fs-meta);
+  line-height: 1.5;
+}
+
+.demo-message-meta img {
+  flex: none;
+}
+
+.demo-message-meta > div {
+  display: grid;
 }
 
 .demo-message-meta strong {
   color: var(--ink);
-  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.demo-message-meta .demo-time {
+  white-space: nowrap;
+}
+
+.demo-message-title {
+  font-size: var(--fs-h3);
+  font-weight: 700;
 }
 
 .demo-day {
@@ -1662,31 +1627,12 @@ button[aria-busy="true"] {
 }
 
 .login-visual-caption {
-  margin: 8px 0 0;
-  color: rgb(255 255 255 / 85%);
+  margin: 0;
+  color: var(--muted);
   font-size: var(--fs-small);
-  font-weight: 700;
-}
-
-@media (max-width: 760px) {
-  .login-layout {
-    grid-template-columns: 1fr;
-    min-height: 0;
-    padding: 10px;
-  }
-
-  .login-main {
-    padding: 32px 12px;
-  }
-
-  .login-visual {
-    padding: 32px 16px;
-  }
-
-  .demo-push,
-  .demo-message {
-    transform: none;
-  }
+  line-height: 1.8;
+  text-align: center;
+  word-break: keep-all;
 }
 
 .notice-page {
@@ -2936,6 +2882,21 @@ body:has(.sticky-actions) .feedback-fab {
   font-weight: 700;
 }
 
+@media (min-width: 761px) and (max-width: 960px) {
+  .login-layout {
+    gap: 32px;
+    padding: 40px 32px;
+  }
+
+  .login-visual {
+    padding: 24px 16px;
+  }
+
+  .demo-message {
+    padding: 20px 16px;
+  }
+}
+
 /* ---------- Mobile fit (≤760px) ----------
    Small phones (iPhone SE, 320px) and touch use. Desktop rules above are
    untouched; everything here only narrows padding, lets content wrap, and
@@ -2951,11 +2912,46 @@ body:has(.sticky-actions) .feedback-fab {
   .dashboard-layout.is-compact,
   .history-grid,
   .status-rail,
-  .login-start-steps,
   .destination-summary,
   .run-meta,
   .outcome {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .login-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding: 32px 24px;
+  }
+
+  .login-main {
+    padding: 0;
+  }
+
+  .login-main h1 {
+    margin-bottom: 16px;
+  }
+
+  .login-lead {
+    margin-bottom: 24px;
+  }
+
+  .login-start summary {
+    min-height: 44px;
+  }
+
+  .login-lead-break {
+    display: none;
+  }
+
+  .login-visual {
+    background: none;
+    padding: 0;
+    gap: 20px;
+  }
+
+  .demo-message {
+    padding: 20px 16px;
   }
 
   .setup-actions .primary-button {

@@ -161,7 +161,6 @@ class LoginGettingStartedTests(TestCase):
 
         self.assertContains(page, "한양대학교")
         self.assertNotContains(page, "성균관대학교")
-        self.assertContains(page, 'href="#how-to-start"')
         self.assertContains(page, 'id="how-to-start"')
         self.assertContains(page, reverse("canvas_token_guide"))
         self.assertContains(page, reverse("pwa_install_guide"))
