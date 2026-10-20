@@ -31,7 +31,7 @@
 
 **변경과 배포 흐름**
 - feature 브랜치를 만들고, 테스트를 통과시킨 뒤 `git push -u origin <브랜치명>`으로 올린다. 브랜치 이름을 반드시 적는다.
-- 이어서 `gh pr create --head <브랜치> --base main`으로 PR을 만들고, PR 검사(test)가 통과하면 `gh pr merge <번호> --merge --delete-branch`로 머지한다.
+- 이어서 `gh pr create --head <브랜치> --base main`으로 PR을 만들고, PR 검사(test)가 통과하면 소유자 `hjkim24` 계정으로 `gh pr merge <번호> --merge --admin --delete-branch`로 머지한다. 새 ruleset에서는 일반 CLI 머지가 정책 차단으로 표시돼 소유자 예외를 명시해야 한다. `--admin`은 테스트 통과 확인 뒤에만 사용한다.
 - **배포는 GitHub Actions가 한다.** main에 머지되면 `.github/workflows/ci.yml`이 테스트 후 `./scripts/deploy.sh`를 실행한다. `docs/`, `deploy/grafana/`, `.github/`, `*.md`만 바뀐 머지는 배포를 건너뛴다.
   - 머지한 뒤 `gh run list --workflow ci.yml --branch main --limit 1`과 `gh run view <id>`로 배포 결과를 확인하고, `curl https://learningx-alert.com/healthz/`가 `ok`인지 본다.
   - Actions 배포가 도는 동안 로컬 `./scripts/deploy.sh`를 동시에 돌리지 않는다. Actions가 막혔을 때만 로컬에서 배포한다.

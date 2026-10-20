@@ -20,6 +20,7 @@
 - 활성 ruleset: [`main-owner-only` (25458152)](https://github.com/hjkim24/learningx-alert-web/rules/25458152), 대상 `refs/heads/main`만.
 - 생성·갱신·삭제는 예외 사용자 `hjkim24`(GitHub user ID `37476664`)만 허용한다. `User` 유형·`always` 예외이며 관리자 역할 전체, GitHub Actions, 앱, 봇, deploy key에는 예외를 주지 않는다.
 - PR 생성·작업 브랜치 push는 이 ruleset으로 제한하지 않는다. 다른 사용자의 PR도 소유자가 머지한다. 별도의 필수 리뷰·검사 조건을 이 ruleset에 추가하지 않았다.
+- CLI에서는 PR의 `test` 검사가 통과한 뒤 소유자 계정으로 `gh pr merge <번호> --merge --admin --delete-branch`를 사용한다. 일반 머지 명령은 정책 차단으로 표시돼 허용된 소유자 예외를 명시해야 했다(PR #77에서 확인). `--admin`으로 테스트 확인을 생략하지 않는다.
 - 소유자는 GitHub 권한상 직접 push도 가능하지만, 이 프로젝트의 에이전트 작업 규칙은 feature 브랜치 → 테스트 → PR → 머지다. 소유자 자격 증명으로 인증한 CLI·에이전트도 같은 GitHub 사용자로 취급되므로 사람과 도구를 구별하는 규칙은 아니다.
 - Actions는 `main` 갱신 뒤 실행되며 `main`에 커밋을 쓰지 않아 기존 테스트·배포 흐름을 유지한다.
 - API 입력 원본: [main-owner-only.ruleset.json](main-owner-only.ruleset.json). GitHub 설정이 실제 적용 상태이며, 원본 파일 수정만으로 설정이 바뀌지는 않는다. 변경은 사용자 요청 후 적용하고 재조회한다.
