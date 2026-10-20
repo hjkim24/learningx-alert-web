@@ -45,4 +45,5 @@
 - [x] Render representative dashboard states with synthetic local fixtures; inspect desktop and mobile, keyboard/details behavior, overflow and CTA navigation without external sends.
 - [x] Review the complete diff against the five focus items, address material findings, update the product docs and commit. Fresh review found no issues and independently passed 29 onboarding/alarms tests.
 - [x] Push `feat/first-use-guide`, create [PR #79](https://github.com/hjkim24/learningx-alert-web/pull/79), and verify CI (`d2b3cd4`: test passed; deploy skipped).
-- [ ] Obtain production-deploy approval before merging; the implementation is ready for review and remains undeployed.
+- [x] Obtain production-deploy approval before merging. The user approved production reflection on 2026-10-20; PR #79 merged as `a5eeb4e` after the final `0f228b2` CI test passed.
+- [x] Verify the production rollout: [main CI 39395326014](https://github.com/hjkim24/learningx-alert-web/actions/runs/39395326014) passed test and deploy. Public GET checks at 2026-10-20 17:46 KST confirmed `/healthz/` 200/ok, the four-step login introduction and the new hashed CSS (200). Authenticated production flows and device delivery were not rerun.
