@@ -43,5 +43,6 @@
 - [x] Keep the current login example and Google form; explain school support, setup order and links to the token/install guides.
 - [x] Run targeted tests, then the full Django/client suites and both deployment script tests. Check no migration is needed.
 - [x] Render representative dashboard states with synthetic local fixtures; inspect desktop and mobile, keyboard/details behavior, overflow and CTA navigation without external sends.
-- [ ] Review the complete diff against the five focus items, address material findings, update the product docs and commit.
-- [ ] Push `feat/first-use-guide`, create a PR, and verify CI. Obtain any required production-deploy approval only after the result is concrete and reviewable.
+- [x] Review the complete diff against the five focus items, address material findings, update the product docs and commit. Fresh review found no issues and independently passed 29 onboarding/alarms tests.
+- [x] Push `feat/first-use-guide`, create [PR #79](https://github.com/hjkim24/learningx-alert-web/pull/79), and verify CI (`d2b3cd4`: test passed; deploy skipped).
+- [ ] Obtain production-deploy approval before merging; the implementation is ready for review and remains undeployed.
