@@ -1,5 +1,7 @@
 # OCI 운영 런북
 
+2026-10-20 문서 갱신: 현재 코드·CI와 대조했다. 아래 VM·DB·Vault 구성과 실측 수치는 기존 운영 기록이며, 이번 갱신에서 내부 운영 상태를 다시 조회하지 않았다. 현재 기능·검증 범위는 [기능 명세](../../FEATURE_SPEC.md)와 [FEASIBILITY](../../FEASIBILITY.md)를 따른다.
+
 LearningX Alert 운영 환경은 OCI 춘천 리전의 Ubuntu 22.04 ARM64 인스턴스에서 실행된다. 공개 주소는 `https://learningx-alert.com`(2026-09-30 이전 `alert.sobok-app.com`, 지금은 새 주소로 301 리디렉션), 예약 공인 IP는 `168.107.37.170`이다. Caddy는 인스턴스 사설 주소 `10.0.1.31:80/443`에만 바인딩하며, 기존 `tossterm.service`와 Tailscale은 별도로 유지한다.
 
 ## 보안 경계
@@ -98,7 +100,9 @@ ssh ubuntu@168.107.37.170 \
 
 ## 배포
 
-배포는 커밋된 깨끗한 작업 트리에서만 실행된다.
+기본 배포 경로는 PR 테스트 → 소유자의 `main` 머지 → GitHub Actions다. `main-owner-only` ruleset은 `main` 생성·갱신·삭제를 `hjkim24`에게만 허용한다. 문서만 바뀌면 테스트 후 배포를 건너뛴다. 자세한 흐름과 권한은 [Actions 운영 문서](github-actions-deploy.md)를 따른다.
+
+아래 수동 경로는 Actions 장애 시에만 사용하며 진행 중인 Actions 배포와 동시에 실행하지 않는다. 배포는 커밋된 깨끗한 작업 트리에서만 실행된다.
 
 ```bash
 git status --short
