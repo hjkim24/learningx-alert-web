@@ -1001,6 +1001,21 @@ button[aria-busy="true"] {
   font-weight: 700;
 }
 
+/* Short token steps with a direct link to each school's Canvas settings. */
+.token-shortcut {
+  max-width: 40rem;
+  margin: 0 0 20px;
+  display: grid;
+  gap: 16px;
+}
+
+/* At 320px "성균관대학교 Canvas 설정 열기" wraps; break between words, evenly. */
+.token-shortcut .secondary-button {
+  word-break: keep-all;
+  text-wrap: balance;
+  text-align: center;
+}
+
 .school-options {
   display: flex;
   flex-wrap: wrap;
@@ -2954,7 +2969,8 @@ body:has(.sticky-actions) .feedback-fab {
     padding: 20px 16px;
   }
 
-  .setup-actions .primary-button {
+  .setup-actions .primary-button,
+  .setup-actions .secondary-button {
     width: 100%;
   }
 

@@ -202,6 +202,32 @@ class SchoolConnectViewTests(TestCase):
         self.assertContains(response, "한양대학교")
         self.assertNotContains(response, 'name="school"')
 
+    @override_settings(CANVAS_BASE_URL="https://canvas.skku.edu/")
+    def test_dashboard_links_each_schools_token_settings(self):
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, 'href="https://canvas.skku.edu/profile/settings"')
+        self.assertContains(response, 'href="https://learning.hanyang.ac.kr/profile/settings"')
+        self.assertContains(response, "성균관대학교 Canvas 설정 열기")
+
+    @override_settings(SCHOOL_MAX_USERS=1)
+    def test_full_school_gets_no_settings_link(self):
+        connect(make_user("other"), "hanyang")
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, "learning.hanyang.ac.kr/profile/settings")
+
+    def test_reconnect_links_only_the_connected_school(self):
+        connection = connect(self.user, "hanyang")
+        connection.needs_reconnect = True
+        connection.save()
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, 'href="https://learning.hanyang.ac.kr/profile/settings"')
+        self.assertNotContains(response, "canvas.skku.edu/profile/settings")
+
+    def test_healthy_connection_hides_the_settings_link(self):
+        connect(self.user, "hanyang")
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, "/profile/settings")
+
     def test_privacy_lists_enabled_schools(self):
         response = self.client.get(reverse("privacy_policy"))
         self.assertContains(response, "성균관대학교(canvas.skku.edu)")
