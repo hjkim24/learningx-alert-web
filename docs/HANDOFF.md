@@ -28,10 +28,12 @@
 - 00:16 KST 운영 Chromium 검증에서 로그인 화면과 새 CSS(`app.a88067f812d7.css`)는 `200`, `/healthz/`는 `200 / ok`였다. 1440·768·390·320px 표시, 넘침 없음, 첫 화면의 Google 버튼, 도움말 키보드 펼침·접힘을 확인했고 데스크톱·모바일 스크린샷도 검토했다. 브라우저 오류와 자동 쓰기 요청은 없었다.
 - 인증·알림 발송 동작은 바꾸지 않았으며, 실제 Google 로그인과 기기 알림 수신은 재시험하지 않았다.
 
-**Canvas 설정 바로가기 (2026-10-24, PR 머지 전)**
+**Canvas 설정 바로가기 (2026-10-24, 운영 반영 완료)**
 
 - 배경: 사용자 피드백에 토큰 발급이 번거롭다는 의견이 많았다. `feat/canvas-settings-shortcut`은 `main`의 `a54f0b1`에서 시작했다.
-- 미연결·재연결 필요 상태의 대시보드 Canvas 연결 칸에 3단계 안내와 학교별 "Canvas 설정 열기" 링크(`School.token_settings_url` = `{canvas_base_url}/profile/settings`, 새 탭)를 넣었다. 정원이 찬 학교는 링크를 빼고, 재연결은 연결된 학교만 보여 준다. 토큰 가이드에 지름길 안내 한 줄을 더했다. 새 의존성·모델·설정은 없다.
+- 미연결·재연결 필요 상태의 대시보드 Canvas 연결 칸에 3단계 안내와 학교별 "Canvas 설정 열기" 링크(`School.token_settings_url` = `{canvas_base_url}/profile/settings`, 새 탭)를 넣었다. 정원이 찬 학교는 링크를 빼고, 재연결은 연결된 학교만 보여 준다. 새 의존성·모델·설정은 없다.
+- [PR #83](https://github.com/hjkim24/learningx-alert-web/pull/83)은 CI test 통과와 사용자 승인 후 사용자가 직접 `dcfbb9e`로 머지했다(에이전트의 `--admin` 머지는 Claude Code 권한 검사에서 차단됨). [main CI 실행 39977433255](https://github.com/hjkim24/learningx-alert-web/actions/runs/39977433255)의 test·deploy가 성공했고 배포는 2026-10-24 00:24 KST에 끝났다. 공개 GET에서 `/healthz/` `200 ok`, 새 CSS `app.459b4e541280.css`의 바로가기 스타일을 확인했다. 운영 로그인 후 대시보드는 Aside가 서비스에 로그인돼 있지 않아 보지 못했다.
+- 후속 `feat/guide-settings-shortcut`: 토큰 가이드의 지름길 한 줄을 1단계 위 "바로 가기" 상자와 학교별 버튼으로 바꿨다(로그인 없이 사용 가능). 처음 시작하기 1단계의 "토큰 받는 방법" 링크는 하단 "토큰 발급 가이드"와 겹쳐 지웠다. 로컬 Django 469개(2개 건너뜀), 클라이언트 35개, 배포 스크립트 2종 통과, Chromium 1280·390·320px 넘침 없음.
 - 리디렉션 확인: 쿠키 없는 요청에서 두 학교 모두 `/profile/settings` → `/login` → 학교 SSO로 가며, SSO 복귀 주소는 `/learningx/login`으로 고정이다. 사용자가 성균관대 로그아웃 상태에서 로그인 후 설정 화면으로 돌아오는 것을 확인했다. **한양대 복귀는 미확인**이라 안내 문구에 "설정 화면이 아니면 버튼을 한 번 더 눌러 주세요"를 넣었다.
 - 로컬 Django 467개(2개 건너뜀), 클라이언트 35개, 배포 스크립트 2종 통과. 데스크톱(Aside)과 Chromium 390·320px에서 넘침 없음을 확인했고, 320px의 버튼 줄바꿈은 단어 단위로 맞췄다.
 - 붙여넣기 버튼(클립보드 API)은 브라우저 권한 창이 뜨고 기본 붙여넣기로 충분해 넣지 않았다. Canvas OAuth(학교의 Developer Key 필요)는 사용자 결정 전 제안 단계다.
@@ -81,7 +83,7 @@
   - `await openTab(url)`을 부른 뒤 전역 `page`를 쓰고, `page.screenshot({path:"./artifacts/x.png"})`로 찍는다. 파일은 `~/.aside/u/0/sessions/<id>/artifacts/`에 저장된다.
   - `setViewportSize`와 `clip`은 동작하지 않는다.
 - **모바일 뷰포트:** Playwright 라이브러리를 임시로 설치해 쓴다.
-  - `.git/pw`에 `npm install playwright@1.63.0`
+  - `.git/pw`에서 `npm init -y` 후 `npm install playwright@1.63.0`. `package.json` 없이 설치하면 npm이 홈의 `~/package.json`·`~/node_modules`에 설치한다(2026-10-24 실제로 발생).
   - `chromium.launch({executablePath: "~/Library/Caches/ms-playwright/chromium_headless_shell-1247/chrome-headless-shell-mac-arm64/chrome-headless-shell"})` + `devices["iPhone SE"]`
 - **렌더링할 페이지:** 로그인이 필요한 페이지는 임시 테스트(`accounts/tests/test_zz_vis_tmp.py`)로 테스트 클라이언트 HTML을 `.git/vis/`에 저장한다. `ln -s ../../static .git/vis/static` 후 `python3 -m http.server 8765 --bind 127.0.0.1`로 띄운다. 임시 테스트와 폴더는 끝나면 지운다.
 - **모바일 CSS:** `static/app.css` 끝의 "Mobile fit (≤760px)" 블록에 모은다. 데스크톱 규칙은 건드리지 않는다.

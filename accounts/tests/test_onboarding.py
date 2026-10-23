@@ -48,6 +48,12 @@ class GettingStartedTests(TestCase):
         self.assertContains(page, 'id="start-guide" open')
         self.assertContains(page, 'href="#canvas-title"')
 
+    def test_connection_step_links_the_token_guide_once(self):
+        page = self.dashboard().content.decode()
+
+        guide = re.search(r'<details[^>]*id="start-guide".*?</details>', page, re.S).group(0)
+        self.assertEqual(guide.count(f'href="{reverse("canvas_token_guide")}"'), 1)
+
     def test_connected_user_is_directed_to_course_selection(self):
         self.connect()
 

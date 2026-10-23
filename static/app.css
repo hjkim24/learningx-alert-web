@@ -1010,7 +1010,8 @@ button[aria-busy="true"] {
 }
 
 /* At 320px "성균관대학교 Canvas 설정 열기" wraps; break between words, evenly. */
-.token-shortcut .secondary-button {
+.token-shortcut .secondary-button,
+.guide-shortcut .primary-button {
   word-break: keep-all;
   text-wrap: balance;
   text-align: center;
