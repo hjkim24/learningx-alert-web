@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load course_names run_labels %}
 
 {% block title %}실행 상세 · LearningX Alert{% endblock %}
 
@@ -10,7 +11,7 @@
       <p class="eyebrow">예약 실행</p>
       <h1>{{ run.scheduled_for|date:"Y.m.d H:i" }} KST</h1>
     </div>
-    <p>{{ run.get_status_display }}{% if run.safe_error_code %} · <code>{{ run.safe_error_code }}</code>{% endif %}</p>
+    <p>{{ run.get_status_display }}{% if run.safe_error_code %} · <span data-error-code="{{ run.safe_error_code }}">{{ run.safe_error_code|error_label }}</span>{% endif %}</p>
   </header>
 
   <dl class="run-meta">
@@ -30,11 +31,11 @@
 
   <section class="preview-section" aria-labelledby="run-items-title">
     <h2 id="run-items-title">포함 항목</h2>
-    {% for item in run.items.all %}
+    {% for item in items %}
       <article class="preview-item">
-        <h3>과목 {{ item.canvas_course_id }} · {{ item.title }}</h3>
+        <h3>{% if item.course_name %}{{ item.course_name|course_title }} · {% endif %}{{ item.title }}</h3>
         <p>마감 {{ item.due_at|date:"Y.m.d H:i" }} KST</p>
-        <p class="fine-print">{{ item.item_type }} · {{ item.observed_state }}</p>
+        <p class="fine-print">{{ item.item_type|item_kind }}</p>
       </article>
     {% empty %}
       <p class="empty-state compact">포함된 항목이 없어요.</p>
@@ -59,7 +60,7 @@
       <p class="outcome{% if delivery.status == 'definitely_failed' or delivery.status == 'needs_review' %} outcome-failed{% endif %}">
         <strong>{{ delivery.destination_label|default:delivery.get_destination_kind_display }} {{ delivery.part_number }}번</strong>
         <span>{{ delivery.get_status_display }}{% if delivery.provider_confirmation_id %} · 확인 ID {{ delivery.provider_confirmation_id }}{% endif %}</span>
-        {% if delivery.safe_error_code %}<code>{{ delivery.safe_error_code }}</code>{% endif %}
+        {% if delivery.safe_error_code %}<span data-error-code="{{ delivery.safe_error_code }}">{{ delivery.safe_error_code|error_label }}</span>{% endif %}
       </p>
     {% empty %}
       <p class="empty-state compact">전송 기록이 없어요.</p>

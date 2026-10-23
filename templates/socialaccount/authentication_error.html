@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}로그인 실패 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <section class="notice-page" aria-labelledby="auth-error-title">
+    <h1 id="auth-error-title">Google 로그인에 실패했어요</h1>
+    <p>잠시 뒤 다시 시도해 주세요. 카카오톡·인스타그램·에브리타임처럼 앱 안에서 열었다면 Safari나 Chrome에서 이 사이트를 열고 로그인해 주세요.</p>
+    <a class="primary-button" href="{% url 'account_login' %}">다시 로그인하기</a>
+  </section>
+{% endblock %}

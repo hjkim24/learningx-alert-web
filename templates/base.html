@@ -7,6 +7,18 @@
   <meta name="color-scheme" content="light">
   <title>{% block title %}LearningX Alert{% endblock %}</title>
   <meta name="theme-color" content="#2c4380">
+  <meta name="description" content="아직 끝내지 않은 과제·퀴즈·강의만 모아 원하는 시각에 휴대폰 푸시·Discord·Slack으로 알려 드려요. 무료로 쓸 수 있어요.">
+  {# Link previews in KakaoTalk, Instagram and Everytime. #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="LearningX Alert">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="LearningX Alert · 과제·강의 마감 알림">
+  <meta property="og:description" content="아직 끝내지 않은 과제·퀴즈·강의만 모아 원하는 시각에 알려 드려요. 무료로 쓸 수 있어요.">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'og-image.png' %}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="LearningX Alert 마감 알림 예시">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="manifest" href="{% url 'web_manifest' %}">
   <link rel="icon" href="{% static 'icons/favicon.ico' %}" sizes="48x48">
   <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon.svg' %}">

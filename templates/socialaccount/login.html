@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% comment %}Shown when the Google login URL is opened by a plain link (GET); signing in still needs this POST.{% endcomment %}
+
+{% block title %}Google 로그인 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <section class="notice-page" aria-labelledby="provider-login-title">
+    <h1 id="provider-login-title">Google로 로그인</h1>
+    <p>아래 버튼을 누르면 Google 로그인 화면으로 이동해요.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button class="primary-button" type="submit">Google로 계속하기</button>
+    </form>
+  </section>
+{% endblock %}

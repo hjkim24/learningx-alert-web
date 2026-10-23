@@ -159,7 +159,8 @@ class NotificationTests(SimpleTestCase):
 
         self.assertLess(text.index("첫 번째"), text.index("두 번째"))
         self.assertIn("조회 실패", text)
-        self.assertIn("assignments_failed", text)
+        self.assertIn("과제 목록을 확인하지 못했습니다.", text)
+        self.assertNotIn("assignments_failed", text)
 
     def test_renderer_neutralizes_provider_mentions_from_external_titles(self):
         result = CollectionResult(

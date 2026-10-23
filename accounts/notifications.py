@@ -136,10 +136,7 @@ def render_notification(result, now):
     if failures:
         lines.extend(("", "조회 실패"))
         for outcome in failures:
-            lines.append(
-                f"- {_safe_external_text(outcome.course_name)}: "
-                f"{outcome.safe_summary} ({outcome.error_code})"
-            )
+            lines.append(f"- {_safe_external_text(outcome.course_name)}: {outcome.safe_summary}")
     return "\n".join(lines)
 
 

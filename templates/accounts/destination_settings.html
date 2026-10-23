@@ -61,35 +61,40 @@
     {% else %}
       <p class="empty-state compact">아직 없어요. 브라우저 푸시를 켜거나 아래에서 Discord·Slack 웹훅을 추가해 주세요.</p>
     {% endif %}
+    {% if destination_count >= destination_limit %}
+      <p class="fine-print">알림 대상은 {{ destination_limit }}개까지 등록할 수 있어요. 새로 추가하려면 먼저 하나를 삭제해 주세요.</p>
+    {% endif %}
   </section>
 
-  <details class="panel webhook-panel"{% if destination_form.is_bound %} open{% endif %}>
-    <summary>
-      <h2 id="destination-title">+ 웹훅 추가</h2>
-      <span class="term-meta">Discord · Slack</span>
-    </summary>
-    <form class="webhook-form" method="post" action="{% url 'destination_save' %}">
-      {% csrf_token %}
-      {{ destination_form.non_field_errors }}
-      <div class="field-pair">
-        <div class="field-row">
-          {{ destination_form.kind.label_tag }}
-          {{ destination_form.kind }}
-          {{ destination_form.kind.errors }}
+  {% if destination_count < destination_limit or destination_form.is_bound %}
+    <details class="panel webhook-panel"{% if destination_form.is_bound %} open{% endif %}>
+      <summary>
+        <h2 id="destination-title">+ 웹훅 추가</h2>
+        <span class="term-meta">Discord · Slack</span>
+      </summary>
+      <form class="webhook-form" method="post" action="{% url 'destination_save' %}">
+        {% csrf_token %}
+        {{ destination_form.non_field_errors }}
+        <div class="field-pair">
+          <div class="field-row">
+            {{ destination_form.kind.label_tag }}
+            {{ destination_form.kind }}
+            {{ destination_form.kind.errors }}
+          </div>
+          <div class="field-row">
+            {{ destination_form.label.label_tag }}
+            {{ destination_form.label }}
+            {{ destination_form.label.errors }}
+          </div>
         </div>
         <div class="field-row">
-          {{ destination_form.label.label_tag }}
-          {{ destination_form.label }}
-          {{ destination_form.label.errors }}
+          {{ destination_form.webhook_url.label_tag }}
+          {{ destination_form.webhook_url }}
+          {{ destination_form.webhook_url.errors }}
+          <small>Discord·Slack 채널 설정에서 만든 웹훅 URL을 붙여 넣으세요. 저장한 뒤에는 다시 보여 주지 않아요.</small>
         </div>
-      </div>
-      <div class="field-row">
-        {{ destination_form.webhook_url.label_tag }}
-        {{ destination_form.webhook_url }}
-        {{ destination_form.webhook_url.errors }}
-        <small>Discord·Slack 채널 설정에서 만든 웹훅 URL을 붙여 넣으세요. 저장한 뒤에는 다시 보여 주지 않아요.</small>
-      </div>
-      <button class="primary-button" type="submit">웹훅 추가</button>
-    </form>
-  </details>
+        <button class="primary-button" type="submit">웹훅 추가</button>
+      </form>
+    </details>
+  {% endif %}
 {% endblock %}

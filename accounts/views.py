@@ -253,7 +253,11 @@ def run_detail(request, pk):
         pk=pk,
         user=request.user,
     )
-    return render(request, "accounts/run_detail.html", {"run": run})
+    course_names = {result.canvas_course_id: result.course_name for result in run.course_results.all()}
+    items = list(run.items.all())
+    for item in items:
+        item.course_name = course_names.get(item.canvas_course_id, "")
+    return render(request, "accounts/run_detail.html", {"run": run, "items": items})
 
 
 @login_required

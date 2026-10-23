@@ -22,7 +22,6 @@
         <li>
           <a href="{% url 'run_detail' run.pk %}">{{ run.scheduled_for|date:"Y.m.d H:i" }} KST</a>
           <span>{{ run.get_status_display }}</span>
-          {% if run.safe_error_code %}<code>{{ run.safe_error_code }}</code>{% endif %}
         </li>
       {% endfor %}
     </ol>

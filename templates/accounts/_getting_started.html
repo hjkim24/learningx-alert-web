@@ -25,11 +25,10 @@
       <a href="{% url 'destination_settings' %}#destination-status-title"><strong>시험 알림</strong><span class="setup-description">{% if setup_test_succeeded %}시험 전송 성공{% else %}직접 보내고 도착했는지 확인해요.{% endif %}</span></a>
     </li>
   </ol>
+  {% comment %}Step 1 needs no prompt here: the Canvas connection card comes right after this guide.{% endcomment %}
+  {% if setup_step != 1 %}
   <div class="setup-next">
-    {% if setup_step == 1 %}
-      <p>학교의 Canvas 액세스 토큰이 필요해요. 아래 연결 칸에서 Canvas 설정을 열어 토큰을 만들고 넣어 주세요.</p>
-      <div class="setup-actions"><a class="primary-button" href="#canvas-title">Canvas 연결하러 가기</a></div>
-    {% elif setup_step == 2 %}
+    {% if setup_step == 2 %}
       <p>과목마다 과제(퀴즈 포함)와 강의 알림을 골라 주세요. 알림 시각도 원하는 때로 바꿀 수 있어요.</p>
       <div class="setup-actions"><a class="primary-button" href="{% url 'course_settings' %}">알림 과목 고르기</a><a class="guide-link" href="{% url 'notification_settings' %}">알림 시각 확인하기</a></div>
     {% elif setup_step == 3 %}
@@ -47,4 +46,5 @@
       <p>다음 예약 시각은 {{ next_run|date:"n월 j일 H:i" }}(한국 시간)이에요. 제출·수강을 마친 항목은 빠지고, 보낼 항목이 없는 날은 기본적으로 조용히 지나가요.</p>
     {% endif %}
   </div>
+  {% endif %}
 </details>
