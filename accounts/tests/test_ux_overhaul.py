@@ -192,7 +192,7 @@ class UxPageTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertContains(response, 'aria-label="주 메뉴"')
-        self.assertContains(response, "등록된 알림 대상이 없어서 예약 알림이 가지 않아요")
+        self.assertContains(response, "알림 대상 추가하기")
         self.assertNotContains(response, "내 로컬 계정과 이력 삭제")
         self.assertContains(response, 'action="/connection/preview/" data-loading')
         self.assertContains(response, 'id="loading-veil"')

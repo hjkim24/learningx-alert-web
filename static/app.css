@@ -776,16 +776,11 @@ button[aria-busy="true"] {
   line-height: 1.6;
 }
 
-.setup-actions,
-.setup-help {
+.setup-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px 20px;
-}
-
-.setup-help {
-  margin-bottom: 0;
 }
 
 .history-grid {
@@ -846,8 +841,7 @@ button[aria-busy="true"] {
   justify-items: start;
 }
 
-.remaining-empty p,
-.remaining-empty form {
+.remaining-empty p {
   margin: 0;
 }
 
@@ -2975,8 +2969,7 @@ body:has(.sticky-actions) .feedback-fab {
     width: 100%;
   }
 
-  .setup-actions .guide-link,
-  .setup-help a {
+  .setup-actions .guide-link {
     min-height: 44px;
     display: inline-flex;
     align-items: center;
