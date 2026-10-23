@@ -921,3 +921,21 @@ const LXPush = (() => {
     submit.disabled = false;
   });
 })();
+
+// Canvas connect card: once a school is picked, show only that school's
+// "Canvas 설정 열기" button. Without JavaScript every school's button stays.
+(() => {
+  const choice = document.querySelector("[data-school-choice]");
+  if (!choice) return;
+  const links = document.querySelectorAll("[data-school-link]");
+
+  function sync() {
+    const picked = choice.querySelector('input[name="school"]:checked');
+    links.forEach((link) => {
+      link.hidden = Boolean(picked) && link.dataset.schoolLink !== picked.value;
+    });
+  }
+
+  choice.addEventListener("change", sync);
+  sync();
+})();

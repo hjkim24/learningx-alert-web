@@ -985,7 +985,7 @@ button[aria-busy="true"] {
 /* School radios (shown only when several schools are enabled). */
 .school-choice {
   max-width: 40rem;
-  margin: 0 0 12px;
+  margin: 0 0 20px;
   padding: 0;
   border: 0;
 }

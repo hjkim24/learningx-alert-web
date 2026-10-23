@@ -111,29 +111,9 @@
       </dl>
     {% endif %}
 
-    {% if not connection or connection.needs_reconnect %}
-      <div class="token-shortcut">
-        <ol class="guide-next">
-          <li>아래 버튼으로 Canvas 설정을 열어요. 로그인 화면이 나오면 로그인하고, 설정 화면이 아니면 버튼을 한 번 더 눌러 주세요.</li>
-          <li>설정 화면 아래쪽의 <strong>+ 새 액세스 토큰</strong>을 눌러 토큰을 만들어요. 만료일을 비워 두면 다시 연결할 일이 없어요.</li>
-          <li>나온 토큰을 전부 복사해 아래 칸에 붙여 넣어요. 그 창을 닫으면 토큰을 다시 볼 수 없어요.</li>
-        </ol>
-        <div class="setup-actions">
-          {% if connection %}
-            <a class="secondary-button" href="{{ school.token_settings_url }}" target="_blank" rel="noopener noreferrer">Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
-          {% else %}
-            {% for option in supported_schools %}{% if option.code not in form.full_codes %}
-              <a class="secondary-button" href="{{ option.token_settings_url }}" target="_blank" rel="noopener noreferrer">{% if supported_schools|length > 1 %}{{ option.name }} {% endif %}Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
-            {% endif %}{% endfor %}
-          {% endif %}
-          <a class="guide-link" href="{% url 'canvas_token_guide' %}">그림으로 자세히 보기</a>
-        </div>
-      </div>
-    {% endif %}
-
     {% if form.school %}
       {# Outside the token grid; the radios join the form via form=. #}
-      <fieldset class="school-choice">
+      <fieldset class="school-choice" data-school-choice>
         <legend>학교</legend>
         <div class="school-options">
           {% for choice in form.school %}
@@ -145,6 +125,27 @@
         </div>
       </fieldset>
     {% endif %}
+
+    {% if not connection or connection.needs_reconnect %}
+      <div class="token-shortcut">
+        <ol class="guide-next">
+          <li>{% if form.school %}학교를 고르고 {% endif %}아래 버튼으로 Canvas 설정을 열어요. 로그인 화면이 나오면 로그인하고, 설정 화면이 아니면 버튼을 한 번 더 눌러 주세요.</li>
+          <li>설정 화면 아래쪽의 <strong>+ 새 액세스 토큰</strong>을 눌러 토큰을 만들어요. 만료일을 비워 두면 다시 연결할 일이 없어요.</li>
+          <li>나온 토큰을 전부 복사해 아래 칸에 붙여 넣어요. 그 창을 닫으면 토큰을 다시 볼 수 없어요.</li>
+        </ol>
+        <div class="setup-actions">
+          {% if connection %}
+            <a class="secondary-button" href="{{ school.token_settings_url }}" target="_blank" rel="noopener noreferrer">Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
+          {% else %}
+            {% for option in supported_schools %}{% if option.code not in form.full_codes %}
+              <a class="secondary-button" href="{{ option.token_settings_url }}" target="_blank" rel="noopener noreferrer" data-school-link="{{ option.code }}">{% if supported_schools|length > 1 %}{{ option.name }} {% endif %}Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
+            {% endif %}{% endfor %}
+          {% endif %}
+          <a class="guide-link" href="{% url 'canvas_token_guide' %}">그림으로 자세히 보기</a>
+        </div>
+      </div>
+    {% endif %}
+
     <form class="token-form" id="canvas-token-form" method="post" action="{% url 'canvas_connect' %}">
       {% csrf_token %}
       <div class="field-row">

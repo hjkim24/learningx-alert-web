@@ -209,6 +209,14 @@ class SchoolConnectViewTests(TestCase):
         self.assertContains(response, 'href="https://learning.hanyang.ac.kr/profile/settings"')
         self.assertContains(response, "성균관대학교 Canvas 설정 열기")
 
+    def test_school_choice_comes_before_the_settings_links_it_filters(self):
+        page = self.client.get(reverse("dashboard")).content.decode()
+
+        self.assertLess(page.index('class="school-choice"'), page.index('class="token-shortcut"'))
+        self.assertIn('data-school-link="skku"', page)
+        self.assertIn('data-school-link="hanyang"', page)
+        self.assertIn("학교를 고르고 아래 버튼으로", page)
+
     @override_settings(SCHOOL_MAX_USERS=1)
     def test_full_school_gets_no_settings_link(self):
         connect(make_user("other"), "hanyang")
