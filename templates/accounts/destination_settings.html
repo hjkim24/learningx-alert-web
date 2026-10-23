@@ -10,13 +10,6 @@
   </header>
   {% include "accounts/_notification_tabs.html" with active="destinations" %}
 
-  {% if not destinations %}
-    <div class="attention-notice" role="status">
-      <strong>아직 등록된 알림 대상이 없어요.</strong>
-      <p>이 기기에서 푸시를 켜거나 Discord·Slack 웹훅을 추가해 주세요.</p>
-    </div>
-  {% endif %}
-
   {% if push_enabled %}
     <section class="panel push-panel" aria-labelledby="push-title" data-push
       data-vapid-key="{{ vapid_public_key }}"
@@ -66,7 +59,7 @@
         {% endfor %}
       </ul>
     {% else %}
-      <p class="empty-state compact">아직 없어요.</p>
+      <p class="empty-state compact">아직 없어요. 브라우저 푸시를 켜거나 아래에서 Discord·Slack 웹훅을 추가해 주세요.</p>
     {% endif %}
   </section>
 

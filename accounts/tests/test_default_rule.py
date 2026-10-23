@@ -125,7 +125,7 @@ class NewUserOnboardingTests(TestCase):
         claimed = claim_due_runs(datetime(2026, 9, 30, 0, 0, tzinfo=UTC))  # 09:00 KST
 
         self.assertIsNotNone(dashboard.context["next_run"])
-        self.assertNotContains(dashboard, "켜 둔 알림 시각이 없어")
+        self.assertNotContains(dashboard, "예약 알림을 받을 시각이 꺼져 있어요.")
         self.assertEqual([run.user_id for run in claimed], [self.user.pk])
 
     def test_dashboard_warns_when_every_alarm_is_off(self):
@@ -139,7 +139,7 @@ class NewUserOnboardingTests(TestCase):
         dashboard = self.client.get(reverse("dashboard"))
 
         self.assertIsNone(dashboard.context["next_run"])
-        self.assertContains(dashboard, "켜 둔 알림 시각이 없어서 예약 알림이 가지 않아요.")
+        self.assertContains(dashboard, "예약 알림을 받을 시각이 꺼져 있어요.")
 
     def test_preview_before_saving_settings_also_creates_a_usable_schedule(self):
         CanvasConnection.objects.create(

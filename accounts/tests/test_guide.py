@@ -2,7 +2,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 
@@ -31,6 +31,14 @@ class CanvasTokenGuideTests(TestCase):
                 self.assertTrue(path.is_file())
                 self.assertLess(path.stat().st_size, 400_000)
         self.assertEqual(page.count("<img "), page.count('alt="'))
+
+    @override_settings(ENABLED_SCHOOLS=("skku", "hanyang"), CANVAS_BASE_URL="https://canvas.skku.edu")
+    def test_guide_links_each_schools_token_settings(self):
+        page = Client().get(reverse("canvas_token_guide"))
+
+        self.assertContains(page, 'href="https://canvas.skku.edu/profile/settings"')
+        self.assertContains(page, 'href="https://learning.hanyang.ac.kr/profile/settings"')
+        self.assertContains(page, "한양대학교 Canvas 설정 열기")
 
     def test_logged_in_user_gets_dashboard_cta(self):
         user = get_user_model().objects.create_user(username="pilot@example.com")

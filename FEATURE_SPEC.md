@@ -18,7 +18,7 @@ Google 로그인은 서비스 계정 인증이고 Canvas 토큰은 학교 데이
 | 영역 | 현재 동작 | 주요 코드 |
 |---|---|---|
 | 계정 | Google이 인증한 이메일로 로그인. 운영 설정으로 공개 가입 또는 허용 목록 선택. 회원 탈퇴 | `accounts/adapters.py`, `accounts/views.py` |
-| Canvas 연결 | 학교 선택, 토큰 검증·암호화 저장·교체·연결 해제, 만료 시 재연결 안내. 미연결·재연결 시 3단계 발급 안내와 학교별 Canvas 설정(`/profile/settings`) 바로가기 | `accounts/services.py`, `accounts/schools.py`, `templates/accounts/dashboard.html` |
+| Canvas 연결 | 학교 선택, 토큰 검증·암호화 저장·교체·연결 해제, 만료 시 재연결 안내. 미연결·재연결 시 3단계 발급 안내와 학교별 Canvas 설정(`/profile/settings`) 바로가기. 토큰 가이드에도 같은 바로가기 | `accounts/services.py`, `accounts/schools.py`, `templates/accounts/dashboard.html`, `templates/guide/canvas_token.html` |
 | 과목 | 본인 active 수강 과목 페이지네이션 조회, 학기별 분류, 과목별 활성화·유형 선택 | `learningx_alert/canvas.py`, `accounts/courses.py`, `accounts/forms.py` |
 | 수집 | 미제출 과제·Canvas 퀴즈, 미수강 LearningX 출석 대상 강의·자료. 완료·기한 경과·마감 없는 항목 제외 | `accounts/collection.py` |
 | 항목 선택 | 미리보기, 개별 항목 제외·복원 | `accounts/views.py`, `accounts/collection.py` |

@@ -48,6 +48,13 @@ class GettingStartedTests(TestCase):
         self.assertContains(page, 'id="start-guide" open')
         self.assertContains(page, 'href="#canvas-title"')
 
+    def test_guide_leaves_help_links_and_missing_setup_to_one_place(self):
+        page = self.dashboard().content.decode()
+
+        guide = re.search(r'<details[^>]*id="start-guide".*?</details>', page, re.S).group(0)
+        self.assertNotIn(reverse("canvas_token_guide"), guide)  # site footer and connect card link it
+        self.assertNotIn("attention-notice", page)  # the current step says what is missing
+
     def test_connected_user_is_directed_to_course_selection(self):
         self.connect()
 

@@ -25,27 +25,8 @@
       <strong>Canvas를 다시 연결해 주세요.</strong>
       <p>토큰이 만료됐거나 삭제돼서 예약 알림을 멈췄어요. 아래 Canvas 연결에 새 토큰을 넣어 주세요.</p>
     </div>
-  {% elif not connection %}
-    <div class="attention-notice" role="status">
-      <strong>Canvas를 연결해 주세요.</strong>
-      <p>아래에 Canvas 액세스 토큰을 넣으면 수강 과목을 불러와요. 처음이라면 <a href="{% url 'canvas_token_guide' %}">발급 가이드</a>를 보세요.</p>
-    </div>
-  {% elif not selected_course_count %}
-    <div class="attention-notice" role="status">
-      <strong>알림을 켠 과목이 없어요.</strong>
-      <p><a href="{% url 'course_settings' %}">과목 선택</a>에서 과제나 강의를 켜 주세요.</p>
-    </div>
-  {% elif not destinations %}
-    <div class="attention-notice" role="status">
-      <strong>등록된 알림 대상이 없어서 예약 알림이 가지 않아요.</strong>
-      <p><a href="{% url 'destination_settings' %}">알림 대상</a>에서 브라우저 푸시나 Discord·Slack 웹훅을 추가해 주세요. iPhone으로 받으려면 먼저 <a href="{% url 'pwa_install_guide' %}">홈 화면에 추가하는 방법</a>을 보세요.</p>
-    </div>
-  {% elif not next_run %}
-    <div class="attention-notice" role="status">
-      <strong>켜 둔 알림 시각이 없어서 예약 알림이 가지 않아요.</strong>
-      <p><a href="{% url 'notification_settings' %}">알림 설정</a>에서 알림 시각을 하나 이상 켜 주세요.</p>
-    </div>
   {% endif %}
+  {% comment %}Missing connection, courses, destinations or alarm times are shown by the getting-started guide's current step.{% endcomment %}
 
   {% include "accounts/_getting_started.html" %}
 
@@ -66,11 +47,7 @@
           {% include "accounts/_item_groups.html" with day_groups=remaining_groups empty_message="마감이 남은 과제·강의가 없어요." %}
         {% else %}
           <div class="empty-state compact remaining-empty">
-            <p>첫 예약 알림이 가고 나면 남은 과제·강의가 여기에 모여요.</p>
-            <form method="post" action="{% url 'preview' %}" data-loading>
-              {% csrf_token %}
-              <button class="secondary-button" type="submit">지금 확인하기</button>
-            </form>
+            <p>첫 예약 알림이 가고 나면 남은 과제·강의가 여기에 모여요. 지금 보려면 위의 알림 미리보기를 눌러 주세요.</p>
           </div>
         {% endif %}
       </section>
