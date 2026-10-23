@@ -1,4 +1,4 @@
-# 인수인계 (2026-10-21 갱신)
+# 인수인계 (2026-10-24 갱신)
 
 다음 작업자(Claude Code 세션)가 이 문서만 읽고 바로 이어서 일할 수 있게 쓴 문서다. 세부 운영 절차는 `docs/operations/oci-production.md`(런북), Actions 배포는 `docs/operations/github-actions-deploy.md`에 있다. 이 문서는 현재 상태, 규칙, 남은 일을 모은다.
 
@@ -27,6 +27,14 @@
 - [PR #81](https://github.com/hjkim24/learningx-alert-web/pull/81)은 최종 커밋 `a6744d5`의 CI test 통과와 사용자 승인 후 `1a7bfd0`으로 머지했다. [main CI 실행 39446228820](https://github.com/hjkim24/learningx-alert-web/actions/runs/39446228820)의 test·deploy가 모두 성공했고, 운영 배포는 2026-10-21 00:15:43 KST에 완료됐다.
 - 00:16 KST 운영 Chromium 검증에서 로그인 화면과 새 CSS(`app.a88067f812d7.css`)는 `200`, `/healthz/`는 `200 / ok`였다. 1440·768·390·320px 표시, 넘침 없음, 첫 화면의 Google 버튼, 도움말 키보드 펼침·접힘을 확인했고 데스크톱·모바일 스크린샷도 검토했다. 브라우저 오류와 자동 쓰기 요청은 없었다.
 - 인증·알림 발송 동작은 바꾸지 않았으며, 실제 Google 로그인과 기기 알림 수신은 재시험하지 않았다.
+
+**Canvas 설정 바로가기 (2026-10-24, PR 머지 전)**
+
+- 배경: 사용자 피드백에 토큰 발급이 번거롭다는 의견이 많았다. `feat/canvas-settings-shortcut`은 `main`의 `a54f0b1`에서 시작했다.
+- 미연결·재연결 필요 상태의 대시보드 Canvas 연결 칸에 3단계 안내와 학교별 "Canvas 설정 열기" 링크(`School.token_settings_url` = `{canvas_base_url}/profile/settings`, 새 탭)를 넣었다. 정원이 찬 학교는 링크를 빼고, 재연결은 연결된 학교만 보여 준다. 토큰 가이드에 지름길 안내 한 줄을 더했다. 새 의존성·모델·설정은 없다.
+- 리디렉션 확인: 쿠키 없는 요청에서 두 학교 모두 `/profile/settings` → `/login` → 학교 SSO로 가며, SSO 복귀 주소는 `/learningx/login`으로 고정이다. 사용자가 성균관대 로그아웃 상태에서 로그인 후 설정 화면으로 돌아오는 것을 확인했다. **한양대 복귀는 미확인**이라 안내 문구에 "설정 화면이 아니면 버튼을 한 번 더 눌러 주세요"를 넣었다.
+- 로컬 Django 467개(2개 건너뜀), 클라이언트 35개, 배포 스크립트 2종 통과. 데스크톱(Aside)과 Chromium 390·320px에서 넘침 없음을 확인했고, 320px의 버튼 줄바꿈은 단어 단위로 맞췄다.
+- 붙여넣기 버튼(클립보드 API)은 브라우저 권한 창이 뜨고 기본 붙여넣기로 충분해 넣지 않았다. Canvas OAuth(학교의 Developer Key 필요)는 사용자 결정 전 제안 단계다.
 
 ## 1. 서비스 한 줄 요약
 

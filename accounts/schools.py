@@ -25,6 +25,12 @@ class School:
     def lectures_available(self):
         return bool(self.learningx_hosts)
 
+    @property
+    def token_settings_url(self):
+        # Canvas page with "+ New Access Token"; logged-out visitors are sent
+        # through the school's SSO and back (owner-checked for SKKU).
+        return f"{self.canvas_base_url.rstrip('/')}/profile/settings"
+
 
 def _registry():
     # Built per call so the SKKU entry follows CANVAS_BASE_URL and
