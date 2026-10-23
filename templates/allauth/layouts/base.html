@@ -1,0 +1,4 @@
+{% extends "base.html" %}
+{% comment %}Every allauth page this app does not override still gets the site header, footer and styles.{% endcomment %}
+
+{% block title %}{% block head_title %}{% endblock head_title %} · LearningX Alert{% endblock title %}

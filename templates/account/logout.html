@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% comment %}Shown when the logout URL is opened by a plain link (GET); the header's 로그아웃 button posts directly.{% endcomment %}
+
+{% block title %}로그아웃 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <section class="notice-page" aria-labelledby="logout-title">
+    <h1 id="logout-title">로그아웃할까요?</h1>
+    <p>이 기기에서만 로그아웃돼요. 예약 알림은 계속 가요.</p>
+    <form class="setup-actions" method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      {{ redirect_field }}
+      <button class="primary-button" type="submit">로그아웃</button>
+      <a class="secondary-button" href="{% url 'dashboard' %}">취소</a>
+    </form>
+  </section>
+{% endblock %}

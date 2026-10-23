@@ -1,0 +1,25 @@
+{% load static %}<!doctype html>
+{% comment %}For error pages Django renders without a request (500, CSRF failure): no context processors, so no base.html.{% endcomment %}
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>{% block title %}{% endblock %} · LearningX Alert</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'icons/favicon.svg' %}">
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="/" aria-label="LearningX Alert 홈">
+      <img class="wordmark-mark" src="{% static 'icons/favicon.svg' %}" width="34" height="34" alt="">
+      <span>LearningX Alert</span>
+    </a>
+  </header>
+  <main class="page-frame">
+    <section class="notice-page" aria-labelledby="error-title">
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</body>
+</html>

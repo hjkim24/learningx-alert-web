@@ -3029,9 +3029,10 @@ body:has(.sticky-actions) .feedback-fab {
 
   /* Recent runs: date on its own line when the row is narrow. */
   .history-list li,
+  /* One column: a long course name and its reason each get the full width. */
   .problem-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 4px 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
   }
 
   .history-list li code,
@@ -3120,6 +3121,15 @@ body:has(.sticky-actions) .feedback-fab {
     position: relative;
   }
 
+  /* Four stacked steps stay short so the next card is close. */
+  .setup-steps {
+    gap: 6px;
+  }
+
+  .setup-steps li {
+    padding: 10px 12px;
+  }
+
   .status-rail a::after {
     content: "";
     position: absolute;
@@ -3154,8 +3164,8 @@ body:has(.sticky-actions) .feedback-fab {
     white-space: nowrap;
   }
 
-  /* Save bar: hint and "저장" on the first row, the preview button below, so
-     no label has to break across lines on a 320px screen. */
+  /* Save bar: one row so it covers little of the screen. With a preview
+     button the hint gives way and the label shortens to "미리보기". */
   .sticky-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -3166,9 +3176,13 @@ body:has(.sticky-actions) .feedback-fab {
   }
 
   .sticky-actions:has(.secondary-button) {
-    grid-template-areas:
-      "hint save"
-      "preview preview";
+    grid-template-areas: "preview save";
+    padding-left: 12px;
+  }
+
+  .sticky-actions:has(.secondary-button) > span,
+  .wide-only {
+    display: none;
   }
 
   .sticky-actions > span {
@@ -3193,10 +3207,6 @@ body:has(.sticky-actions) .feedback-fab {
 
   .sticky-actions.save-bar .primary-button {
     width: 100%;
-  }
-
-  body:has(.sticky-actions .secondary-button) .feedback-fab {
-    bottom: calc(148px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Room below the last card so the floating feedback button never covers it. */

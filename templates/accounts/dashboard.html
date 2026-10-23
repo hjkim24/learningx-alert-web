@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load run_labels %}
 
 {% block title %}대시보드 · LearningX Alert{% endblock %}
 
@@ -7,10 +8,12 @@
     <div>
       <h1>대시보드</h1>
     </div>
-    <form method="post" action="{% url 'preview' %}" data-loading>
-      {% csrf_token %}
-      <button class="primary-button" type="submit"{% if not connection %} disabled{% endif %}>알림 미리보기</button>
-    </form>
+    {% if connection %}
+      <form method="post" action="{% url 'preview' %}" data-loading>
+        {% csrf_token %}
+        <button class="primary-button" type="submit">알림 미리보기</button>
+      </form>
+    {% endif %}
   </header>
 
   {% if push_gone %}
@@ -29,6 +32,11 @@
   {% comment %}Missing connection, courses, destinations or alarm times are shown by the getting-started guide's current step.{% endcomment %}
 
   {% include "accounts/_getting_started.html" %}
+
+  {% comment %}A missing or broken connection is the next thing to fix, so its card comes first.{% endcomment %}
+  {% if not connection or connection.needs_reconnect %}
+    {% include "accounts/_connection_panel.html" %}
+  {% endif %}
 
   {% if connection %}
     {% comment %}With nothing left to show, the three cards share one row instead of leaving a tall empty column beside the stacked side cards.{% endcomment %}
@@ -55,7 +63,7 @@
         {% include "accounts/_dashboard_history.html" %}
       </div>
     </div>
-  {% else %}
+  {% elif recent_runs %}
     <div class="history-grid">
       {% include "accounts/_dashboard_history.html" %}
     </div>
@@ -73,96 +81,13 @@
       {% for delivery in delivery_problems %}
         <p class="problem-row">
           <strong>{{ delivery.destination_label|default:delivery.get_destination_kind_display }} · 전송 {{ delivery.part_number }}번</strong>
-          <span>{{ delivery.get_status_display }}</span>
-          {% if delivery.safe_error_code %}<code>{{ delivery.safe_error_code }}</code>{% endif %}
+          <span>{{ delivery.get_status_display }}{% if delivery.safe_error_code %} · <span data-error-code="{{ delivery.safe_error_code }}">{{ delivery.safe_error_code|error_label }}</span>{% endif %}</span>
         </p>
       {% endfor %}
     </section>
   {% endif %}
 
-  <details class="panel connection-panel"{% if not connection or connection.needs_reconnect %} open{% endif %}>
-    <summary>
-      <h2 id="canvas-title">Canvas 연결</h2>
-      {% if connection %}
-        <span class="term-meta">{% if connection.needs_reconnect %}재연결 필요{% else %}<span class="connection-dot" aria-hidden="true"></span>연결됨{% endif %} · {{ school.name }} · {{ connection.canvas_name }}</span>
-      {% else %}
-        <span class="term-meta">연결 필요</span>
-      {% endif %}
-    </summary>
-
-    {% if connection %}
-      <dl class="destination-summary">
-        <div>
-          <dt>학교</dt>
-          <dd>{{ school.name }}</dd>
-        </div>
-        <div>
-          <dt>Canvas 사용자</dt>
-          <dd>{{ connection.canvas_name }}</dd>
-        </div>
-        <div>
-          <dt>Canvas ID</dt>
-          <dd>{{ connection.canvas_user_id }}</dd>
-        </div>
-        <div>
-          <dt>마지막 확인</dt>
-          <dd>{{ connection.verified_at|date:"Y.m.d H:i" }} KST</dd>
-        </div>
-      </dl>
-    {% endif %}
-
-    {% if form.school %}
-      {# Outside the token grid; the radios join the form via form=. #}
-      <fieldset class="school-choice" data-school-choice>
-        <legend>학교</legend>
-        <div class="school-options">
-          {% for choice in form.school %}
-            <label class="school-option">
-              <input type="radio" form="canvas-token-form" name="{{ choice.data.name }}" value="{{ choice.data.value }}" required{% if choice.data.value in form.full_codes %} disabled{% endif %}>
-              <span>{{ choice.choice_label }}</span>
-            </label>
-          {% endfor %}
-        </div>
-      </fieldset>
-    {% endif %}
-
-    {% if not connection or connection.needs_reconnect %}
-      <div class="token-shortcut">
-        <ol class="guide-next">
-          <li>{% if form.school %}학교를 고르고 {% endif %}아래 버튼으로 Canvas 설정을 열어요. 로그인 화면이 나오면 로그인하고, 설정 화면이 아니면 버튼을 한 번 더 눌러 주세요.</li>
-          <li>설정 화면 아래쪽의 <strong>+ 새 액세스 토큰</strong>을 눌러 토큰을 만들어요. 만료일을 비워 두면 다시 연결할 일이 없어요.</li>
-          <li>나온 토큰을 전부 복사해 아래 칸에 붙여 넣어요. 그 창을 닫으면 토큰을 다시 볼 수 없어요.</li>
-        </ol>
-        <div class="setup-actions">
-          {% if connection %}
-            <a class="secondary-button" href="{{ school.token_settings_url }}" target="_blank" rel="noopener noreferrer">Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
-          {% else %}
-            {% for option in supported_schools %}{% if option.code not in form.full_codes %}
-              <a class="secondary-button" href="{{ option.token_settings_url }}" target="_blank" rel="noopener noreferrer" data-school-link="{{ option.code }}">{% if supported_schools|length > 1 %}{{ option.name }} {% endif %}Canvas 설정 열기<span class="visually-hidden"> (새 탭)</span></a>
-            {% endif %}{% endfor %}
-          {% endif %}
-          <a class="guide-link" href="{% url 'canvas_token_guide' %}">그림으로 자세히 보기</a>
-        </div>
-      </div>
-    {% endif %}
-
-    <form class="token-form" id="canvas-token-form" method="post" action="{% url 'canvas_connect' %}">
-      {% csrf_token %}
-      <div class="field-row">
-        {{ form.token.label_tag }}
-        {{ form.token }}
-        <small>토큰은 암호화해서 저장하고, 다시 보여 주지 않아요.</small>
-      </div>
-      <button class="primary-button" type="submit">
-        {% if connection %}새 토큰으로 교체{% else %}연결하기{% endif %}
-      </button>
-    </form>
-
-    {% if connection %}
-      <form class="disconnect-form" method="post" action="{% url 'canvas_disconnect' %}">
-        {% csrf_token %}
-        <button class="danger-button" type="submit">Canvas 연결 해제</button>
-      </form>
-    {% endif %}
-  </details>
+  {% if connection and not connection.needs_reconnect %}
+    {% include "accounts/_connection_panel.html" %}
+  {% endif %}
 {% endblock %}

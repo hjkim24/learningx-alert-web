@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}페이지를 찾을 수 없어요 · LearningX Alert{% endblock %}
+
+{% block content %}
+  <section class="notice-page" aria-labelledby="not-found-title">
+    <h1 id="not-found-title">페이지를 찾을 수 없어요</h1>
+    <p>주소가 바뀌었거나 없는 페이지예요. 처음 화면에서 다시 시작해 주세요.</p>
+    <a class="primary-button" href="{% url 'dashboard' %}">처음으로</a>
+  </section>
+{% endblock %}
