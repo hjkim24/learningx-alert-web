@@ -114,7 +114,9 @@ class NotificationPageTests(TestCase):
         self.assertContains(notifications, 'max="14"')
         # One saved alarm row plus the hidden template row for "add".
         self.assertContains(notifications, 'type="time"', count=2)
-        self.assertContains(destinations, 'type="password"')
+        # The webhook URL is visible while pasting (to check a ?thread_id=).
+        self.assertContains(destinations, 'type="text" name="webhook_url"')
+        self.assertNotContains(destinations, 'type="password"')
         self.assertNotContains(notifications, 'type="password"')
 
     def test_notification_settings_requires_login(self):

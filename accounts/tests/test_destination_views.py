@@ -107,6 +107,8 @@ class DestinationViewTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertContains(response, "이미 등록한 웹훅이에요.", status_code=400)
+        # A rejected form is re-rendered without echoing the URL back.
+        self.assertNotContains(response, self.discord_url, status_code=400)
         self.assertEqual(Destination.objects.filter(user=self.user).count(), 1)
 
     @patch("learningx_alert.network.socket.getaddrinfo", return_value=PUBLIC_DNS)
