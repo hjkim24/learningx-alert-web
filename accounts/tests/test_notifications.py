@@ -86,6 +86,30 @@ class NotificationTests(SimpleTestCase):
 
         self.assertEqual(opener.requests[0].full_url, request_url)
 
+    def test_webhook_requests_send_an_explicit_user_agent(self):
+        # Discord's Cloudflare answers urllib's default "Python-urllib/x.y"
+        # with 403 (error 1010), which failed every Discord delivery.
+        opener = FakeOpener(
+            [
+                FakeResponse(
+                    "https://discord.com/api/webhooks/123/token?wait=true",
+                    b'{"id":"message-1"}',
+                )
+            ]
+        )
+
+        send_webhook_part(
+            "discord",
+            "https://discord.com/api/webhooks/123/token",
+            "시험",
+            opener=opener,
+            resolve_public=False,
+        )
+
+        user_agent = opener.requests[0].get_header("User-agent")
+        self.assertTrue(user_agent)
+        self.assertNotIn("Python-urllib", user_agent)
+
     def test_slack_requires_services_path_on_hooks_host(self):
         valid = "https://hooks.slack.com/services/T1/B2/secret"
         self.assertEqual(

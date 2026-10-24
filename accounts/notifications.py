@@ -29,6 +29,8 @@ DISCORD_PATH = re.compile(r"/api/webhooks/[0-9]+/[A-Za-z0-9._-]+")
 SLACK_PATH = re.compile(r"/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9_-]+")
 # Discord posts into a forum post or thread when the webhook URL names it.
 DISCORD_THREAD_QUERY = re.compile(r"thread_id=[0-9]{1,20}")
+# Discord's Cloudflare rejects urllib's default "Python-urllib/x.y" (403, error 1010).
+WEBHOOK_USER_AGENT = "LearningXAlert (https://learningx-alert.com, 1.0)"
 KST = ZoneInfo("Asia/Seoul")
 MAX_MESSAGE_UNITS = 1900
 
@@ -203,7 +205,11 @@ def send_webhook_part(
     request = Request(
         request_url,
         data=json.dumps(payload).encode(),
-        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        headers={
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": WEBHOOK_USER_AGENT,
+        },
         method="POST",
     )
     delivery_opener = opener or _delivery_opener(resolve_public)
