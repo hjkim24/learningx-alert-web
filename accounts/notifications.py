@@ -27,6 +27,8 @@ from .services import encrypt_secret
 
 DISCORD_PATH = re.compile(r"/api/webhooks/[0-9]+/[A-Za-z0-9._-]+")
 SLACK_PATH = re.compile(r"/services/[A-Za-z0-9]+/[A-Za-z0-9]+/[A-Za-z0-9_-]+")
+# Discord posts into a forum post or thread when the webhook URL names it.
+DISCORD_THREAD_QUERY = re.compile(r"thread_id=[0-9]{1,20}")
 KST = ZoneInfo("Asia/Seoul")
 MAX_MESSAGE_UNITS = 1900
 
@@ -72,7 +74,13 @@ def validate_webhook_url(kind, value, resolve_public=True):
         )
         if (
             parsed.port is not None
-            or parsed.query
+            or (
+                parsed.query
+                and not (
+                    kind == Destination.Kind.DISCORD
+                    and DISCORD_THREAD_QUERY.fullmatch(parsed.query)
+                )
+            )
             or parsed.fragment
             or not path_pattern.fullmatch(parsed.path)
         ):
@@ -186,7 +194,8 @@ def send_webhook_part(
         resolve_public=resolve_public,
     )
     if kind == Destination.Kind.DISCORD:
-        request_url = f"{normalized_url}?wait=true"
+        separator = "&" if urlsplit(normalized_url).query else "?"
+        request_url = f"{normalized_url}{separator}wait=true"
         payload = {"content": text, "allowed_mentions": {"parse": []}}
     else:
         request_url = normalized_url

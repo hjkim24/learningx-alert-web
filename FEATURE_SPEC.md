@@ -23,7 +23,7 @@ Google 로그인은 서비스 계정 인증이고 Canvas 토큰은 학교 데이
 | 수집 | 미제출 과제·Canvas 퀴즈, 미수강 LearningX 출석 대상 강의·자료. 완료·기한 경과·마감 없는 항목 제외 | `accounts/collection.py` |
 | 항목 선택 | 미리보기, 개별 항목 제외·복원 | `accounts/views.py`, `accounts/collection.py` |
 | 규칙 | 조회 범위, 한국 시간 알림 시각·요일·켜기/끄기. 보낼 항목 없는 날 하루 한 번 알림(기본 꺼짐) | `accounts/models.py`, `accounts/forms.py`, `accounts/scheduling.py` |
-| 수신처 | Discord·Slack 웹훅, 브라우저 푸시(PWA), 여러 대상 독립 발송, 사용자 요청 시 시험 알림 | `accounts/notifications.py`, `accounts/webpush.py` |
+| 수신처 | Discord·Slack 웹훅(Discord는 `?thread_id=`로 포럼 글·스레드 지정 가능), 브라우저 푸시(PWA), 여러 대상 독립 발송, 사용자 요청 시 시험 알림 | `accounts/notifications.py`, `accounts/webpush.py` |
 | 예약·이력 | 회차 중복 방지, 누락 분 따라잡기, 실행·항목·과목·수신처별 결과 저장 | `accounts/scheduling.py`, `accounts/management/commands/run_scheduler.py` |
 | 화면 | 연결·다음 실행·남은 항목·최근 결과, 푸시 만료 안내, 모바일 대응, 설치·토큰 가이드, 사이트 디자인의 로그인 취소·오류·404·500 페이지, 링크 미리보기(Open Graph) | `accounts/views.py`, `templates/`, `static/` |
 | 첫 사용 안내 | 로그인 화면의 활성 학교·서비스 소개·알림 예시와 접을 수 있는 연결 도움말. 대시보드의 연결→과목→수신처→시험 알림 4단계 가이드는 기존 설정으로 진행 상태를 판단하며 완료 뒤 접기·재열기 지원 | `accounts/views.py`, `config/context_processors.py`, `templates/account/login.html`, `templates/accounts/_getting_started.html` |
