@@ -49,6 +49,43 @@ class NotificationTests(SimpleTestCase):
             ):
                 validate_webhook_url("discord", invalid, resolve_public=False)
 
+    def test_discord_accepts_only_a_thread_id_query(self):
+        thread = "https://discord.com/api/webhooks/123/token?thread_id=456"
+        self.assertEqual(
+            validate_webhook_url("discord", thread, resolve_public=False),
+            thread,
+        )
+        for invalid in (
+            "https://discord.com/api/webhooks/123/token?thread_id=",
+            "https://discord.com/api/webhooks/123/token?thread_id=abc",
+            "https://discord.com/api/webhooks/123/token?thread_id=1&thread_id=2",
+            "https://discord.com/api/webhooks/123/token?thread_id=1&wait=true",
+        ):
+            with self.subTest(invalid=invalid), self.assertRaises(
+                WebhookValidationError
+            ):
+                validate_webhook_url("discord", invalid, resolve_public=False)
+        with self.assertRaises(WebhookValidationError):
+            validate_webhook_url(
+                "slack",
+                "https://hooks.slack.com/services/T1/B2/secret?thread_id=1",
+                resolve_public=False,
+            )
+
+    def test_discord_thread_keeps_thread_id_when_sending(self):
+        request_url = "https://discord.com/api/webhooks/123/token?thread_id=456&wait=true"
+        opener = FakeOpener([FakeResponse(request_url, b'{"id":"message-1"}')])
+
+        send_webhook_part(
+            "discord",
+            "https://discord.com/api/webhooks/123/token?thread_id=456",
+            "시험",
+            opener=opener,
+            resolve_public=False,
+        )
+
+        self.assertEqual(opener.requests[0].full_url, request_url)
+
     def test_slack_requires_services_path_on_hooks_host(self):
         valid = "https://hooks.slack.com/services/T1/B2/secret"
         self.assertEqual(
