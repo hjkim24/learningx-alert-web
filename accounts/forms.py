@@ -115,6 +115,13 @@ WEBHOOK_KINDS = (
 )
 
 
+class UnechoedTextInput(forms.TextInput):
+    """Readable while pasting, but a rejected form never echoes the secret back."""
+
+    def format_value(self, value):
+        return None
+
+
 class DestinationForm(LabelSuffixMixin, forms.Form):
     """A new Discord/Slack webhook destination. Browser push registers via JS."""
 
@@ -130,9 +137,8 @@ class DestinationForm(LabelSuffixMixin, forms.Form):
         label="웹훅 URL",
         required=False,
         strip=True,
-        widget=forms.PasswordInput(
-            attrs={"autocomplete": "off"},
-            render_value=False,
+        widget=UnechoedTextInput(
+            attrs={"autocomplete": "off", "autocapitalize": "off", "spellcheck": "false"},
         ),
     )
 
